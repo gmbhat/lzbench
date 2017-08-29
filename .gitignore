@@ -4,6 +4,7 @@ _visual/
 
 # Archives
 *.zip
+*.tar
 
 # Object files
 *.o
