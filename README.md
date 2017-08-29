@@ -1,10 +1,10 @@
 Introduction
 -------------------------
 
-lzbench is an in-memory benchmark of open-source LZ77/LZSS/LZMA compressors. It joins all compressors into a single exe. 
-At the beginning an input file is read to memory. 
-Then all compressors are used to compress and decompress the file and decompressed file is verified. 
-This approach has a big advantage of using the same compiler with the same optimizations for all compressors. 
+lzbench is an in-memory benchmark of open-source LZ77/LZSS/LZMA compressors. It joins all compressors into a single exe.
+At the beginning an input file is read to memory.
+Then all compressors are used to compress and decompress the file and decompressed file is verified.
+This approach has a big advantage of using the same compiler with the same optimizations for all compressors.
 The disadvantage is that it requires source code of each compressor (therefore Slug or lzturbo are not included).
 
 |Status   |
@@ -62,7 +62,7 @@ make BUILD_ARCH=32-bit
 
 ```
 
-To remove one of compressors you can add `-DBENCH_REMOVE_XXX` to `DEFINES` in Makefile (e.g. `DEFINES += -DBENCH_REMOVE_LZ4` to remove LZ4). 
+To remove one of compressors you can add `-DBENCH_REMOVE_XXX` to `DEFINES` in Makefile (e.g. `DEFINES += -DBENCH_REMOVE_LZ4` to remove LZ4).
 You also have to remove corresponding `*.o` files (e.g. `lz4/lz4.o` and `lz4/lz4hc.o`).
 
 lzbench was tested with:
@@ -74,8 +74,8 @@ lzbench was tested with:
 
 Supported compressors
 -------------------------
-**Warning**: some of the compressors listed here have security issues and/or are 
-no longer maintained.  For information about the security of the various compressors, 
+**Warning**: some of the compressors listed here have security issues and/or are
+no longer maintained.  For information about the security of the various compressors,
 see the [CompFuzz Results](https://github.com/nemequ/compfuzz/wiki/Results) page.
 ```
 blosclz 2015-11-10
@@ -126,7 +126,7 @@ The following results are obtained with `lzbench 1.7.1` with the `-t16,16 -eall`
 with ["silesia.tar"](https://drive.google.com/file/d/0BwX7dtyRLxThenZpYU9zLTZhR1k/view?usp=sharing) which contains tarred files from [Silesia compression corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia).
 The results sorted by ratio are available [here](lzbench171_sorted.md).
 
-| Compressor name         | Compression| Decompress.| Compr. size | Ratio | 
+| Compressor name         | Compression| Decompress.| Compr. size | Ratio |
 | ---------------         | -----------| -----------| ----------- | ----- |
 | memcpy                  |  8657 MB/s |  8891 MB/s |   211947520 |100.00 |
 | blosclz 2015-11-10 -1   |   902 MB/s |  5855 MB/s |   211768481 | 99.92 |
@@ -306,3 +306,28 @@ The results sorted by ratio are available [here](lzbench171_sorted.md).
 | zstd 1.1.4 -18          |  2.75 MB/s |   573 MB/s |    55288461 | 26.09 |
 | zstd 1.1.4 -22          |  1.39 MB/s |   459 MB/s |    52718819 | 24.87 |
 
+
+Adding a new compressor
+-------------------------
+
+If you have another compressor that you would like to add to lzbench, this can be done as follows:
+
+ 1. Add all the relevant code in some subdirectory.
+ 1. Go to `_lzbench/lzbench.h`
+    1. Increment `LZBENCH_COMPRESSOR_COUNT` (around line 140)
+    1. Add the relevant info in the array `comp_desc`. The fields are described in the struct immediately above it (`compressor_desc_t`).
+        1. name and version are self explanatory
+        1. First and last level refer to levels of compression. By convention, higher levels mean more compression.
+        1. TODO I don't know what `additional_param` means.
+        1. `max_block_size` is self-explanatory if your compressor splits the data into blocks and compresses each block (which it probably does).
+        1. `compress` and `decompress` need to be pointers to functions matching the signatures immediately above the struct definition. Note that these should be wrapper functions (which we'll define in a moment), not your actual compression and decompression functions.
+        1. The same is true for `init` and `deinit`, though these can be `NULL`.
+    1. Optionally, add an alias to the `alias_desc` array below and increment `LZBENCH_ALIASES_COUNT`.
+ 1. Go to `_lzbench/compressors.h` and add in an `ifdef` block declaring the functions you specified in the `comp_desc` array.
+ 1. Go to `_lzbench/compressors.cpp` and add in an `ifdef` block defining these functions, presumably by calling your own compressor's top-level compress and decompress functions. Note that you should only `#include` your header within this `ifdef`.
+
+ 1. Go to the Makefile. Add in a variable containing all the .o files your compressor needs. Then add this variable to the list under the `lzbench` target.
+    1. If you need special flags, add a custom rule above this build rule, copying the (simple) structure used by other such rules.
+
+
+See the `example_compressor` directory, and the associated `example_compress`, `example_decompress`, and other functions, for a minimal working example.

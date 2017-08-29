@@ -1,7 +1,7 @@
 #ifndef LZBENCH_COMPRESSORS_H
 #define LZBENCH_COMPRESSORS_H
 
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <stdint.h> // int64_t
 
 int64_t lzbench_memcpy(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t , size_t, char* );
@@ -478,5 +478,12 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 	#define lzbench_nakamichi_decompress NULL
 #endif
 
+#ifndef BENCH_REMOVE_EXAMPLE
+    int64_t lzbench_example_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_example_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+#else
+    #define lzbench_example_compress NULL
+    #define lzbench_example_decompress NULL
+#endif
 
 #endif // LZBENCH_COMPRESSORS_H

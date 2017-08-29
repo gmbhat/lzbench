@@ -42,22 +42,22 @@
 	typedef LARGE_INTEGER bench_rate_t;
 	typedef LARGE_INTEGER bench_timer_t;
 	#define InitTimer(rate) if (!QueryPerformanceFrequency(&rate)) { printf("QueryPerformance not present"); };
-	#define GetTime(now) QueryPerformanceCounter(&now); 
+	#define GetTime(now) QueryPerformanceCounter(&now);
 	#define GetDiffTime(rate, start_ticks, end_ticks) (1000000000ULL*(end_ticks.QuadPart - start_ticks.QuadPart)/rate.QuadPart)
 	void uni_sleep(UINT milisec) { Sleep(milisec); };
     #ifndef fseeko
 		#ifdef _fseeki64
-            #define fseeko _fseeki64 
+            #define fseeko _fseeki64
             #define ftello _ftelli64
 		#else
-            #define fseeko fseek 
+            #define fseeko fseek
             #define ftello ftell
         #endif
 	#endif
 	#define PROGOS "Windows"
 #else
     #include <stdarg.h> // va_args
-	#include <time.h>   
+	#include <time.h>
 	#include <unistd.h>
 	#include <sys/resource.h>
 	void uni_sleep(uint32_t milisec) { usleep(milisec * 1000); };
@@ -137,7 +137,7 @@ typedef struct
 
 
 
-#define LZBENCH_COMPRESSOR_COUNT 65
+#define LZBENCH_COMPRESSOR_COUNT 66
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -206,6 +206,7 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "zstd22",     "1.1.4",       1,  22,   22,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd24",     "1.1.4",       1,  22,   24,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "nakamichi",  "okamigan",    0,   0,    0,       0, lzbench_nakamichi_compress,  lzbench_nakamichi_decompress,  NULL,                    NULL },
+    { "example",    "0.0",         0,   0,    0,       0, lzbench_example_compress,    lzbench_example_decompress,    NULL,                    NULL },
 };
 
 

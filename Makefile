@@ -85,21 +85,21 @@ ZLIB_FILES = zlib/adler32.o zlib/compress.o zlib/crc32.o zlib/deflate.o zlib/gzc
 ZLIB_FILES += zlib/gzwrite.o zlib/infback.o zlib/inffast.o zlib/inflate.o zlib/inftrees.o zlib/trees.o
 ZLIB_FILES += zlib/uncompr.o zlib/zutil.o
 
-LZMAT_FILES = lzmat/lzmat_dec.o lzmat/lzmat_enc.o 
+LZMAT_FILES = lzmat/lzmat_dec.o lzmat/lzmat_enc.o
 
 LZRW_FILES = lzrw/lzrw1-a.o lzrw/lzrw1.o lzrw/lzrw2.o lzrw/lzrw3.o lzrw/lzrw3-a.o
 
 LZMA_FILES = lzma/LzFind.o lzma/LzmaDec.o lzma/LzmaEnc.o
 
-LZ4_FILES = lizard/lizard_compress.o lizard/lizard_decompress.o lz4/lz4.o lz4/lz4hc.o 
+LZ4_FILES = lizard/lizard_compress.o lizard/lizard_decompress.o lz4/lz4.o lz4/lz4hc.o
 
 LZF_FILES = lzf/lzf_c_ultra.o lzf/lzf_c_very.o lzf/lzf_d.o
 
-LZFSE_FILES = lzfse/lzfse_decode.o lzfse/lzfse_decode_base.o lzfse/lzfse_encode.o lzfse/lzfse_encode_base.o lzfse/lzfse_fse.o lzfse/lzvn_decode.o lzfse/lzvn_decode_base.o lzfse/lzvn_encode_base.o 
+LZFSE_FILES = lzfse/lzfse_decode.o lzfse/lzfse_decode_base.o lzfse/lzfse_encode.o lzfse/lzfse_encode_base.o lzfse/lzfse_fse.o lzfse/lzvn_decode.o lzfse/lzvn_decode_base.o lzfse/lzvn_encode_base.o
 
 QUICKLZ_FILES = quicklz/quicklz151b7.o quicklz/quicklz1.o quicklz/quicklz2.o quicklz/quicklz3.o
 
-SNAPPY_FILES = snappy/snappy-sinksource.o snappy/snappy-stubs-internal.o snappy/snappy.o 
+SNAPPY_FILES = snappy/snappy-sinksource.o snappy/snappy-stubs-internal.o snappy/snappy.o
 
 BROTLI_FILES = brotli/common/dictionary.o brotli/dec/bit_reader.o brotli/dec/decode.o brotli/dec/huffman.o brotli/dec/state.o
 BROTLI_FILES += brotli/enc/backward_references.o brotli/enc/block_splitter.o brotli/enc/brotli_bit_stream.o brotli/enc/encode.o
@@ -107,24 +107,26 @@ BROTLI_FILES += brotli/enc/entropy_encode.o brotli/enc/histogram.o brotli/enc/li
 BROTLI_FILES += brotli/enc/metablock.o brotli/enc/static_dict.o brotli/enc/utf8_util.o brotli/enc/compress_fragment.o brotli/enc/compress_fragment_two_pass.o
 BROTLI_FILES += brotli/enc/cluster.o brotli/enc/bit_cost.o brotli/enc/backward_references_hq.o brotli/enc/dictionary_hash.o
 
-ZSTD_FILES = zstd/lib/decompress/zstd_decompress.o zstd/lib/decompress/huf_decompress.o zstd/lib/common/zstd_common.o zstd/lib/common/fse_decompress.o 
-ZSTD_FILES += zstd/lib/common/xxhash.o zstd/lib/common/error_private.o zstd/lib/common/entropy_common.o 
-ZSTD_FILES += zstd/lib/compress/zstd_compress.o zstd/lib/compress/fse_compress.o zstd/lib/compress/huf_compress.o 
+ZSTD_FILES = zstd/lib/decompress/zstd_decompress.o zstd/lib/decompress/huf_decompress.o zstd/lib/common/zstd_common.o zstd/lib/common/fse_decompress.o
+ZSTD_FILES += zstd/lib/common/xxhash.o zstd/lib/common/error_private.o zstd/lib/common/entropy_common.o
+ZSTD_FILES += zstd/lib/compress/zstd_compress.o zstd/lib/compress/fse_compress.o zstd/lib/compress/huf_compress.o
 
-BRIEFLZ_FILES = brieflz/brieflz.o brieflz/depacks.o 
+BRIEFLZ_FILES = brieflz/brieflz.o brieflz/depacks.o
 
-LIBLZG_FILES = liblzg/decode.o liblzg/encode.o liblzg/checksum.o 
+LIBLZG_FILES = liblzg/decode.o liblzg/encode.o liblzg/checksum.o
 
 XZ_FILES = xz/lzma_decoder.o xz/lzma_encoder.o xz/common.o xz/price_table.o xz/fastpos_table.o xz/lzma_encoder_optimum_fast.o xz/lzma_encoder_optimum_normal.o
 XZ_FILES += xz/lz_decoder.o xz/lz_encoder.o xz/lz_encoder_mf.o xz/alone.o xz/alone_encoder.o xz/alone_decoder.o xz/lzma_encoder_presets.o xz/crc32_table.o
 
-XPACK_FILES = xpack/lib/x86_cpu_features.o xpack/lib/xpack_common.o xpack/lib/xpack_compress.o xpack/lib/xpack_decompress.o 
+XPACK_FILES = xpack/lib/x86_cpu_features.o xpack/lib/xpack_common.o xpack/lib/xpack_compress.o xpack/lib/xpack_decompress.o
 
-GIPFELI_FILES = gipfeli/decompress.o gipfeli/entropy.o gipfeli/entropy_code_builder.o gipfeli/gipfeli-internal.o gipfeli/lz77.o 
+GIPFELI_FILES = gipfeli/decompress.o gipfeli/entropy.o gipfeli/entropy_code_builder.o gipfeli/gipfeli-internal.o gipfeli/lz77.o
 
 LIBDEFLATE_FILES = libdeflate/adler32.o libdeflate/aligned_malloc.o libdeflate/crc32.o libdeflate/deflate_compress.o
 LIBDEFLATE_FILES += libdeflate/deflate_decompress.o libdeflate/gzip_compress.o libdeflate/gzip_decompress.o
 LIBDEFLATE_FILES += libdeflate/x86_cpu_features.o libdeflate/zlib_compress.o libdeflate/zlib_decompress.o
+
+EXAMPLE_FILES = example_compressor/example.o
 
 MISC_FILES = crush/crush.o shrinker/shrinker.o fastlz/fastlz.o pithy/pithy.o lzjb/lzjb2010.o wflz/wfLZ.o
 MISC_FILES += lzlib/lzlib.o blosclz/blosclz.o slz/slz.o
@@ -134,7 +136,7 @@ ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
 else
 	CSC_FILES = libcsc/csc_analyzer.o libcsc/csc_coder.o libcsc/csc_dec.o libcsc/csc_enc.o libcsc/csc_encoder_main.o
-	CSC_FILES += libcsc/csc_filters.o libcsc/csc_lz.o libcsc/csc_memio.o libcsc/csc_mf.o libcsc/csc_model.o libcsc/csc_profiler.o libcsc/csc_default_alloc.o 
+	CSC_FILES += libcsc/csc_filters.o libcsc/csc_lz.o libcsc/csc_memio.o libcsc/csc_mf.o libcsc/csc_model.o libcsc/csc_profiler.o libcsc/csc_default_alloc.o
 endif
 
 ifeq "$(DONT_BUILD_DENSITY)" "1"
@@ -180,7 +182,7 @@ endif
 ifeq "$(DONT_BUILD_YAPPY)" "1"
     DEFINES += -DBENCH_REMOVE_YAPPY
 else
-    MISC_FILES += yappy/yappy.o 
+    MISC_FILES += yappy/yappy.o
 endif
 
 ifeq "$(DONT_BUILD_ZLING)" "1"
@@ -198,7 +200,7 @@ endif
 all: lzbench
 
 # FIX for SEGFAULT on GCC 4.9+
-wflz/wfLZ.o: wflz/wfLZ.c wflz/wfLZ.h 
+wflz/wfLZ.o: wflz/wfLZ.c wflz/wfLZ.h
 	$(CC) $(CFLAGS_O2) $< -c -o $@
 
 shrinker/shrinker.o: shrinker/shrinker.c
@@ -228,13 +230,13 @@ lzsse/lzsse4/lzsse4.o: lzsse/lzsse4/lzsse4.cpp
 lzsse/lzsse8/lzsse8.o: lzsse/lzsse8/lzsse8.cpp
 	$(CXX) $(CFLAGS) -std=c++0x -msse4.1 $< -c -o $@
 
-nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c 
+nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c
 	$(CC) $(CFLAGS) -mavx $< -c -o $@
 
 
 _lzbench/lzbench.o: _lzbench/lzbench.cpp _lzbench/lzbench.h
 
-lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) $(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) $(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) $(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) $(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) $(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) $(LIBDEFLATE_FILES) $(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
+lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) $(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) $(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) $(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) $(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) $(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) $(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	@echo Linked GCC_VERSION=$(GCC_VERSION) CLANG_VERSION=$(CLANG_VERSION) COMPILER=$(COMPILER)
 
