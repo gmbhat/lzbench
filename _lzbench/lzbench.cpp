@@ -103,7 +103,7 @@ void print_speed(lzbench_params_t *params, string_table_t& row)
     cspeed = row.col5_origsize * 1000.0 / row.col2_ctime;
     dspeed = (!row.col3_dtime) ? 0 : (row.col5_origsize * 1000.0 / row.col3_dtime);
     ratio = row.col4_comprsize * 100.0 / row.col5_origsize;
-    
+
     switch (params->textformat)
     {
         case CSV:
@@ -155,7 +155,7 @@ void print_time(lzbench_params_t *params, string_table_t& row)
     switch (params->textformat)
     {
         case CSV:
-            printf("%s,%llu,%llu,%llu,%llu,%.2f,%s\n", row.col1_algname.c_str(), (unsigned long long)ctime, (unsigned long long)dtime,  (unsigned long long) row.col5_origsize, (unsigned long long)row.col4_comprsize, ratio, row.col6_filename.c_str()); break; 
+            printf("%s,%llu,%llu,%llu,%llu,%.2f,%s\n", row.col1_algname.c_str(), (unsigned long long)ctime, (unsigned long long)dtime,  (unsigned long long) row.col5_origsize, (unsigned long long)row.col4_comprsize, ratio, row.col6_filename.c_str()); break;
         case TURBOBENCH:
             printf("%12llu %6.1f%9llu%9llu  %22s %s\n", (unsigned long long)row.col4_comprsize, ratio, (unsigned long long)ctime, (unsigned long long)dtime, row.col1_algname.c_str(), row.col6_filename.c_str()); break;
         case TEXT:
@@ -190,19 +190,19 @@ void print_stats(lzbench_params_t *params, const compressor_desc_t* desc, int le
     std::sort(ctime.begin(), ctime.end());
     std::sort(dtime.begin(), dtime.end());
     uint64_t best_ctime, best_dtime;
-    
+
     switch (params->timetype)
     {
         default:
-        case FASTEST: 
+        case FASTEST:
             best_ctime = ctime.empty()?0:ctime[0];
             best_dtime = dtime.empty()?0:dtime[0];
             break;
-        case AVERAGE: 
+        case AVERAGE:
             best_ctime = ctime.empty()?0:std::accumulate(ctime.begin(),ctime.end(),(uint64_t)0) / ctime.size();
             best_dtime = dtime.empty()?0:std::accumulate(dtime.begin(),dtime.end(),(uint64_t)0) / dtime.size();
             break;
-        case MEDIAN: 
+        case MEDIAN:
             best_ctime = ctime.empty()?0:(ctime[(ctime.size()-1)/2] + ctime[ctime.size()/2]) / 2;
             best_dtime = dtime.empty()?0:(dtime[(dtime.size()-1)/2] + dtime[dtime.size()/2]) / 2;
             break;
@@ -234,13 +234,48 @@ size_t common(uint8_t *p1, uint8_t *p2)
     return size;
 }
 
+
+/* Allocate aligned memory in a portable way.
+ *
+ * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
+ *
+ * @param alignment The number of bytes to which memory must be aligned. This
+ *  value *must* be <= 255.
+ * @param bytes The number of bytes to allocate.
+ * @param zero If true, the returned memory will be zeroed. If false, the
+ *  contents of the returned memory are undefined.
+ * @returns A pointer to `size` bytes of memory, aligned to an `alignment`-byte
+ *  boundary.
+ */
+void *aligned_alloc(size_t alignment, size_t size, bool zero) {
+    size_t request_size = size + alignment;
+    char* buf = (char*)(zero ? calloc(1, request_size) : malloc(request_size));
+
+    size_t remainder = ((size_t)buf) % alignment;
+    size_t offset = alignment - remainder;
+    char* ret = buf + (unsigned char)offset;
+
+    // store how many extra bytes we allocated in the byte just before the
+    // pointer we return
+    *(unsigned char*)(ret - 1) = offset;
+
+    return (void*)ret;
+}
+
+/* Free memory allocated with aligned_alloc */
+void aligned_free(void* aligned_ptr) {
+    int offset = *(((char*)aligned_ptr) - 1);
+    free(((char*)aligned_ptr) - offset);
+}
+
+
 /*
  * Allocate a buffer of size bytes using malloc (or equivalent call returning a buffer
  * that can be passed to free). Touches each page so that the each page is actually
  * physically allocated and mapped into the process.
  */
 void *alloc_and_touch(size_t size, bool must_zero) {
-	void *buf = must_zero ? calloc(1, size) : malloc(size);
+    void *buf = must_zero ? calloc(1, size) : malloc(size);
 	volatile char zero = 0;
 	for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
 		static_cast<char * volatile>(buf)[i] = zero;
@@ -273,7 +308,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params, std::vector<size_t>& c
             memcpy(outbuf, inbuf, part);
             clen = part;
         }
-        
+
         inbuf += part;
         outbuf += clen;
         outsize -= clen;
@@ -310,7 +345,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params, std::vector<size_t>&
         outbuf += dlen;
         sum += dlen;
     }
-    
+
     return sum;
 }
 
@@ -357,7 +392,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
             tmpsize -= MIN(tmpsize, chunk_size);
         }
     }
-    
+
     LZBENCH_PRINT(5, "%s chunk_sizes=%d\n", desc->name, (int)chunk_sizes.size());
 
     total_c_iters = 0;
@@ -417,18 +452,18 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
         LZBENCH_PRINT(9, "%s dnanosec=%d\n", desc->name, (int)nanosec);
 
         if (insize != decomplen)
-        {   
+        {
             decomp_error = true;
-            LZBENCH_PRINT(5, "ERROR: inlen[%d] != outlen[%d]\n", (int32_t)insize, (int32_t)decomplen);
+            LZBENCH_PRINT(5, "ERROR: input length (%d) != decompressed length (%d)\n", (int32_t)insize, (int32_t)decomplen);
         }
-        
+
         if (memcmp(inbuf, decomp, insize) != 0)
         {
             decomp_error = true;
 
             size_t cmn = common(inbuf, decomp);
-            LZBENCH_PRINT(5, "ERROR in %s: common=%d/%d\n", desc->name, (int32_t)cmn, (int32_t)insize);
-            
+            LZBENCH_PRINT(5, "ERROR in %s: only = %d / %d decompressed bytes were correct\n", desc->name, (int32_t)cmn, (int32_t)insize);
+
             if (params->verbose >= 10)
             {
                 char text[256];
@@ -446,7 +481,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
         memset(decomp, 0, insize); // clear output buffer
 
         if (decomp_error) break;
-        
+
         total_nanosec = GetDiffTime(rate, timer_ticks, end_ticks);
         total_d_iters += i;
         if ((total_d_iters >= params->d_iters) && (total_nanosec > ((uint64_t)params->dmintime*1000000))) break;
@@ -498,7 +533,7 @@ void lzbench_test_with_params(lzbench_params_t *params, std::vector<size_t> &fil
                         found = true;
                        // printf("%s %s %s\n", cparams[0].c_str(), comp_desc[i].version, cparams[j].c_str());
                         if (j >= cparams.size())
-                        {                          
+                        {
                             for (int level=comp_desc[i].first_level; level<=comp_desc[i].last_level; level++)
                                 lzbench_test(params, file_sizes, &comp_desc[i], level, inbuf, insize, compbuf, comprsize, decomp, rate, level);
                         }
@@ -533,7 +568,7 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         printf("Could not find input files\n");
         return 1;
     }
-    
+
     comprsize = GET_COMPRESS_BOUND(totalsize);
     inbuf = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, false);
     compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
@@ -553,12 +588,12 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         if (UTIL_isDirectory(inFileNames[i])) {
             fprintf(stderr, "warning: use -r to process directories (%s)\n", inFileNames[i]);
             continue;
-        } 
+        }
 
         if (!(in=fopen(inFileNames[i], "rb"))) {
             perror(inFileNames[i]);
             continue;
-        } 
+        }
 
         fseeko(in, 0L, SEEK_END);
         insize = ftello(in);
@@ -571,7 +606,7 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         fclose(in);
     }
 
-    if (file_sizes.size() == 0) 
+    if (file_sizes.size() == 0)
         goto _clean;
 
     format(text, "%d files", file_sizes.size());
@@ -618,13 +653,13 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         if (UTIL_isDirectory(inFileNames[i])) {
             fprintf(stderr, "warning: use -r to process directories (%s)\n", inFileNames[i]);
             continue;
-        } 
-        
+        }
+
         if (!(in=fopen(inFileNames[i], "rb"))) {
             perror(inFileNames[i]);
             continue;
-        } 
-        
+        }
+
         pch = strrchr(inFileNames[i], '\\');
         params->in_filename = pch ? pch+1 : inFileNames[i];
 
@@ -707,7 +742,7 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         free(compbuf);
         free(decomp);
     }
-    
+
     return 0;
 }
 
@@ -905,7 +940,7 @@ int main( int argc, char** argv)
 
 
 #ifdef UTIL_HAS_CREATEFILELIST
-    if (recursive) {  /* at this stage, filenameTable is a list of paths, which can contain both files and directories */ 
+    if (recursive) {  /* at this stage, filenameTable is a list of paths, which can contain both files and directories */
         extendedFileList = UTIL_createFileList(inFileNames, ifnIdx, &fileNamesBuf, &fileNamesNb);
         if (extendedFileList) {
             unsigned u;

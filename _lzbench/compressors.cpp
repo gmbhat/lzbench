@@ -1810,6 +1810,105 @@ int64_t lzbench_nakamichi_decompress(char *inbuf, size_t insize, char *outbuf, s
 #endif
 
 
+#ifndef BENCH_REMOVE_FASTPFOR
+#include "fastpfor/codecfactory.h"
+// #include "fastpfor/intersection.h"
+
+// avoid polluting namespace
+#define FASTPFOR_BLOCK_SZ 128
+
+int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
+{
+    using namespace FastPForLib;
+    IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
+    size_t compressed_size = outsize / 4; // written to, but also read...
+
+    // to include the whole input, we need to round, up the number of integers
+    // since the number of bytes might not be a multiple of 4
+    // XXX: reading past end of input only okay because of padding
+    insize += (insize % 4) ? 4 - (insize % 4) : 0;
+
+    codec.encodeArray((const uint32_t*)inbuf, insize / 4,
+                      (uint32_t*)outbuf, compressed_size);
+
+    return compressed_size * 4;
+
+    // // TODO rm after debug
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+
+    // uint8_t remainder = insize % FASTPFOR_BLOCK_SZ;
+    // *(uint8_t*)outbuf = remainder;
+    // outbuf++;
+
+    // // hack so we can return the right compressed length
+    // // *(size_t*)outbuf = insize;
+    // // outbuf += sizeof(size_t);
+
+    // // write bytes in blocks of size FASTPFOR_BLOCK_SZ; note that we
+    // // divide the size by 4 since we're treating the buffers as uint32s
+    // size_t insize_even_multiple = insize - (insize % FASTPFOR_BLOCK_SZ);
+    // size_t compressed_size = outsize / 4; // written to, but also read...
+    // codec.encodeArray((const uint32_t*)inbuf, insize_even_multiple / 4,
+    //                   (uint32_t*)outbuf, compressed_size);
+    // // return compressed_size; // TODO rm
+    // // return (compressed_size * 4) + sizeof(size_t); // TODO rm
+
+    // // // TODO rm after debug
+    // // memcpy(outbuf, inbuf, insize);
+    // // return insize + sizeof(size_t);
+
+    // // write remaining bytes
+    // compressed_size *= 4; // convert from number of uint32s to bytes
+    // memcpy(outbuf + compressed_size, inbuf + insize_even_multiple, remainder);
+    // return compressed_size + remainder + 1;  // 1 is from storing remainder
+}
+
+int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*)
+{
+    using namespace FastPForLib;
+    IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
+    size_t decompressed_size = outsize / 4; // written to, but also read...
+    codec.decodeArray((const uint32_t*)inbuf, insize / 4,
+                      (uint32_t*)outbuf, decompressed_size);
+
+    return decompressed_size * 4;
+
+    // size_t orig_size = *(size_t*)inbuf;
+    // inbuf += sizeof(size_t);
+
+    // TODO rm after debug
+    // memcpy(outbuf, inbuf, insize);
+    // return orig_size;
+
+    // size_t remainder = *(uint8_t*)inbuf;
+    // inbuf++;
+
+    // using namespace FastPForLib;
+    // IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
+    // insize -= 1;  // size of remainder value
+    // insize -= remainder; // size of remainder bytes
+    // size_t decompressed_size = outsize / 4; // written to, but also read...
+    // codec.decodeArray((const uint32_t*)inbuf, insize / 4,
+    //                   (uint32_t*)outbuf, decompressed_size);
+
+    // decompressed_size *= 4; // convert from uint32s to bytes
+    // memcpy(outbuf + decompressed_size, inbuf + insize, remainder);
+    // return decompressed_size + remainder;
+
+    // // return orig_size; // TODO rm
+}
+
+int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*) {
+    return 0; // TODO
+}
+
+int64_t lzbench_simdbp128_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*) {
+    return 0; // TODO
+}
+
+#endif
+
 #ifndef BENCH_REMOVE_EXAMPLE
 #include "example_compressor/example.h"
 

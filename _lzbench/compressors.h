@@ -486,4 +486,18 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     #define lzbench_example_decompress NULL
 #endif
 
+#ifndef BENCH_REMOVE_FASTPFOR
+    int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+
+    int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_simdbp128_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+#else
+    #define lzbench_fastpfor_compress NULL
+    #define lzbench_fastpfor_decompress NULL
+
+    #define lzbench_simdbp128_compress NULL
+    #define lzbench_simdbp128_decompress NULL
+#endif
+
 #endif // LZBENCH_COMPRESSORS_H

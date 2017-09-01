@@ -49,7 +49,8 @@ endif
 
 DEFINES     += -I. -Izstd/lib -Izstd/lib/common -Ixpack/common -Ilibcsc
 DEFINES     += -DHAVE_CONFIG_H
-CODE_FLAGS  += -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion
+CODE_FLAGS  += -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -std=c++0x
+# OPT_FLAGS   ?= -fomit-frame-pointer -fstrict-aliasing -ffast-math
 OPT_FLAGS   ?= -fomit-frame-pointer -fstrict-aliasing -ffast-math
 
 
@@ -58,7 +59,7 @@ ifeq ($(BUILD_TYPE),debug)
 	OPT_FLAGS_O3 = $(OPT_FLAGS) -g
 else
 	OPT_FLAGS_O2 = $(OPT_FLAGS) -O2 -DNDEBUG
-	OPT_FLAGS_O3 = $(OPT_FLAGS) -O3 -DNDEBUG
+	OPT_FLAGS_O3 = $(OPT_FLAGS) -O3 -DNDEBUG -march=native
 endif
 
 CFLAGS = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O3) $(DEFINES)
@@ -131,6 +132,15 @@ EXAMPLE_FILES = example_compressor/example.o
 MISC_FILES = crush/crush.o shrinker/shrinker.o fastlz/fastlz.o pithy/pithy.o lzjb/lzjb2010.o wflz/wfLZ.o
 MISC_FILES += lzlib/lzlib.o blosclz/blosclz.o slz/slz.o
 
+# SIMDCOMP_FILES = simdcomp/avx512bitpacking.o simdcomp/avxbitpacking.o
+# SIMDCOMP_FILES += simdcomp/simdbitpacking.o simdcomp/simdpackedsearch.o
+# SIMDCOMP_FILES += simdcomp/simdintegratedbitpacking.o simdcomp/simdcomputil.o
+# SIMDCOMP_FILES += simdcomp/simdpackedselect.o
+
+FASTPFOR_FILES  = fastpfor/bitpacking.o fastpfor/varintdecode.o
+FASTPFOR_FILES += fastpfor/bitpackingaligned.o fastpfor/bitpackingunaligned.o
+FASTPFOR_FILES += fastpfor/horizontalbitpacking.o fastpfor/simdbitpacking.o
+FASTPFOR_FILES += fastpfor/simdunalignedbitpacking.o fastpfor/streamvbyte.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
@@ -222,13 +232,13 @@ pithy/pithy.o: pithy/pithy.cpp
 	$(CXX) $(CFLAGS_O2) $< -c -o $@
 
 lzsse/lzsse2/lzsse2.o: lzsse/lzsse2/lzsse2.cpp
-	$(CXX) $(CFLAGS) -std=c++0x -msse4.1 $< -c -o $@
+	$(CXX) $(CFLAGS) -msse4.1 $< -c -o $@
 
 lzsse/lzsse4/lzsse4.o: lzsse/lzsse4/lzsse4.cpp
-	$(CXX) $(CFLAGS) -std=c++0x -msse4.1 $< -c -o $@
+	$(CXX) $(CFLAGS) -msse4.1 $< -c -o $@
 
 lzsse/lzsse8/lzsse8.o: lzsse/lzsse8/lzsse8.cpp
-	$(CXX) $(CFLAGS) -std=c++0x -msse4.1 $< -c -o $@
+	$(CXX) $(CFLAGS) -msse4.1 $< -c -o $@
 
 nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c
 	$(CC) $(CFLAGS) -mavx $< -c -o $@
@@ -236,7 +246,14 @@ nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c
 
 _lzbench/lzbench.o: _lzbench/lzbench.cpp _lzbench/lzbench.h
 
-lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) $(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) $(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) $(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) $(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) $(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) $(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
+lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
+		$(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) 		\
+		$(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) 		\
+		$(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) 			\
+		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) 		\
+		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
+		$(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(FASTPFOR_FILES) 				\
+		$(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	@echo Linked GCC_VERSION=$(GCC_VERSION) CLANG_VERSION=$(CLANG_VERSION) COMPILER=$(COMPILER)
 
