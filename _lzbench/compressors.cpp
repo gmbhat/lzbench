@@ -23,20 +23,20 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 }
 
 
-#ifndef BENCH_REMOVE_BLOSCLZ
-#include "blosclz/blosclz.h"
+// #ifndef BENCH_REMOVE_BLOSCLZ
+// #include "blosclz/blosclz.h"
 
-int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
-{
-    return blosclz_compress(level, inbuf, insize, outbuf, outsize, 1);
-}
+// int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
+// {
+//     return blosclz_compress(level, inbuf, insize, outbuf, outsize, 1);
+// }
 
-int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t , size_t, char*)
-{
-    return blosclz_decompress(inbuf, insize, outbuf, outsize);
-}
+// int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t , size_t, char*)
+// {
+//     return blosclz_decompress(inbuf, insize, outbuf, outsize);
+// }
 
-#endif
+// #endif
 
 
 #ifndef BENCH_REMOVE_BRIEFLZ
@@ -1817,10 +1817,11 @@ int64_t lzbench_nakamichi_decompress(char *inbuf, size_t insize, char *outbuf, s
 // avoid polluting namespace
 #define FASTPFOR_BLOCK_SZ 128
 
-int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
+int64_t fastpfor_compress_with_codec(const char* codecname, char *inbuf,
+    size_t insize, char *outbuf, size_t outsize)
 {
     using namespace FastPForLib;
-    IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
+    IntegerCODEC& codec = *CODECFactory::getFromName(codecname);
     size_t compressed_size = outsize / 4; // written to, but also read...
 
     // to include the whole input, we need to round, up the number of integers
@@ -1830,81 +1831,59 @@ int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size
 
     codec.encodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, compressed_size);
-
     return compressed_size * 4;
-
-    // // TODO rm after debug
-    // memcpy(outbuf, inbuf, insize);
-    // return insize;
-
-    // uint8_t remainder = insize % FASTPFOR_BLOCK_SZ;
-    // *(uint8_t*)outbuf = remainder;
-    // outbuf++;
-
-    // // hack so we can return the right compressed length
-    // // *(size_t*)outbuf = insize;
-    // // outbuf += sizeof(size_t);
-
-    // // write bytes in blocks of size FASTPFOR_BLOCK_SZ; note that we
-    // // divide the size by 4 since we're treating the buffers as uint32s
-    // size_t insize_even_multiple = insize - (insize % FASTPFOR_BLOCK_SZ);
-    // size_t compressed_size = outsize / 4; // written to, but also read...
-    // codec.encodeArray((const uint32_t*)inbuf, insize_even_multiple / 4,
-    //                   (uint32_t*)outbuf, compressed_size);
-    // // return compressed_size; // TODO rm
-    // // return (compressed_size * 4) + sizeof(size_t); // TODO rm
-
-    // // // TODO rm after debug
-    // // memcpy(outbuf, inbuf, insize);
-    // // return insize + sizeof(size_t);
-
-    // // write remaining bytes
-    // compressed_size *= 4; // convert from number of uint32s to bytes
-    // memcpy(outbuf + compressed_size, inbuf + insize_even_multiple, remainder);
-    // return compressed_size + remainder + 1;  // 1 is from storing remainder
 }
 
-int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*)
+int64_t fastpfor_decompress_with_codec(const char* codecname, char *inbuf,
+    size_t insize, char *outbuf, size_t outsize)
 {
     using namespace FastPForLib;
-    IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
+    IntegerCODEC& codec = *CODECFactory::getFromName(codecname);
     size_t decompressed_size = outsize / 4; // written to, but also read...
     codec.decodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, decompressed_size);
-
     return decompressed_size * 4;
-
-    // size_t orig_size = *(size_t*)inbuf;
-    // inbuf += sizeof(size_t);
-
-    // TODO rm after debug
-    // memcpy(outbuf, inbuf, insize);
-    // return orig_size;
-
-    // size_t remainder = *(uint8_t*)inbuf;
-    // inbuf++;
-
-    // using namespace FastPForLib;
-    // IntegerCODEC& codec = *CODECFactory::getFromName("simdfastpfor256");
-    // insize -= 1;  // size of remainder value
-    // insize -= remainder; // size of remainder bytes
-    // size_t decompressed_size = outsize / 4; // written to, but also read...
-    // codec.decodeArray((const uint32_t*)inbuf, insize / 4,
-    //                   (uint32_t*)outbuf, decompressed_size);
-
-    // decompressed_size *= 4; // convert from uint32s to bytes
-    // memcpy(outbuf + decompressed_size, inbuf + insize, remainder);
-    // return decompressed_size + remainder;
-
-    // // return orig_size; // TODO rm
 }
+
+
+#define FASTPFOR_FUNC(NAME, CODEC_NAME)                                     \
+int64_t lzbench_ ## NAME ## _compress(char *inbuf, size_t insize,           \
+    char *outbuf, size_t outsize, size_t level, size_t, char*) {            \
+    return fastpfor_compress_with_codec(CODEC_NAME, inbuf, insize,          \
+                                        outbuf, outsize);                   \
+}                                                                           \
+int64_t lzbench_ ## NAME ## _decompress(char *inbuf, size_t insize,        \
+    char *outbuf, size_t outsize, size_t, size_t, char*) {                  \
+    return fastpfor_decompress_with_codec(CODEC_NAME, inbuf, insize,        \
+                                          outbuf, outsize);                 \
+}
+
+FASTPFOR_FUNC(fastpfor, "simdfastpfor256");
+FASTPFOR_FUNC(binarypacking, "simdbinarypacking");
+FASTPFOR_FUNC(optpfor, "simdoptpfor");
+FASTPFOR_FUNC(varintg8iu, "varintg8iu");
+FASTPFOR_FUNC(simple8b, "simple8b");
+FASTPFOR_FUNC(simdgroupsimple, "simdgroupsimple");
+
+// int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
+// {
+//     return fastpfor_compress_with_codec("simdfastpfor256", inbuf, insize,
+//                                         outbuf, outsize);
+// }
+
+// int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*)
+// {
+//     return fastpfor_decompress_with_codec("simdfastpfor256", inbuf, insize,
+//                                           outbuf, outsize);
+// }
 
 int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*) {
     return 0; // TODO
 }
 
 int64_t lzbench_simdbp128_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*) {
-    return 0; // TODO
+    return fastpfor_decompress_with_codec("simdfastpfor256", inbuf, insize,
+                                      outbuf, outsize);
 }
 
 #endif
@@ -1921,5 +1900,54 @@ int64_t lzbench_example_decompress(char *inbuf, size_t insize, char *outbuf, siz
 {
     return example_decompress(inbuf, insize, outbuf, outsize);
 }
+
+
+#ifndef BENCH_REMOVE_BLOSC
+#include "blosc/blosc.h"
+#include "blosc/blosclz.h"
+
+// ------------------------ blosclz
+int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return blosclz_compress(level, inbuf, insize, outbuf, outsize, 1);
+}
+int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t , size_t, char*)
+{
+    return blosclz_decompress(inbuf, insize, outbuf, outsize);
+}
+
+// ------------------------ shuffling
+int64_t lzbench_blosc_bitshuf_compress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t level, size_t, char*)
+{
+    return blosc_compress_ctx(level, BLOSC_BITSHUFFLE, 1, insize, inbuf,
+                              outbuf, outsize, "blosclz", 0, 1);
+}
+int64_t lzbench_blosc_bitshuf_decompress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t, size_t, char*)
+{
+    return blosc_decompress_ctx(inbuf, outbuf, outsize, 1);
+}
+
+int64_t lzbench_blosc_byteshuf_compress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t level, size_t, char*)
+{
+    // what these arguments mean (see blosc.h for details):
+// int blosc_compress_ctx(int clevel, int doshuffle, size_t typesize,
+//                        size_t nbytes, const void* src, void* dest,
+//                        size_t destsize, const char* compressor,
+//                        size_t blocksize, int numinternalthreads);
+    return blosc_compress_ctx(level, BLOSC_SHUFFLE, 1, insize, inbuf,
+                              outbuf, outsize, "blosclz", 0, 1);
+}
+int64_t lzbench_blosc_byteshuf_decompress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t, size_t, char*)
+{
+    return blosc_decompress_ctx(inbuf, outbuf, outsize, 1);
+}
+
+#endif
 
 #endif

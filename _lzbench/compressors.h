@@ -9,13 +9,13 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 
 
 
-#ifndef BENCH_REMOVE_BLOSCLZ
-	int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
-	int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
-#else
-	#define lzbench_blosclz_compress NULL
-	#define lzbench_blosclz_decompress NULL
-#endif
+// #ifndef BENCH_REMOVE_BLOSCLZ
+// 	int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+// 	int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+// #else
+// 	#define lzbench_blosclz_compress NULL
+// 	#define lzbench_blosclz_decompress NULL
+// #endif
 
 
 #ifndef BENCH_REMOVE_BRIEFLZ
@@ -487,11 +487,24 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 #endif
 
 #ifndef BENCH_REMOVE_FASTPFOR
-    int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
-    int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
 
-    int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
-    int64_t lzbench_simdbp128_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+    #define DECLARE_FASTPFOR_FUNC(NAME)                                     \
+        int64_t lzbench_ ## NAME ## _compress(char *inbuf, size_t insize,       \
+            char *outbuf, size_t outsize, size_t level, size_t, char*);     \
+        int64_t lzbench_ ## NAME ## _decompress(char *inbuf, size_t insize,     \
+            char *outbuf, size_t outsize, size_t, size_t, char*);           \
+
+    DECLARE_FASTPFOR_FUNC(fastpfor)
+    DECLARE_FASTPFOR_FUNC(binarypacking)
+    DECLARE_FASTPFOR_FUNC(optpfor)
+    DECLARE_FASTPFOR_FUNC(varintg8iu)
+    DECLARE_FASTPFOR_FUNC(simple8b)
+    DECLARE_FASTPFOR_FUNC(simdgroupsimple)
+    // int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+    // int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+
+    // int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
+    // int64_t lzbench_simdbp128_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
 #else
     #define lzbench_fastpfor_compress NULL
     #define lzbench_fastpfor_decompress NULL
@@ -499,5 +512,29 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     #define lzbench_simdbp128_compress NULL
     #define lzbench_simdbp128_decompress NULL
 #endif
+
+#ifndef BENCH_REMOVE_BLOSC
+ int64_t lzbench_blosclz_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*);
+ int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*);
+
+ int64_t lzbench_blosc_bitshuf_compress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t level, size_t, char*);
+ int64_t lzbench_blosc_bitshuf_decompress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t, size_t, char*);
+
+ int64_t lzbench_blosc_byteshuf_compress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t level, size_t, char*);
+ int64_t lzbench_blosc_byteshuf_decompress(char *inbuf, size_t insize,
+    char *outbuf, size_t outsize, size_t, size_t, char*);
+
+#else
+ #define lzbench_blosclz_compress NULL
+ #define lzbench_blosclz_decompress NULL
+#endif
+
+
+
 
 #endif // LZBENCH_COMPRESSORS_H

@@ -130,7 +130,7 @@ LIBDEFLATE_FILES += libdeflate/x86_cpu_features.o libdeflate/zlib_compress.o lib
 EXAMPLE_FILES = example_compressor/example.o
 
 MISC_FILES = crush/crush.o shrinker/shrinker.o fastlz/fastlz.o pithy/pithy.o lzjb/lzjb2010.o wflz/wfLZ.o
-MISC_FILES += lzlib/lzlib.o blosclz/blosclz.o slz/slz.o
+MISC_FILES += lzlib/lzlib.o slz/slz.o
 
 # SIMDCOMP_FILES = simdcomp/avx512bitpacking.o simdcomp/avxbitpacking.o
 # SIMDCOMP_FILES += simdcomp/simdbitpacking.o simdcomp/simdpackedsearch.o
@@ -141,6 +141,10 @@ FASTPFOR_FILES  = fastpfor/bitpacking.o fastpfor/varintdecode.o
 FASTPFOR_FILES += fastpfor/bitpackingaligned.o fastpfor/bitpackingunaligned.o
 FASTPFOR_FILES += fastpfor/horizontalbitpacking.o fastpfor/simdbitpacking.o
 FASTPFOR_FILES += fastpfor/simdunalignedbitpacking.o fastpfor/streamvbyte.o
+
+BLOSC_FILES  = blosc/bitshuffle-avx2.o blosc/bitshuffle-generic.o
+BLOSC_FILES += blosc/shuffle-avx2.o blosc/shuffle-generic.o blosc/bitshuffle-sse2.o
+BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
@@ -253,6 +257,7 @@ lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
 		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) 		\
 		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
 		$(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(FASTPFOR_FILES) 				\
+		$(BLOSC_FILES)														\
 		$(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	@echo Linked GCC_VERSION=$(GCC_VERSION) CLANG_VERSION=$(CLANG_VERSION) COMPILER=$(COMPILER)
