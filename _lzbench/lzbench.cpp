@@ -36,13 +36,6 @@ int istrcmp(const char *str1, const char *str2)
     }
 }
 
-// char* align_ptr(const void* ptr) {
-//     uint64_t p = reinterpret_cast<uint64_t>(ptr);
-//     uint64_t remainder = p % MAX_ALIGN_BYTES;
-//     p += remainder ? MAX_ALIGN_BYTES - p : 0;
-//     return reinterpret_cast<char*>(p);
-// }
-
 void format(std::string& s,const char* formatstring, ...)
 {
    char buff[1024];
@@ -281,8 +274,8 @@ void aligned_free(void* aligned_ptr) {
 
 uint8_t* alloc_data_buffer(size_t size) {
     void* buf;
-    if (MAX_ALIGN_BYTES > 1) {
-        buf = aligned_alloc(MAX_ALIGN_BYTES, size, true);
+    if (ALIGN_BYTES > 1) {
+        buf = aligned_alloc(ALIGN_BYTES, size, true);
     } else {
         buf = calloc(1, size);
     }
@@ -294,26 +287,11 @@ uint8_t* alloc_data_buffer(size_t size) {
 }
 
 void free_data_buffer(void* ptr) {
-    if (MAX_ALIGN_BYTES > 1) {
+    if (ALIGN_BYTES > 1) {
         aligned_free(ptr);
     } else {
         free(ptr);
     }
-}
-
-// TODO rm this func
-/*
- * Allocate a buffer of size bytes using malloc (or equivalent call returning a buffer
- * that can be passed to free). Touches each page so that the each page is actually
- * physically allocated and mapped into the process.
- */
-void *alloc_and_touch(size_t size, bool must_zero) {
-    void *buf = must_zero ? calloc(1, size) : malloc(size);
-	volatile char zero = 0;
-	for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
-		static_cast<char * volatile>(buf)[i] = zero;
-	}
-	return buf;
 }
 
 
@@ -336,9 +314,6 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         if (outpart > outsize) outpart = outsize;
 
         clen = compress((char*)inbuf, part, (char*)outbuf, outpart, param1, param2, workmem);
-        // char* inptr = align_ptr(inbuf);
-        // char* outptr = align_ptr(outbuf);
-        // clen = compress(inptr, part, outptr, outpart, param1, param2, workmem);
         LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n", (int)part, (int)clen, (int)(inbuf-start));
 
         if (clen <= 0 || clen == part)
@@ -350,8 +325,6 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
         inbuf += part;
         outbuf += clen;
-        // inbuf = reinterpret_cast<uint8_t*>(inptr + part);
-        // outbuf = reinterpret_cast<uint8_t*>(outptr + clen);
         outsize -= clen;
         compr_sizes[i] = clen;
         sum += clen;
@@ -369,9 +342,6 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     size_t part, sum = 0;
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
-
-    // char* inptr = reinterpret_cast<char*>(inbuf);
-    // char* outptr = reinterpret_cast<char*>(outbuf);
 
     LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", chunk_sizes.size());
     for (int i = 0; i < chunk_sizes.size(); i++) {
@@ -400,8 +370,6 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
 
         inbuf += part;
         outbuf += dlen;
-        // inbuf = reinterpret_cast<uint8_t*>(inptr + part);
-        // outbuf = reinterpret_cast<uint8_t*>(outptr + dlen);
         sum += dlen;
     }
 
@@ -437,9 +405,6 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         size_t part = MIN(100*1024, chunk_size);
         GetTime(start_ticks);
         int64_t clen = desc->compress((char*)inbuf, part, (char*)compbuf, comprsize, param1, param2, workmem);
-        // char* inptr = align_ptr(inbuf);
-        // char* compptr = align_ptr(compbuf);
-        // int64_t clen = desc->compress(inptr, part, compptr, comprsize, param1, param2, workmem);
         GetTime(end_ticks);
         nanosec = GetDiffTime(rate, start_ticks, end_ticks)/1000;
         if (clen>0 && nanosec>=1000)
@@ -632,20 +597,15 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
     FILE* in;
     const char* pch;
 
-    // totalsize = UTIL_getTotalFileSize(inFileNames, ifnIdx, MAX_ALIGN_BYTES);
     totalsize = UTIL_getTotalFileSize(inFileNames, ifnIdx);
     if (totalsize == 0) {
         printf("Could not find input files\n");
         return 1;
     }
 
-    // comprsize = GET_COMPRESS_BOUND(totalsize);
-    // inbuf = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, false);
-    // compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
-    // decomp = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, true);
-    size_t inbuf_size = totalsize + PAD_SIZE + (MAX_ALIGN_BYTES * ifnIdx);
+    size_t inbuf_size = totalsize + PAD_SIZE + (ALIGN_BYTES * ifnIdx);
     size_t outbuf_size = inbuf_size;
-    comprsize = GET_COMPRESS_BOUND(totalsize) + (MAX_ALIGN_BYTES * ifnIdx);
+    comprsize = GET_COMPRESS_BOUND(totalsize) + (ALIGN_BYTES * ifnIdx);
     inbuf = alloc_data_buffer(inbuf_size);
     compbuf = alloc_data_buffer(inbuf_size);
     decomp = alloc_data_buffer(outbuf_size);
@@ -674,25 +634,17 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         fseeko(in, 0L, SEEK_END);
         insize = ftello(in);
         rewind(in);
-
-        // this check breaks when MAX_ALIGN_BYTES > 1
-        // if (inpos + insize > totalsize) { printf("inpos + insize > totalsize\n"); goto _clean; };
-
         insize = fread(inbuf+inpos, 1, insize, in);
 
-        // force even multiple of MAX_ALIGN_BYTES so start of next file
+        // force even multiple of ALIGN_BYTES so start of next file
         // will be aligned properly
-        printf("orig insize: %lld\n", insize);
-        size_t remainder = insize % MAX_ALIGN_BYTES;
-        insize += remainder ? MAX_ALIGN_BYTES - remainder : 0;
-        printf("new insize: %lld\n", insize);
+        size_t remainder = insize % ALIGN_BYTES;
+        insize += remainder ? ALIGN_BYTES - remainder : 0;
 
         file_sizes.push_back(insize);
         inpos += insize;
         fclose(in);
     }
-    // std::cout << "total size: " << totalsize << "\n";
-    printf("totalsize: %lld\n", insize);
 
     if (file_sizes.size() == 0)
         goto _clean;
@@ -703,11 +655,6 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
     LZBENCH_PRINT(5, "totalsize=%d inpos=%d\n", (int)totalsize, (int)inpos);
     totalsize = inpos;
 
-    // aligned_totalsize = totalsize;
-    // for (int i = 0; i < ifnIdx; i++) {
-    //     size_t remainder = (file_sizes[i] % MAX_ALIGN_BYTES);
-    //     aligned_totalsize += remainder ? MAX_ALIGN_BYTES - remainder : 0;
-    // }
 
     {
         std::vector<size_t> single_file;
@@ -725,9 +672,6 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
     lzbench_test_with_params(params, file_sizes, encoder_list?encoder_list:alias_desc[0].params, inbuf, totalsize, compbuf, comprsize, decomp, rate);
 
 _clean:
-    // free(inbuf);
-    // free(compbuf);
-    // free(decomp);
     free_data_buffer(inbuf);
     free_data_buffer(compbuf);
     free_data_buffer(decomp);
@@ -771,17 +715,8 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         else
             insize = real_insize;
 
-     //    comprsize = GET_COMPRESS_BOUND(insize);
-    	// // printf("insize=%llu comprsize=%llu %llu\n", insize, comprsize, MAX(MEMCPY_BUFFER_SIZE, insize));
-     //    inbuf = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, false);
-     //    compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
-     //    decomp = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, true);
-
-        comprsize = GET_COMPRESS_BOUND(insize) + MAX_ALIGN_BYTES;
-        // inbuf = (uint8_t*)alloc_and_touch(inbuf_size, true);
-        // compbuf = (uint8_t*)alloc_and_touch(comprsize, true);
-        // decomp = (uint8_t*)alloc_and_touch(outbuf_size, true);
-        size_t inbuf_size = insize + PAD_SIZE + MAX_ALIGN_BYTES;
+        comprsize = GET_COMPRESS_BOUND(insize) + ALIGN_BYTES;
+        size_t inbuf_size = insize + PAD_SIZE + ALIGN_BYTES;
         size_t outbuf_size = inbuf_size;
         inbuf = alloc_data_buffer(inbuf_size);
         compbuf = alloc_data_buffer(comprsize);
@@ -844,9 +779,6 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         }
 
         fclose(in);
-        // free(inbuf);
-        // free(compbuf);
-        // free(decomp);
         free_data_buffer(inbuf);
         free_data_buffer(compbuf);
         free_data_buffer(decomp);

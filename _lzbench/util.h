@@ -246,14 +246,9 @@ UTIL_STATIC U64 UTIL_getFileSize(const char* infilename)
 UTIL_STATIC U64 UTIL_getTotalFileSize(const char** fileNamesTable, unsigned nbFiles)
 {
     U64 total = 0;
-    // size_t fsize, remainder;
     unsigned n;
     for (n=0; n<nbFiles; n++)
         total += UTIL_getFileSize(fileNamesTable[n]);
-        // fsize = UTIL_getFileSize(fileNamesTable[n]);
-        // total += fsize;
-        // remainder = alignment ? (fsize % alignment) : 0;
-        // total += remainder ? alignment - remainder : 0;
     return total;
 }
 
