@@ -12,6 +12,8 @@
 #define PROGNAME "lzbench"
 #define PROGVERSION "1.7.1"
 #define PAD_SIZE (16*1024)
+// #define MAX_ALIGN_BYTES 1  // input and output buffs aligned to this many bytes
+#define MAX_ALIGN_BYTES 32  // input and output buffs aligned to this many bytes
 #define MIN_PAGE_SIZE 4096  // smallest page size we expect, if it's wrong the first algorithm might be a bit slower
 #define DEFAULT_LOOP_TIME (100*1000000)  // 1/10 of a second
 #define GET_COMPRESS_BOUND(insize) (insize + insize/6 + PAD_SIZE)  // for pithy
@@ -139,7 +141,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 75
+#define LZBENCH_COMPRESSOR_COUNT 77
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -218,9 +220,11 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     FASTPFOR_ENTRY("varintg8iu", varintg8iu),
     FASTPFOR_ENTRY("simple8b", simple8b),
     FASTPFOR_ENTRY("simdgroupsimple", simdgroupsimple),
-    { "blosclz",        "1.12.1",  1,   9,    0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,        NULL,            NULL },
-    { "blosc_bitshuf",  "1.12.1",  1,   9,    0,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,  NULL,            NULL },
-    { "blosc_byteshuf", "1.12.1",  1,   9,    0,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress, NULL,            NULL },
+    { "blosclz",        "1.12.1",   1,   9,    0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,        NULL,            NULL },
+    { "blosc_bitshuf8",  "1.12.1",  1,   9,    1,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,  NULL,            NULL },
+    { "blosc_byteshuf8", "1.12.1",  1,   9,    1,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress, NULL,            NULL },
+    { "blosc_bitshuf16",  "1.12.1", 1,   9,    2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,  NULL,            NULL },
+    { "blosc_byteshuf16", "1.12.1", 1,   9,    2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress, NULL,            NULL },
 };
 
 #undef FASTPFOR_ENTRY

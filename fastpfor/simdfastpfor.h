@@ -166,7 +166,6 @@ public:
       size_t thisnvalue(0);
       size_t thissize = static_cast<size_t>(
           finalout > PageSize + out ? PageSize : (finalout - out));
-
       __decodeArray(in, thisnvalue, out, thissize);
       in += thisnvalue;
       out += thissize;
@@ -305,6 +304,7 @@ public:
     const uint8_t *bytep = reinterpret_cast<const uint8_t *>(inexcept);
     inexcept += (bytesize + sizeof(uint32_t) - 1) / sizeof(uint32_t);
     const uint32_t bitmap = *(inexcept++);
+    // std::cout << "about to unpackmesimd()\n";
     for (uint32_t k = 2; k <= 32; ++k) {
       if ((bitmap & (1U << (k - 1))) != 0) {
         inexcept = unpackmesimd(inexcept, datatobepacked[k], k);
@@ -316,13 +316,17 @@ public:
     for (uint32_t k = 1; k <= 32; ++k) {
       unpackpointers[k] = datatobepacked[k].begin();
     }
+    // std::cout << "about to padTo128bits(in)\n";
     in = padTo128bits(in);
+    // std::cout << "needPaddingTo128Bits(out)? " << needPaddingTo128Bits(out) << "\n";
     assert(!needPaddingTo128Bits(out));
     for (uint32_t run = 0; run < nvalue / BlockSize; ++run, out += BlockSize) {
       const uint8_t b = *bytep++;
       const uint8_t cexcept = *bytep++;
+      // std::cout << "about to unpackblocksimd(in, out, b)\n";
       in = unpackblocksimd(in, out, b);
       if (cexcept > 0) {
+        // std::cout << "about to unpack exceptions\n";
         const uint8_t maxbits = *bytep++;
         if (maxbits - b == 1) {
           for (uint32_t k = 0; k < cexcept; ++k) {

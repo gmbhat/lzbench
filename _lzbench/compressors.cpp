@@ -1812,7 +1812,6 @@ int64_t lzbench_nakamichi_decompress(char *inbuf, size_t insize, char *outbuf, s
 
 #ifndef BENCH_REMOVE_FASTPFOR
 #include "fastpfor/codecfactory.h"
-// #include "fastpfor/intersection.h"
 
 // avoid polluting namespace
 #define FASTPFOR_BLOCK_SZ 128
@@ -1824,10 +1823,13 @@ int64_t fastpfor_compress_with_codec(const char* codecname, char *inbuf,
     IntegerCODEC& codec = *CODECFactory::getFromName(codecname);
     size_t compressed_size = outsize / 4; // written to, but also read...
 
-    // to include the whole input, we need to round, up the number of integers
+    // to include the whole input, we need to round up the number of integers
     // since the number of bytes might not be a multiple of 4
     // XXX: reading past end of input only okay because of padding
     insize += (insize % 4) ? 4 - (insize % 4) : 0;
+
+    // std::cout << "inbuf ptr trailing bits: " << ((uint64_t)inbuf & 0xFF) << "\n";
+    // std::cout << "outbuf ptr trailing bits: " << ((uint64_t)outbuf & 0xFF) << "\n";
 
     codec.encodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, compressed_size);
@@ -1840,8 +1842,14 @@ int64_t fastpfor_decompress_with_codec(const char* codecname, char *inbuf,
     using namespace FastPForLib;
     IntegerCODEC& codec = *CODECFactory::getFromName(codecname);
     size_t decompressed_size = outsize / 4; // written to, but also read...
+
+    // std::cout << "about to call fastpfor decompress func\n";
+    // std::cout << "inbuf ptr trailing bits: " << ((uint64_t)inbuf & 0xFF) << "\n";
+    // std::cout << "outbuf ptr trailing bits: " << ((uint64_t)outbuf & 0xFF) << "\n";
+
     codec.decodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, decompressed_size);
+    // std::cout << "called fastpfor decompress func\n";
     return decompressed_size * 4;
 }
 
@@ -1852,7 +1860,7 @@ int64_t lzbench_ ## NAME ## _compress(char *inbuf, size_t insize,           \
     return fastpfor_compress_with_codec(CODEC_NAME, inbuf, insize,          \
                                         outbuf, outsize);                   \
 }                                                                           \
-int64_t lzbench_ ## NAME ## _decompress(char *inbuf, size_t insize,        \
+int64_t lzbench_ ## NAME ## _decompress(char *inbuf, size_t insize,         \
     char *outbuf, size_t outsize, size_t, size_t, char*) {                  \
     return fastpfor_decompress_with_codec(CODEC_NAME, inbuf, insize,        \
                                           outbuf, outsize);                 \
@@ -1920,9 +1928,9 @@ int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf,
 
 // ------------------------ shuffling
 int64_t lzbench_blosc_bitshuf_compress(char *inbuf, size_t insize,
-    char *outbuf, size_t outsize, size_t level, size_t, char*)
+    char *outbuf, size_t outsize, size_t level, size_t elem_sz, char*)
 {
-    return blosc_compress_ctx(level, BLOSC_BITSHUFFLE, 1, insize, inbuf,
+    return blosc_compress_ctx(level, BLOSC_BITSHUFFLE, elem_sz, insize, inbuf,
                               outbuf, outsize, "blosclz", 0, 1);
 }
 int64_t lzbench_blosc_bitshuf_decompress(char *inbuf, size_t insize,
@@ -1932,14 +1940,14 @@ int64_t lzbench_blosc_bitshuf_decompress(char *inbuf, size_t insize,
 }
 
 int64_t lzbench_blosc_byteshuf_compress(char *inbuf, size_t insize,
-    char *outbuf, size_t outsize, size_t level, size_t, char*)
+    char *outbuf, size_t outsize, size_t level, size_t elem_sz, char*)
 {
     // what these arguments mean (see blosc.h for details):
 // int blosc_compress_ctx(int clevel, int doshuffle, size_t typesize,
 //                        size_t nbytes, const void* src, void* dest,
 //                        size_t destsize, const char* compressor,
 //                        size_t blocksize, int numinternalthreads);
-    return blosc_compress_ctx(level, BLOSC_SHUFFLE, 1, insize, inbuf,
+    return blosc_compress_ctx(level, BLOSC_SHUFFLE, elem_sz, insize, inbuf,
                               outbuf, outsize, "blosclz", 0, 1);
 }
 int64_t lzbench_blosc_byteshuf_decompress(char *inbuf, size_t insize,

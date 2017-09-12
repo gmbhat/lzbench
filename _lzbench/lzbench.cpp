@@ -36,6 +36,12 @@ int istrcmp(const char *str1, const char *str2)
     }
 }
 
+// char* align_ptr(const void* ptr) {
+//     uint64_t p = reinterpret_cast<uint64_t>(ptr);
+//     uint64_t remainder = p % MAX_ALIGN_BYTES;
+//     p += remainder ? MAX_ALIGN_BYTES - p : 0;
+//     return reinterpret_cast<char*>(p);
+// }
 
 void format(std::string& s,const char* formatstring, ...)
 {
@@ -235,6 +241,11 @@ size_t common(uint8_t *p1, uint8_t *p2)
 }
 
 
+// size_t round_up_to_multiple_of(size_t x, size_t multipleof) {
+//     size_t remainder = x % multipleof;
+//     return remainder ? (multipleof - remainder) : x;
+// }
+
 /* Allocate aligned memory in a portable way.
  *
  * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
@@ -268,7 +279,29 @@ void aligned_free(void* aligned_ptr) {
     free(((char*)aligned_ptr) - offset);
 }
 
+uint8_t* alloc_data_buffer(size_t size) {
+    void* buf;
+    if (MAX_ALIGN_BYTES > 1) {
+        buf = aligned_alloc(MAX_ALIGN_BYTES, size, true);
+    } else {
+        buf = calloc(1, size);
+    }
+    volatile char zero = 0;
+    for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
+        static_cast<char * volatile>(buf)[i] = zero;
+    }
+    return reinterpret_cast<uint8_t*>(buf);
+}
 
+void free_data_buffer(void* ptr) {
+    if (MAX_ALIGN_BYTES > 1) {
+        aligned_free(ptr);
+    } else {
+        free(ptr);
+    }
+}
+
+// TODO rm this func
 /*
  * Allocate a buffer of size bytes using malloc (or equivalent call returning a buffer
  * that can be passed to free). Touches each page so that the each page is actually
@@ -284,7 +317,10 @@ void *alloc_and_touch(size_t size, bool must_zero) {
 }
 
 
-inline int64_t lzbench_compress(lzbench_params_t *params, std::vector<size_t>& chunk_sizes, compress_func compress, std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf, size_t outsize, size_t param1, size_t param2, char* workmem)
+inline int64_t lzbench_compress(lzbench_params_t *params,
+    std::vector<size_t>& chunk_sizes, compress_func compress,
+    std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf,
+    size_t outsize, size_t param1, size_t param2, char* workmem)
 {
     int64_t clen;
     size_t outpart, part, sum = 0;
@@ -300,6 +336,9 @@ inline int64_t lzbench_compress(lzbench_params_t *params, std::vector<size_t>& c
         if (outpart > outsize) outpart = outsize;
 
         clen = compress((char*)inbuf, part, (char*)outbuf, outpart, param1, param2, workmem);
+        // char* inptr = align_ptr(inbuf);
+        // char* outptr = align_ptr(outbuf);
+        // clen = compress(inptr, part, outptr, outpart, param1, param2, workmem);
         LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n", (int)part, (int)clen, (int)(inbuf-start));
 
         if (clen <= 0 || clen == part)
@@ -311,6 +350,8 @@ inline int64_t lzbench_compress(lzbench_params_t *params, std::vector<size_t>& c
 
         inbuf += part;
         outbuf += clen;
+        // inbuf = reinterpret_cast<uint8_t*>(inptr + part);
+        // outbuf = reinterpret_cast<uint8_t*>(outptr + clen);
         outsize -= clen;
         compr_sizes[i] = clen;
         sum += clen;
@@ -319,13 +360,24 @@ inline int64_t lzbench_compress(lzbench_params_t *params, std::vector<size_t>& c
 }
 
 
-inline int64_t lzbench_decompress(lzbench_params_t *params, std::vector<size_t>& chunk_sizes, compress_func decompress, std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf, size_t param1, size_t param2, char* workmem)
+inline int64_t lzbench_decompress(lzbench_params_t *params,
+    std::vector<size_t>& chunk_sizes, compress_func decompress,
+    std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf,
+    size_t param1, size_t param2, char* workmem)
 {
     int64_t dlen;
     size_t part, sum = 0;
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
 
+    // char* inptr = reinterpret_cast<char*>(inbuf);
+    // char* outptr = reinterpret_cast<char*>(outbuf);
+
+    LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", chunk_sizes.size());
+    for (int i = 0; i < chunk_sizes.size(); i++) {
+        LZBENCH_PRINT(9, "Chunk %d: orig size, compressed size = %lld, %lld\n",
+            i, chunk_sizes[i], compr_sizes[i]);
+    }
     for (int i=0; i<cscount; i++)
     {
         part = compr_sizes[i];
@@ -336,13 +388,20 @@ inline int64_t lzbench_decompress(lzbench_params_t *params, std::vector<size_t>&
         }
         else
         {
+            LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
             dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
+            // inptr = align_ptr(inbuf);
+            // outptr = align_ptr(outbuf);
+            // dlen = decompress(inptr, part, outptr, chunk_sizes[i], param1, param2, workmem);
         }
-        LZBENCH_PRINT(9, "DEC part=%d dlen=%d out=%d\n", (int)part, (int)dlen, (int)(outbuf - outstart));
+        LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",
+            i, (int)part, (int)dlen, (int)(outbuf - outstart));
         if (dlen <= 0) return dlen;
 
         inbuf += part;
         outbuf += dlen;
+        // inbuf = reinterpret_cast<uint8_t*>(inptr + part);
+        // outbuf = reinterpret_cast<uint8_t*>(outptr + dlen);
         sum += dlen;
     }
 
@@ -350,7 +409,10 @@ inline int64_t lzbench_decompress(lzbench_params_t *params, std::vector<size_t>&
 }
 
 
-void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, const compressor_desc_t* desc, int level, uint8_t *inbuf, size_t insize, uint8_t *compbuf, size_t comprsize, uint8_t *decomp, bench_rate_t rate, size_t param1)
+void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
+    const compressor_desc_t* desc, int level, uint8_t *inbuf, size_t insize,
+    uint8_t *compbuf, size_t comprsize, uint8_t *decomp, bench_rate_t rate,
+    size_t param1)
 {
     float speed;
     int i, total_c_iters, total_d_iters;
@@ -375,6 +437,9 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
         size_t part = MIN(100*1024, chunk_size);
         GetTime(start_ticks);
         int64_t clen = desc->compress((char*)inbuf, part, (char*)compbuf, comprsize, param1, param2, workmem);
+        // char* inptr = align_ptr(inbuf);
+        // char* compptr = align_ptr(compbuf);
+        // int64_t clen = desc->compress(inptr, part, compptr, comprsize, param1, param2, workmem);
         GetTime(end_ticks);
         nanosec = GetDiffTime(rate, start_ticks, end_ticks)/1000;
         if (clen>0 && nanosec>=1000)
@@ -393,7 +458,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
         }
     }
 
-    LZBENCH_PRINT(5, "%s chunk_sizes=%d\n", desc->name, (int)chunk_sizes.size());
+    LZBENCH_PRINT(5, "%s using %d chunks\n", desc->name, (int)chunk_sizes.size());
 
     total_c_iters = 0;
     GetTime(timer_ticks);
@@ -405,10 +470,11 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes, con
         do
         {
             GetTime(start_ticks);
-            complen = lzbench_compress(params, chunk_sizes, desc->compress, compr_sizes, inbuf, compbuf, comprsize, param1, param2, workmem);
+            complen = lzbench_compress(params, chunk_sizes, desc->compress,
+                compr_sizes, inbuf, compbuf, comprsize, param1, param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);
-            if (nanosec >= 10000) ctime.push_back(nanosec);
+            if (nanosec >= 10000) { ctime.push_back(nanosec); }
             i++;
         }
         while (GetDiffTime(rate, loop_ticks, end_ticks) < params->cloop_time);
@@ -497,7 +563,10 @@ done:
 }
 
 
-void lzbench_test_with_params(lzbench_params_t *params, std::vector<size_t> &file_sizes, const char *namesWithParams, uint8_t *inbuf, size_t insize, uint8_t *compbuf, size_t comprsize, uint8_t *decomp, bench_rate_t rate)
+void lzbench_test_with_params(lzbench_params_t *params,
+    std::vector<size_t> &file_sizes, const char *namesWithParams,
+    uint8_t *inbuf, size_t insize, uint8_t *compbuf, size_t comprsize,
+    uint8_t *decomp, bench_rate_t rate)
 {
     std::vector<std::string> cnames, cparams;
 
@@ -556,23 +625,30 @@ next_k:
 int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned ifnIdx, char* encoder_list)
 {
     bench_rate_t rate;
-    size_t comprsize, insize, inpos, totalsize;
+    size_t comprsize, insize, inpos, totalsize;//, aligned_totalsize;
     uint8_t *inbuf, *compbuf, *decomp;
     std::vector<size_t> file_sizes;
     std::string text;
     FILE* in;
     const char* pch;
 
+    // totalsize = UTIL_getTotalFileSize(inFileNames, ifnIdx, MAX_ALIGN_BYTES);
     totalsize = UTIL_getTotalFileSize(inFileNames, ifnIdx);
     if (totalsize == 0) {
         printf("Could not find input files\n");
         return 1;
     }
 
-    comprsize = GET_COMPRESS_BOUND(totalsize);
-    inbuf = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, false);
-    compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
-    decomp = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, true);
+    // comprsize = GET_COMPRESS_BOUND(totalsize);
+    // inbuf = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, false);
+    // compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
+    // decomp = (uint8_t*)alloc_and_touch(totalsize + PAD_SIZE, true);
+    size_t inbuf_size = totalsize + PAD_SIZE + (MAX_ALIGN_BYTES * ifnIdx);
+    size_t outbuf_size = inbuf_size;
+    comprsize = GET_COMPRESS_BOUND(totalsize) + (MAX_ALIGN_BYTES * ifnIdx);
+    inbuf = alloc_data_buffer(inbuf_size);
+    compbuf = alloc_data_buffer(inbuf_size);
+    decomp = alloc_data_buffer(outbuf_size);
 
     if (!inbuf || !compbuf || !decomp)
     {
@@ -599,12 +675,24 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         insize = ftello(in);
         rewind(in);
 
-        if (inpos + insize > totalsize) { printf("inpos + insize > totalsize\n"); goto _clean; };
+        // this check breaks when MAX_ALIGN_BYTES > 1
+        // if (inpos + insize > totalsize) { printf("inpos + insize > totalsize\n"); goto _clean; };
+
         insize = fread(inbuf+inpos, 1, insize, in);
+
+        // force even multiple of MAX_ALIGN_BYTES so start of next file
+        // will be aligned properly
+        printf("orig insize: %lld\n", insize);
+        size_t remainder = insize % MAX_ALIGN_BYTES;
+        insize += remainder ? MAX_ALIGN_BYTES - remainder : 0;
+        printf("new insize: %lld\n", insize);
+
         file_sizes.push_back(insize);
         inpos += insize;
         fclose(in);
     }
+    // std::cout << "total size: " << totalsize << "\n";
+    printf("totalsize: %lld\n", insize);
 
     if (file_sizes.size() == 0)
         goto _clean;
@@ -614,6 +702,12 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
 
     LZBENCH_PRINT(5, "totalsize=%d inpos=%d\n", (int)totalsize, (int)inpos);
     totalsize = inpos;
+
+    // aligned_totalsize = totalsize;
+    // for (int i = 0; i < ifnIdx; i++) {
+    //     size_t remainder = (file_sizes[i] % MAX_ALIGN_BYTES);
+    //     aligned_totalsize += remainder ? MAX_ALIGN_BYTES - remainder : 0;
+    // }
 
     {
         std::vector<size_t> single_file;
@@ -631,9 +725,12 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
     lzbench_test_with_params(params, file_sizes, encoder_list?encoder_list:alias_desc[0].params, inbuf, totalsize, compbuf, comprsize, decomp, rate);
 
 _clean:
-    free(inbuf);
-    free(compbuf);
-    free(decomp);
+    // free(inbuf);
+    // free(compbuf);
+    // free(decomp);
+    free_data_buffer(inbuf);
+    free_data_buffer(compbuf);
+    free_data_buffer(decomp);
 
     return 0;
 }
@@ -674,18 +771,27 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         else
             insize = real_insize;
 
-        comprsize = GET_COMPRESS_BOUND(insize);
-    	// printf("insize=%llu comprsize=%llu %llu\n", insize, comprsize, MAX(MEMCPY_BUFFER_SIZE, insize));
-        inbuf = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, false);
-        compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
-        decomp = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, true);
+     //    comprsize = GET_COMPRESS_BOUND(insize);
+    	// // printf("insize=%llu comprsize=%llu %llu\n", insize, comprsize, MAX(MEMCPY_BUFFER_SIZE, insize));
+     //    inbuf = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, false);
+     //    compbuf = (uint8_t*)alloc_and_touch(comprsize, false);
+     //    decomp = (uint8_t*)alloc_and_touch(insize + PAD_SIZE, true);
+
+        comprsize = GET_COMPRESS_BOUND(insize) + MAX_ALIGN_BYTES;
+        // inbuf = (uint8_t*)alloc_and_touch(inbuf_size, true);
+        // compbuf = (uint8_t*)alloc_and_touch(comprsize, true);
+        // decomp = (uint8_t*)alloc_and_touch(outbuf_size, true);
+        size_t inbuf_size = insize + PAD_SIZE + MAX_ALIGN_BYTES;
+        size_t outbuf_size = inbuf_size;
+        inbuf = alloc_data_buffer(inbuf_size);
+        compbuf = alloc_data_buffer(comprsize);
+        decomp = alloc_data_buffer(outbuf_size);
 
         if (!inbuf || !compbuf || !decomp)
         {
             printf("Not enough memory, please use -m option!");
             return 1;
         }
-
 
         if(params->random_read){
           long long unsigned pos = 0;
@@ -738,9 +844,12 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         }
 
         fclose(in);
-        free(inbuf);
-        free(compbuf);
-        free(decomp);
+        // free(inbuf);
+        // free(compbuf);
+        // free(decomp);
+        free_data_buffer(inbuf);
+        free_data_buffer(compbuf);
+        free_data_buffer(decomp);
     }
 
     return 0;
