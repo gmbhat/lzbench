@@ -179,6 +179,9 @@ void print_time(lzbench_params_t *params, string_table_t& row)
                 printf("|%8llu us ", (unsigned long long)dtime);
             printf("|%12llu |%6.2f | %-s|\n", (unsigned long long)row.col4_comprsize, ratio, row.col6_filename.c_str());
             break;
+        case MARKDOWN2:
+            printf("MARKDOWN2 not supported!\n");
+            break;
     }
 }
 
@@ -343,10 +346,10 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
 
-    LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", chunk_sizes.size());
+    LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", (int)chunk_sizes.size());
     for (int i = 0; i < chunk_sizes.size(); i++) {
-        LZBENCH_PRINT(9, "Chunk %d: orig size, compressed size = %lld, %lld\n",
-            i, chunk_sizes[i], compr_sizes[i]);
+        LZBENCH_PRINT(9, "Chunk %d: orig size, compressed size = %d, %d\n",
+            (int)i, (int)chunk_sizes[i], (int)compr_sizes[i]);
     }
     for (int i=0; i<cscount; i++)
     {
@@ -359,6 +362,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
         else
         {
             LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
+            printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
             dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
             // inptr = align_ptr(inbuf);
             // outptr = align_ptr(outbuf);
@@ -737,7 +741,7 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
           }else{
             insize = real_insize;
           }
-          printf("Seeking to: %llu %Zu %Zu\n", pos, params->chunk_size, insize);
+          printf("Seeking to: %llu %ld %ld\n", pos, (long)params->chunk_size, (long)insize);
         }
 
         insize = fread(inbuf, 1, insize, in);
@@ -999,10 +1003,11 @@ int main( int argc, char** argv)
     else
         result = lzbench_main(params, inFileNames, ifnIdx, encoder_list);
 
-    if (params->chunk_size > 10 * (1<<20))
+    if (params->chunk_size > 10 * (1<<20)) {
         LZBENCH_PRINT(2, "done... (cIters=%d dIters=%d cTime=%.1f dTime=%.1f chunkSize=%dMB cSpeed=%dMB)\n", params->c_iters, params->d_iters, params->cmintime/1000.0, params->dmintime/1000.0, (int)(params->chunk_size >> 20), params->cspeed);
-    else
+    } else {
         LZBENCH_PRINT(2, "done... (cIters=%d dIters=%d cTime=%.1f dTime=%.1f chunkSize=%dKB cSpeed=%dMB)\n", params->c_iters, params->d_iters, params->cmintime/1000.0, params->dmintime/1000.0, (int)(params->chunk_size >> 10), params->cspeed);
+    }
 
     if (sort_col <= 0) goto _clean;
 

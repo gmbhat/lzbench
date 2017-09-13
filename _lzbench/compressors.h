@@ -535,6 +535,19 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 #endif
 
 
+#ifndef BENCH_REMOVE_BBP
+    int64_t lzbench_bbp_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_bbp_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t, size_t, char*);
+    char* lzbench_bbp_init(size_t insize, size_t level, size_t);
+    void lzbench_bbp_deinit(char* workmem);
+#else
+    #define lzbench_bbp_compress NULL
+    #define lzbench_bbp_decompress NULL
+    #define lzbench_bbp_init NULL
+    #define lzbench_bbp_deinit NULL
+#endif
 
 
 #endif // LZBENCH_COMPRESSORS_H

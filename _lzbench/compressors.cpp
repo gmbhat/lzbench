@@ -1828,9 +1828,6 @@ int64_t fastpfor_compress_with_codec(const char* codecname, char *inbuf,
     // XXX: reading past end of input only okay because of padding
     insize += (insize % 4) ? 4 - (insize % 4) : 0;
 
-    // std::cout << "inbuf ptr trailing bits: " << ((uint64_t)inbuf & 0xFF) << "\n";
-    // std::cout << "outbuf ptr trailing bits: " << ((uint64_t)outbuf & 0xFF) << "\n";
-
     codec.encodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, compressed_size);
     return compressed_size * 4;
@@ -1843,13 +1840,8 @@ int64_t fastpfor_decompress_with_codec(const char* codecname, char *inbuf,
     IntegerCODEC& codec = *CODECFactory::getFromName(codecname);
     size_t decompressed_size = outsize / 4; // written to, but also read...
 
-    // std::cout << "about to call fastpfor decompress func\n";
-    // std::cout << "inbuf ptr trailing bits: " << ((uint64_t)inbuf & 0xFF) << "\n";
-    // std::cout << "outbuf ptr trailing bits: " << ((uint64_t)outbuf & 0xFF) << "\n";
-
     codec.decodeArray((const uint32_t*)inbuf, insize / 4,
                       (uint32_t*)outbuf, decompressed_size);
-    // std::cout << "called fastpfor decompress func\n";
     return decompressed_size * 4;
 }
 
@@ -1872,18 +1864,6 @@ FASTPFOR_FUNC(optpfor, "simdoptpfor");
 FASTPFOR_FUNC(varintg8iu, "varintg8iu");
 FASTPFOR_FUNC(simple8b, "simple8b");
 FASTPFOR_FUNC(simdgroupsimple, "simdgroupsimple");
-
-// int64_t lzbench_fastpfor_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*)
-// {
-//     return fastpfor_compress_with_codec("simdfastpfor256", inbuf, insize,
-//                                         outbuf, outsize);
-// }
-
-// int64_t lzbench_fastpfor_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*)
-// {
-//     return fastpfor_decompress_with_codec("simdfastpfor256", inbuf, insize,
-//                                           outbuf, outsize);
-// }
 
 int64_t lzbench_simdbp128_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*) {
     return 0; // TODO
@@ -1908,6 +1888,7 @@ int64_t lzbench_example_decompress(char *inbuf, size_t insize, char *outbuf, siz
 {
     return example_decompress(inbuf, insize, outbuf, outsize);
 }
+#endif
 
 
 #ifndef BENCH_REMOVE_BLOSC
@@ -1955,7 +1936,55 @@ int64_t lzbench_blosc_byteshuf_decompress(char *inbuf, size_t insize,
 {
     return blosc_decompress_ctx(inbuf, outbuf, outsize, 1);
 }
-
 #endif
 
+#ifndef BENCH_REMOVE_BBP
+extern "C" {
+    #include "bbp/bbp.h"
+}
+int64_t lzbench_bbp_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*)
+{
+    // TODO get BBP decompression to stop yielding bus errors; below
+    // compression code appears to work
+    std::cout << "WARNING: BBP not implemented; defaulting to memcpy\n";
+
+    // int blocksize = 0; // use library default
+    // int blocksize2 = 0; // use library default
+    // int offset = 16; // minimum possible value; 1 would be delta coding
+    // return bbp_code_offset((uint8_t*)inbuf, (uint8_t*)outbuf, blocksize,
+    //                        blocksize2, (int)insize, (int)offset);
+    memcpy(outbuf, inbuf, insize);
+    return insize;
+}
+int64_t lzbench_bbp_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    // code in this function *should* work based on BBP CLI code, but
+    // throws bus a error instead.
+
+    // uint64_t remainder_in = ((uint64_t)inbuf) % 16;
+    // uint64_t remainder_out = ((uint64_t)outbuf) % 16;
+    // printf("inbuf, outbuf alignments: %llu, %llu\n", remainder_in, remainder_out);
+
+    // // std::cout << "no really, print stuff in decomp func...\n";
+
+    // uint32_t uncompressed_sz, compressed_sz;
+    // bbp_header_sizes((uint8_t*)inbuf, &uncompressed_sz, &compressed_sz);
+    // printf("compressed, decompressed sizes: %u, %u\n", compressed_sz, uncompressed_sz);
+
+    // bbp_decode((uint8_t*)inbuf, (uint8_t*)outbuf);
+    // return uncompressed_sz;
+    memcpy(outbuf, inbuf, insize);
+    return insize;
+}
+
+char* lzbench_bbp_init(size_t insize, size_t level, size_t) {
+    bbp_init();
+    return NULL;
+}
+void lzbench_bbp_deinit(char* workmem) {
+    bbp_shutdown();
+}
 #endif
+

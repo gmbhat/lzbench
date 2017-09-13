@@ -140,7 +140,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 77
+#define LZBENCH_COMPRESSOR_COUNT 78
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -209,8 +209,6 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "zstd22",     "1.1.4",       1,  22,   22,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd24",     "1.1.4",       1,  22,   24,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "nakamichi",  "okamigan",    0,   0,    0,       0, lzbench_nakamichi_compress,  lzbench_nakamichi_decompress,  NULL,                    NULL },
-    // { "fastpfor",   "2017-8-30",   0,   0,    0,       0, lzbench_fastpfor_compress,   lzbench_fastpfor_decompress,   NULL,                    NULL },
-    // { "simdbp128",  "2017-8-30",   0,   0,    0,       0, lzbench_simdbp128_compress,  lzbench_simdbp128_decompress,  NULL,                    NULL },
     { "example",    "0.0",         0,   0,    0,       0, lzbench_example_compress,    lzbench_example_decompress,    NULL,                    NULL },
     // ---- 65 compressors above this point ----
     FASTPFOR_ENTRY("fastpfor", fastpfor),
@@ -219,11 +217,12 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     FASTPFOR_ENTRY("varintg8iu", varintg8iu),
     FASTPFOR_ENTRY("simple8b", simple8b),
     FASTPFOR_ENTRY("simdgroupsimple", simdgroupsimple),
-    { "blosclz",        "1.12.1",   1,   9,    0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,        NULL,            NULL },
-    { "blosc_bitshuf8",  "1.12.1",  1,   9,    1,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,  NULL,            NULL },
-    { "blosc_byteshuf8", "1.12.1",  1,   9,    1,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress, NULL,            NULL },
-    { "blosc_bitshuf16",  "1.12.1", 1,   9,    2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,  NULL,            NULL },
-    { "blosc_byteshuf16", "1.12.1", 1,   9,    2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress, NULL,            NULL },
+    { "blosclz",        "1.12.1",   1,   9,    0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,         NULL,           NULL },
+    { "blosc_bitshuf8",  "1.12.1",  1,   9,    1,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,   NULL,           NULL },
+    { "blosc_byteshuf8", "1.12.1",  1,   9,    1,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,  NULL,           NULL },
+    { "blosc_bitshuf16",  "1.12.1", 1,   9,    2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,   NULL,           NULL },
+    { "blosc_byteshuf16", "1.12.1", 1,   9,    2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,  NULL,           NULL },
+    { "bbp", "2017-9-13",           0,   0,    0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,   lzbench_bbp_init,         lzbench_bbp_deinit },
 };
 
 #undef FASTPFOR_ENTRY
