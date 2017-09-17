@@ -140,7 +140,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 78
+#define LZBENCH_COMPRESSOR_COUNT 81
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -223,6 +223,9 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "blosc_bitshuf16",  "1.12.1", 1,   9,    2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,   NULL,           NULL },
     { "blosc_byteshuf16", "1.12.1", 1,   9,    2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,  NULL,           NULL },
     { "bbp", "2017-9-13",           0,   0,    0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,   lzbench_bbp_init,         lzbench_bbp_deinit },
+    { "sprintzDelta", "2017-9-16",  0,   0,    0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,   NULL,           NULL },
+    { "sprintzDblDelta", "2017-9-16", 0, 0,    0,       0, lzbench_sprintz_dbldelta_compress,  lzbench_sprintz_dbldelta_decompress,   NULL,           NULL },
+    { "sprintzDynDelta",    "2017-9-16",    0,   0,    0,       0, lzbench_sprintz_dyndelta_compress,  lzbench_sprintz_dyndelta_decompress,   NULL,           NULL },
 };
 
 #undef FASTPFOR_ENTRY

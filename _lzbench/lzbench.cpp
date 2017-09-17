@@ -362,7 +362,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
         else
         {
             LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
-            printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
+            // printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
             dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
             // inptr = align_ptr(inbuf);
             // outptr = align_ptr(outbuf);

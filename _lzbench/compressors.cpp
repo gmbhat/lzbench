@@ -1988,3 +1988,59 @@ void lzbench_bbp_deinit(char* workmem) {
 }
 #endif
 
+#ifndef BENCH_REMOVE_SPRINTZ
+#include "sprintz/sprintz.h"
+
+int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return compress8b_delta((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    // return compress8b_delta_simple((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    // printf("about to call delta decompress func...\n");
+    return decompress8b_delta((int8_t*)inbuf, (uint8_t*)outbuf);
+    // return decompress8b_delta_simple((int8_t*)inbuf, (uint8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+
+int64_t lzbench_sprintz_dbldelta_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    // printf("about to call double delta compress func...\n");
+    return compress8b_doubledelta((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+int64_t lzbench_sprintz_dbldelta_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    return decompress8b_doubledelta((int8_t*)inbuf, (uint8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+
+int64_t lzbench_sprintz_dyndelta_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return compress8b_dyndelta((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    return decompress8b_dyndelta((int8_t*)inbuf, (uint8_t*)outbuf);
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+}
+
+
+#endif
+
+

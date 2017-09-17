@@ -549,5 +549,26 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     #define lzbench_bbp_deinit NULL
 #endif
 
+#ifndef BENCH_REMOVE_SPRINTZ
+    int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t, size_t, char*);
+    int64_t lzbench_sprintz_dbldelta_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_sprintz_dbldelta_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t, size_t, char*);
+    int64_t lzbench_sprintz_dyndelta_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t, size_t, char*);
+#else
+    #define lzbench_sprintz_delta_compress
+    #define lzbench_sprintz_delta_decompress
+    #define lzbench_sprintz_dbldelta_compress
+    #define lzbench_sprintz_dbldelta_decompress
+    #define lzbench_sprintz_dyndelta_compress
+    #define lzbench_sprintz_dyndelta_decompress
+#endif
 
 #endif // LZBENCH_COMPRESSORS_H

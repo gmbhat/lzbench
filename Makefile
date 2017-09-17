@@ -150,6 +150,8 @@ BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.
 BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
+SPRINTZ_FILES = sprintz/sprintz.o
+
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
 else
@@ -251,8 +253,6 @@ lzsse/lzsse8/lzsse8.o: lzsse/lzsse8/lzsse8.cpp
 nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c
 	$(CC) $(CFLAGS) -mavx $< -c -o $@
 
-# tornado/tor_test.o
-
 _lzbench/lzbench.o: _lzbench/lzbench.cpp _lzbench/lzbench.h
 
 lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
@@ -262,7 +262,7 @@ lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
 		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) 		\
 		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
 		$(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(FASTPFOR_FILES) 				\
-		$(BLOSC_FILES) $(BBP_FILES)									        \
+		$(BLOSC_FILES) $(BBP_FILES)	$(SPRINTZ_FILES)						\
 		$(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	@echo Linked GCC_VERSION=$(GCC_VERSION) CLANG_VERSION=$(CLANG_VERSION) COMPILER=$(COMPILER)
