@@ -462,6 +462,14 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     void lzbench_zstd_deinit(char* workmem);
 	int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
 	int64_t lzbench_zstd_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+
+    int64_t lzbench_fse_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+    int64_t lzbench_fse_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+
+    int64_t lzbench_huff0_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+    int64_t lzbench_huff0_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char*);
+
+
 #else
 	#define lzbench_zstd_init NULL
 	#define lzbench_zstd_deinit NULL

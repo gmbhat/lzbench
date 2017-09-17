@@ -1716,6 +1716,9 @@ int64_t lzbench_zling_decompress(char *inbuf, size_t insize, char *outbuf, size_
 #ifndef BENCH_REMOVE_ZSTD
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd/lib/zstd.h"
+#include "zstd/lib/common/fse.h"
+#include "zstd/lib/common/huf.h"
+#include "zstd/lib/common/zstd_errors.h"
 
 typedef struct {
     ZSTD_CCtx* cctx;
@@ -1789,6 +1792,66 @@ int64_t lzbench_zstd_decompress(char *inbuf, size_t insize, char *outbuf, size_t
     return ZSTD_decompressDCtx(zstd_params->dctx, outbuf, outsize, inbuf, insize);
 }
 
+int64_t lzbench_fse_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    auto ret = FSE_compress(outbuf, outsize, inbuf, insize);
+    if (FSE_isError(ret)) {
+        printf("FSE compression had error: %s\n", FSE_getErrorName(ret));
+    }
+
+    // printf("FSE writing compressed size %lu (from insize %lu)\n", ret, insize);
+
+    if (ret == 0) { // fse does nothing if it deems input incompressible
+        memcpy(outbuf, inbuf, insize);
+        return insize;
+    } else if (ret == 1) { // whole input is a constant
+        *(uint64_t*)outbuf = insize;
+        *(outbuf + 8) = *inbuf;
+        return 9;
+    }
+    return ret;
+}
+
+int64_t lzbench_fse_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    // printf("FSE decompress: received compressed size: %lu\n", insize);
+    if (insize == 9) {
+        uint64_t size = *(uint64_t*)inbuf;
+        uint8_t val = *(inbuf + 8);
+        memset(outbuf, val, size);
+        return size;
+    }
+
+    auto ret = FSE_decompress(outbuf, outsize, inbuf, insize);
+    if (FSE_isError(ret)) {
+        printf("FSE decompression had error: %s\n", FSE_getErrorName(ret));
+    }
+    return ret;
+}
+
+int64_t lzbench_huff0_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    auto ret = HUF_compress(outbuf, outsize, inbuf, insize);
+    if (HUF_isError(ret)) {
+        printf("HUFF0 compression had error: %s\n", HUF_getErrorName(ret));
+        if (ret == ZSTD_error_srcSize_wrong) {
+            printf("Maximum block size is 128KiB; try lzbench arg: '-b127'\n");
+        }
+    }
+    return ret;
+}
+int64_t lzbench_huff0_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    auto ret = HUF_decompress(outbuf, outsize, inbuf, insize);
+    if (HUF_isError(ret)) {
+        printf("HUFF0 decompression had error: %s\n", HUF_getErrorName(ret));
+    }
+    return ret;
+}
 
 #endif
 
@@ -1911,6 +1974,7 @@ int64_t lzbench_blosclz_decompress(char *inbuf, size_t insize, char *outbuf,
 int64_t lzbench_blosc_bitshuf_compress(char *inbuf, size_t insize,
     char *outbuf, size_t outsize, size_t level, size_t elem_sz, char*)
 {
+    // printf("blosc received elem_sz: %lu\n", elem_sz);
     return blosc_compress_ctx(level, BLOSC_BITSHUFFLE, elem_sz, insize, inbuf,
                               outbuf, outsize, "blosclz", 0, 1);
 }

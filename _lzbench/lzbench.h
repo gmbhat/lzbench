@@ -140,7 +140,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 81
+#define LZBENCH_COMPRESSOR_COUNT 82
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -208,9 +208,11 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "zstd",       "1.1.4",       1,  22,    0,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd22",     "1.1.4",       1,  22,   22,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd24",     "1.1.4",       1,  22,   24,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
+    { "fse",        "0.9.0",       0,   0,    0,       0, lzbench_fse_compress,        lzbench_fse_decompress,        NULL,                    NULL },
+    { "huff0",      "0.9.0",       0,   0,    0, 127<<10, lzbench_huff0_compress,      lzbench_huff0_decompress,      NULL,                    NULL },
     { "nakamichi",  "okamigan",    0,   0,    0,       0, lzbench_nakamichi_compress,  lzbench_nakamichi_decompress,  NULL,                    NULL },
     { "example",    "0.0",         0,   0,    0,       0, lzbench_example_compress,    lzbench_example_decompress,    NULL,                    NULL },
-    // ---- 65 compressors above this point ----
+    // ---- 66 compressors above this point ----
     FASTPFOR_ENTRY("fastpfor", fastpfor),
     FASTPFOR_ENTRY("binarypacking", binarypacking),
     FASTPFOR_ENTRY("optpfor", optpfor),
