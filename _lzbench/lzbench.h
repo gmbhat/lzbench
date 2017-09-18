@@ -145,7 +145,7 @@ typedef struct
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
     { "memcpy",     "",            0,   0,    0,       0, lzbench_return_0,            lzbench_memcpy,                NULL,                    NULL },
-    // { "blosclz",    "2015-11-10",  1,   9,    0, 64*1024, lzbench_blosclz_compress,    lzbench_blosclz_decompress,    NULL,                    NULL },
+    // General-purpose compressors
     { "brieflz",    "1.1.0",       0,   0,    0,       0, lzbench_brieflz_compress,    lzbench_brieflz_decompress,    lzbench_brieflz_init,    lzbench_brieflz_deinit },
     { "brotli",     "2017-03-10",  0,  11,    0,       0, lzbench_brotli_compress,     lzbench_brotli_decompress,     NULL,                    NULL },
     { "brotli22",   "2017-03-10",  0,  11,   22,       0, lzbench_brotli_compress,     lzbench_brotli_decompress,     NULL,                    NULL },
@@ -154,8 +154,10 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "csc",        "2016-10-13",  1,   5,    0,       0, lzbench_csc_compress,        lzbench_csc_decompress,        NULL,                    NULL },
     { "density",    "0.12.5 beta", 1,   3,    0,       0, lzbench_density_compress,    lzbench_density_decompress,    NULL,                    NULL }, // decompression error (shortened output)
     { "fastlz",     "0.1",         1,   2,    0,       0, lzbench_fastlz_compress,     lzbench_fastlz_decompress,     NULL,                    NULL },
+    { "fse",        "0.9.0",       0,   0,    0,       0, lzbench_fse_compress,        lzbench_fse_decompress,        NULL,                    NULL },
     { "gipfeli",    "2016-07-13",  0,   0,    0,       0, lzbench_gipfeli_compress,    lzbench_gipfeli_decompress,    NULL,                    NULL },
     { "glza",       "0.8",         0,   0,    0,       0, lzbench_glza_compress,       lzbench_glza_decompress,       NULL,                    NULL },
+    { "huff0",      "0.9.0",       0,   0,    0, 127<<10, lzbench_huff0_compress,      lzbench_huff0_decompress,      NULL,                    NULL },
     { "libdeflate", "0.7",         1,  12,    0,       0, lzbench_libdeflate_compress, lzbench_libdeflate_decompress, NULL,                    NULL },
     { "lz4",        "1.7.5",       0,   0,    0,       0, lzbench_lz4_compress,        lzbench_lz4_decompress,        NULL,                    NULL },
     { "lz4fast",    "1.7.5",       1,  99,    0,       0, lzbench_lz4fast_compress,    lzbench_lz4_decompress,        NULL,                    NULL },
@@ -208,11 +210,9 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "zstd",       "1.1.4",       1,  22,    0,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd22",     "1.1.4",       1,  22,   22,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
     { "zstd24",     "1.1.4",       1,  22,   24,       0, lzbench_zstd_compress,       lzbench_zstd_decompress,       lzbench_zstd_init,       lzbench_zstd_deinit },
-    { "fse",        "0.9.0",       0,   0,    0,       0, lzbench_fse_compress,        lzbench_fse_decompress,        NULL,                    NULL },
-    { "huff0",      "0.9.0",       0,   0,    0, 127<<10, lzbench_huff0_compress,      lzbench_huff0_decompress,      NULL,                    NULL },
     { "nakamichi",  "okamigan",    0,   0,    0,       0, lzbench_nakamichi_compress,  lzbench_nakamichi_decompress,  NULL,                    NULL },
     { "example",    "0.0",         0,   0,    0,       0, lzbench_example_compress,    lzbench_example_decompress,    NULL,                    NULL },
-    // ---- 66 compressors above this point ----
+    // Integer compressors
     FASTPFOR_ENTRY("fastpfor", fastpfor),
     FASTPFOR_ENTRY("binarypacking", binarypacking),
     FASTPFOR_ENTRY("optpfor", optpfor),
