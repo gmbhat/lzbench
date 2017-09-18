@@ -23,6 +23,7 @@
 #   code to generate scatterplots for speed vs ratio
 #   code to read in our stored data and generate real plots via this func
 
+import datetime
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,12 +31,25 @@ import pandas as pd
 import seaborn as sb
 
 import sys
+from . import files
+from . import pyience
+
+# import gflags   # google's command line lib; pip install python-gflags
+# FLAGS = gflags.FLAGS
+
 if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
 
+# gflags.DEFINE_
+
+
 DATASETS_DIR = '~/Desktop/datasets/compress'  # change this if you aren't me
+FIG_SAVE_DIR = 'figs'
+RESULTS_SAVE_DIR = 'results'
+ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
+
 DEFAULT_LEVELS = [1, 5, 9]  # many compressors have levels 1-9
 
 NEEDS_NBITS = '<nbits>'
@@ -57,18 +71,24 @@ ALGO_INFO = {
     'LZ4':          AlgoInfo('lz4', levels=DEFAULT_LEVELS),
     'Gipfeli':      AlgoInfo('gipfeli'),
     'Snappy':       AlgoInfo('snappy'),
-    'FSE':       AlgoInfo('fse'),
-    'Huffman':       AlgoInfo('huff0'),
+    # just entropy coding
+    'FSE':          AlgoInfo('fse'),
+    'Huffman':      AlgoInfo('huff0'),
     # integer compressors
     'Delta':        AlgoInfo('sprintzDelta', preprocs=None),
     'DoubleDelta':  AlgoInfo('sprintzDoubleDelta', preprocs=None),
     'FastPFOR':     AlgoInfo('fastpfor', needs_32b=True),
-    'OptPFOR':     AlgoInfo('optpfor', needs_32b=True),
+    'OptPFOR':      AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':    AlgoInfo('binarypacking', needs_32b=True),
     'SIMDGroupSimple': AlgoInfo('simdgroupsimple', needs_32b=True),
     'BitShuffle':   AlgoInfo('blosc_bitshuf{}b'.format(NEEDS_NBITS), levels=DEFAULT_LEVELS), # noqa
     'ByteShuffle':  AlgoInfo('blosc_byteshuf{}b'.format(NEEDS_NBITS), levels=DEFAULT_LEVELS), # noqa
 }
+
+# DSET_INFO = {
+#     'UCR'
+#
+# }
 
 
 def _pretty_scatterplot(x, y):
@@ -80,6 +100,19 @@ def _pretty_scatterplot(x, y):
     ax.set_ylabel('Compression Ratio')
 
     plt.show()
+
+
+def now_as_string():
+    return datetime.datetime.now().strftime("%Y-%m-%dT%H_%M_%S")
+
+
+def save_data_frame(df, save_dir, name=None, timestamp=False):
+    files.ensure_dir_exists(save_dir)
+    timestamp_str = ("_" + now_as_string()) if timestamp else ""
+    name = name if name else ""
+    fileName = "{}{}.csv".format(name, timestamp_str)
+    df = df.sort_index(axis=1)
+    df.to_csv(os.path.join(save_dir, fileName))
 
 
 def df_from_string(s, **kwargs):
@@ -145,8 +178,9 @@ def _generate_cmd(nbits, algos, dset_path, memlimit=None, minsecs=1):
     return cmd
 
 
-def _run_experiment(nbits, dsets, algos, memlimit=None, minsecs=1, order='f',
+def _run_experiment(nbits, dsets, algos, memlimit=-1, minsecs=0, order='f',
                     verbose=1):
+    dsets = pyience.ensure_list_or_tuple(dsets)
 
     for dset in dsets:
         dset_path = _dset_path(nbits=nbits, dset=dset, algos=algos, order=order)
@@ -161,28 +195,57 @@ def _run_experiment(nbits, dsets, algos, memlimit=None, minsecs=1, order='f',
         trimmed = output[:output.find('\ndone...')]
         # trimmed = trimmed[:]
 
-        # print "\n" + output
-        if verbose > 0:
-            # print "trimmed output:"
-            print trimmed
+        if verbose > 1:
+            print "raw output:\n" + output
+            print "trimmed output:\n", trimmed
 
         results = df_from_string(trimmed[:])
-        print "==== results df:\n", results
+        # print "==== results df:\n", results
+        # print results_dicts
+        results_dicts = results.to_dict('records')
+        for d in results_dicts:
+            d['Dataset'] = dset
+            d['Memlimit'] = memlimit
+            d['Minsecs'] = minsecs
+            d['Nbits'] = nbits
+            d['Order'] = order
+            d['Algorithm'] = d['Compressor name']
+            d.pop('Compressor name')
+            # d.pop('Filename')  # not useful because of -j
+        results = pd.DataFrame.from_records(results_dicts)
 
+        print "==== Results"
+        print results
 
+        # dump raw results with a timestamp for archival purposes
+        pyience.save_data_frame(results, RESULTS_SAVE_DIR,
+                                name='results', timestamp=True)
+        # add these results to master set of results, overwriting previous
+        # results where relevant
+        if os.path.exists(ALL_RESULTS_PATH):
+            existing_results = pd.read_csv(ALL_RESULTS_PATH)
+            all_results = pd.concat([results, existing_results], axis=0)
+            relevant_cols = 'Algorithm Dataset Memlimit Nbits Order'.split()
+            all_results.drop_duplicates(subset=relevant_cols, inplace=True)
+        else:
+            all_results = results
 
-        # SELF: pick up here by adding params to the df, then saving it
+        all_results.to_csv(ALL_RESULTS_PATH, index=False)
+        print "all results ever:\n", all_results
 
-
-
-        # kvs = {'Algorithm: ': }
+        return all_results
 
 
 # ================================================================ main
 
 def main():
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Zstd', 'FSE'])
-    _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['FSE'])
+    # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['FSE'])
+    # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Huffman'])
+
+    kwargs = pyience.parse_cmd_line()
+    if kwargs:
+        _run_experiment(**kwargs)
 
 
 if __name__ == '__main__':
