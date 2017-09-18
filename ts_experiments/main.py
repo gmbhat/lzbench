@@ -54,17 +54,23 @@ DEFAULT_LEVELS = [1, 5, 9]  # many compressors have levels 1-9
 
 NEEDS_NBITS = '<nbits>'
 
+# np.random.seed(123)
+
 
 class AlgoInfo(object):
 
-    def __init__(self, lzbench_name, levels=None, preprocs=['delta'], needs_32b=False):
+    def __init__(self, lzbench_name, levels=None, preprocs=['delta'],
+                 needs_32b=False, group=None):
         self.lzbench_name = lzbench_name
         self.levels = levels
         self.preprocs = preprocs  # try with each of these variants of data
         self.needs_32b = needs_32b
+        # self.group = group if group is not None else np.random.randint(99999)
+        self.group = group
 
 
 ALGO_INFO = {
+    'Memcpy':       AlgoInfo('memcpy'),
     # general-purpose compressors
     'Zlib':         AlgoInfo('zlib', levels=DEFAULT_LEVELS),
     'Zstd':         AlgoInfo('zstd', levels=DEFAULT_LEVELS),
@@ -75,8 +81,8 @@ ALGO_INFO = {
     'FSE':          AlgoInfo('fse'),
     'Huffman':      AlgoInfo('huff0'),
     # integer compressors
-    'Delta':        AlgoInfo('sprintzDelta', preprocs=None),
-    'DoubleDelta':  AlgoInfo('sprintzDoubleDelta', preprocs=None),
+    'Delta':        AlgoInfo('sprintzDelta', preprocs=None, group='Sprintz'),
+    'DoubleDelta':  AlgoInfo('sprintzDoubleDelta', preprocs=None, group='Sprintz'), # noqa
     'FastPFOR':     AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':      AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':    AlgoInfo('binarypacking', needs_32b=True),
@@ -85,41 +91,54 @@ ALGO_INFO = {
     'ByteShuffle':  AlgoInfo('blosc_byteshuf{}b'.format(NEEDS_NBITS), levels=DEFAULT_LEVELS), # noqa
 }
 
-# DSET_INFO = {
-#     'UCR'
-#
-# }
+# associate each algorithm with a color
+cmap = plt.get_cmap('tab20')
+for i, (name, info) in enumerate(sorted(ALGO_INFO.items())):
+    if info.group == 'Sprintz':
+        info.color = 'r'
+        # info.marker = '.'
+
+    if i >= 6:
+        i += 1  # don't let anything be red (which is color6 in tab20)
+    frac = i * (20. / 256.)
+    # frac = float(i) / len(ALGO_INFO)
+    info.color = cmap(frac)
 
 
-def _pretty_scatterplot(x, y):
-    sb.set_context('talk')
-    _, ax = plt.subplots(figsize=(7, 7))
-    ax.scatter(x, y)
-    ax.set_title('Compression Speed vs Ratio')
-    ax.set_xlabel('Compression Speed (MB/s)')
-    ax.set_ylabel('Compression Ratio')
-
-    plt.show()
+BENCH_NAME_TO_PRETTY_NAME = dict([(info.lzbench_name, key)
+                                 for (key, info) in ALGO_INFO.items()])
 
 
-def now_as_string():
-    return datetime.datetime.now().strftime("%Y-%m-%dT%H_%M_%S")
+PRETTY_DSET_NAMES = {
+    'ucr':          'UCR',
+    'ampd_gas':     'AMPD Gas',
+    'ampd_water':   'AMPD Water',
+    'ampd_power':   'AMPD Power',
+    'ampd_weather': 'AMPD Weather',
+    'uci_gas':      'UCI Gas',
+    'pamap':        'PAMAP',
+    'msrc':         'MSRC-12',
+}
+ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 
 
-def save_data_frame(df, save_dir, name=None, timestamp=False):
-    files.ensure_dir_exists(save_dir)
-    timestamp_str = ("_" + now_as_string()) if timestamp else ""
-    name = name if name else ""
-    fileName = "{}{}.csv".format(name, timestamp_str)
-    df = df.sort_index(axis=1)
-    df.to_csv(os.path.join(save_dir, fileName))
+# ================================================================ experiments
+
+def _clean_algorithm_name(algo_name):
+    tokens = algo_name.split()
+    algo_name = BENCH_NAME_TO_PRETTY_NAME[tokens[0]]
+    if tokens[-1][0] == '-':  # if compression level given; eg, '-5'
+        algo_name += ' ' + tokens[-1]
+    return algo_name
 
 
-def df_from_string(s, **kwargs):
+def _df_from_string(s, **kwargs):
     return pd.read_csv(StringIO(s), **kwargs)
 
 
 def _dset_path(nbits, dset, algos, order):
+    algos = pyience.ensure_list_or_tuple(algos)
+
     join = os.path.join
     path = DATASETS_DIR
 
@@ -159,6 +178,8 @@ def _dset_path(nbits, dset, algos, order):
 
 
 def _generate_cmd(nbits, algos, dset_path, memlimit=None, minsecs=1):
+    algos = pyience.ensure_list_or_tuple(algos)
+
     cmd = './lzbench -r -j -o4 -e'  # o4 is csv
     # cmd = './lzbench -r -j -e'
     algo_strs = []
@@ -179,7 +200,7 @@ def _generate_cmd(nbits, algos, dset_path, memlimit=None, minsecs=1):
 
 
 def _run_experiment(nbits, dsets, algos, memlimit=-1, minsecs=0, order='f',
-                    verbose=1):
+                    create_fig=False, verbose=1):
     dsets = pyience.ensure_list_or_tuple(dsets)
 
     for dset in dsets:
@@ -199,7 +220,7 @@ def _run_experiment(nbits, dsets, algos, memlimit=-1, minsecs=0, order='f',
             print "raw output:\n" + output
             print "trimmed output:\n", trimmed
 
-        results = df_from_string(trimmed[:])
+        results = _df_from_string(trimmed[:])
         # print "==== results df:\n", results
         # print results_dicts
         results_dicts = results.to_dict('records')
@@ -209,13 +230,14 @@ def _run_experiment(nbits, dsets, algos, memlimit=-1, minsecs=0, order='f',
             d['Minsecs'] = minsecs
             d['Nbits'] = nbits
             d['Order'] = order
-            d['Algorithm'] = d['Compressor name']
+            d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
             d.pop('Compressor name')
             # d.pop('Filename')  # not useful because of -j
         results = pd.DataFrame.from_records(results_dicts)
 
-        print "==== Results"
-        print results
+        if verbose > 0:
+            print "==== Results"
+            print results
 
         # dump raw results with a timestamp for archival purposes
         pyience.save_data_frame(results, RESULTS_SAVE_DIR,
@@ -231,9 +253,124 @@ def _run_experiment(nbits, dsets, algos, memlimit=-1, minsecs=0, order='f',
             all_results = results
 
         all_results.to_csv(ALL_RESULTS_PATH, index=False)
-        print "all results ever:\n", all_results
+        # print "all results ever:\n", all_results
 
-        return all_results
+    if create_fig:
+        for dset in dsets:
+            fig_for_dset(dset, save=True, df=all_results)
+            # fig_for_dset(dset, algos=algos, save=True, df=all_results)
+
+
+# ================================================================ plotting
+
+
+def _pretty_scatterplot(x, y):
+    sb.set_context('talk')
+    _, ax = plt.subplots(figsize=(7, 7))
+    ax.scatter(x, y)
+    ax.set_title('Compression Speed vs Ratio')
+    ax.set_xlabel('Compression Speed (MB/s)')
+    ax.set_ylabel('Compression Ratio')
+
+    plt.show()
+
+
+def fig_for_dset(dset, algos=None, save=True, df=None, **sink):
+
+    fig, axes = plt.subplots(2)
+    dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
+    fig.suptitle(dset_name)
+
+    axes[0].set_title('Compression Speed vs Ratio')
+    axes[0].set_xlabel('Compression Speed (MB/s)')
+    axes[0].set_ylabel('Compression Ratio')
+    axes[1].set_title('Decompression Speed vs Compression Ratio')
+    axes[1].set_xlabel('Decompression Speed (MB/s)')
+    axes[1].set_ylabel('Compression Ratio')
+
+    if df is None:
+        df = pd.read_csv(ALL_RESULTS_PATH)
+    # print "read back df"
+    # print df
+
+    df = df[df['Dataset'] == dset]
+    df = df[df['Algorithm'] != 'Memcpy']
+
+    if algos is None:
+        algos = list(df['Algorithm'])
+    else:
+        df = df[df['Algorithm'].isin(algos)]
+
+    # munge algorithm names
+    # raw_algos = df['Algorithm']
+    # algos = []
+    # for algo in raw_algos:
+    #     algos.append(algo_name)
+
+    # print df
+
+    # df['Algorithm'] = raw_algos
+    compress_speeds = df['Compression speed'].as_matrix()
+    decompress_speeds = df['Decompression speed'].as_matrix()
+    ratios = (100. / df['Ratio']).as_matrix()
+
+    for i, algo in enumerate(algos):  # undo artificial boost from 0 padding
+        name = algo.split()[0]
+        if ALGO_INFO[name].needs_32b:
+            nbits = df['Nbits'].iloc[i]
+            ratios[i] *= nbits / 32.
+
+    # ratios = 100. / ratios
+    # df['Ratio'] = 100. / df['Ratio']
+
+    # print "algos: ", algos
+    # print "compress_speeds: ", compress_speeds
+    # print "ratios: ", ratios
+
+    # option 1: annotate each point with the algorithm name
+    def scatter_plot(ax, x, y):
+        # ignore level (eg, '-3') and deltas (eg, Zstd-Delta)
+        base_algos = [algo.split()[0].split('-')[0] for algo in algos]
+
+        # scatterplot color-coded by algorithm
+        infos = [ALGO_INFO[algo] for algo in base_algos]
+        colors = [info.color for info in infos]
+        ax.scatter(x, y, c=colors)
+
+        # annotations
+        xscale = ax.get_xlim()[1] - ax.get_xlim()[0]
+        yscale = ax.get_ylim()[1] - ax.get_ylim()[0]
+        perturb_x = .01 * xscale
+        perturb_y = .01 * yscale
+        for i, algo in enumerate(algos):
+            ax.annotate(algo, (x[i] + perturb_x, y[i] + perturb_y))
+        ax.margins(0.2)
+
+    scatter_plot(axes[0], compress_speeds, ratios)
+    scatter_plot(axes[1], decompress_speeds, ratios)
+
+    # # option 2: color the points by algorithm and have a legend
+    # # EDIT: I can't get this to plot into a particular ax; dealbreaker
+    # def scatter_plot(ax, x, y, df):
+    #     groups = df.groupby('Algorithm')
+    #     sb.pairplot(x_vars=[x], y_vars=[y], data=df, hue='Algorithm',
+    #                 diag_kws=dict(ax=ax))
+
+    # scatter_plot(axes[0], 'Compression speed', 'Ratio', df)
+    # scatter_plot(axes[1], 'Decompression speed', 'Ratio', df)
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=.88)
+    if save:
+        files.ensure_dir_exists(FIG_SAVE_DIR)
+        plt.savefig(os.path.join(FIG_SAVE_DIR, dset))
+    else:
+        plt.show()
+
+
+def fig_for_dsets(dsets, **kwargs):
+    for dset in pyience.ensure_list_or_tuple(dsets):
+        fig_for_dset(dset, **kwargs)
 
 
 # ================================================================ main
@@ -244,8 +381,36 @@ def main():
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Huffman'])
 
     kwargs = pyience.parse_cmd_line()
-    if kwargs:
+
+    if kwargs.get('dsets', None) == 'all':
+        kwargs['dsets'] = ALL_DSET_NAMES
+
+    # print kwargs; return
+
+    if kwargs and 'fig' not in kwargs:
         _run_experiment(**kwargs)
+    elif 'fig' in kwargs:
+        fig_for_dsets(**kwargs)
+
+    # fig_for_dset('ampd_gas')
+
+    # gradient = np.linspace(0, 1, 256)
+    # gradient = np.vstack((gradient, gradient))
+    # # plt.imshow(gradient, aspect='auto', cmap=plt.get_cmap('Dark2'))
+    # # plt.imshow(gradient, aspect='auto', cmap=plt.get_cmap('tab10'))
+    # plt.imshow(gradient, aspect='auto', cmap=plt.get_cmap('tab20'))
+    # plt.show()
+
+    # # this is how you get the colors out of a cmap; vals in (0, 1)
+    # cmap = plt.get_cmap('tab20')
+    # print cmap(0)
+    # print cmap(.1)
+    # print cmap(.11)
+    # print cmap(.2)
+    # print cmap(.3)
+    # # print cmap(26)
+    # # print cmap(27)
+    # # print cmap(255)
 
 
 if __name__ == '__main__':
