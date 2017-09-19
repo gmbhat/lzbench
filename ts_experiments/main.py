@@ -129,6 +129,15 @@ PRETTY_DSET_NAMES = {
 }
 ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 
+PREPROC_TO_INT = {
+    'delta':  1,
+    'delta2': 2,
+    'delta3': 3,
+    'delta4': 4,
+}
+
+INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
+
 
 # ================================================================ experiments
 
@@ -146,10 +155,6 @@ def _df_from_string(s, **kwargs):
     return pd.read_csv(StringIO(s), **kwargs)
 
 
-# def _canonical_algo_names(algos):
-    # return [algo.split('-')[0] for algo in algos]  # just strips of '-Delta'
-
-
 def _dset_path(nbits, dset, algos, order, deltas):
     algos = pyience.ensure_list_or_tuple(algos)
 
@@ -162,12 +167,6 @@ def _dset_path(nbits, dset, algos, order, deltas):
 
     # storage format (number of bits, whether delta-encoded)
     assert nbits in (8, 16)
-    # want_deltas = np.array([(name.endswith('-Delta')) for name in algos])
-    # if np.sum(want_deltas) not in (0, len(algos)):
-    #     raise ValueError('Some algorithms want delta-encoded input, while '
-    #                      'others do not; requires separate commands. Requested'
-    #                      ' algorithms:\n'.format(', '.join(algos)))
-    # deltas = np.sum(want_deltas) > 0
 
     # algos = _canonical_algo_names(algos)
     want_32b = np.array([ALGO_INFO[algo].needs_32b for algo in algos])
@@ -192,10 +191,11 @@ def _dset_path(nbits, dset, algos, order, deltas):
     return join(path, dset)
 
 
-def _generate_cmd(nbits, algos, dset_path, memlimit=None, minsecs=1):
+def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, minsecs=1):
     algos = pyience.ensure_list_or_tuple(algos)
 
-    cmd = './lzbench -r -j -o4 -e'  # o4 is csv
+    # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
+    cmd = './lzbench -r -o4 -a'  # o4 is csv
     algo_strs = []
     for algo in algos:
         algo = algo.split('-')[0]  # rm possible '-Delta' suffix
@@ -210,6 +210,11 @@ def _generate_cmd(nbits, algos, dset_path, memlimit=None, minsecs=1):
     if memlimit is not None and int(memlimit) > 0:
         cmd += ' -b{}'.format(int(memlimit))
     cmd += ' -t{},{}'.format(int(minsecs), int(minsecs))
+    if preprocs is not None:
+        preprocs = pyience.ensure_list_or_tuple(preprocs)
+        for preproc in preprocs:
+            cmd += ' -d{}'.format(PREPROC_TO_INT[preproc.lower()])
+
     cmd += ' {}'.format(dset_path)
     return cmd
 
@@ -221,10 +226,15 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
     algos = pyience.ensure_list_or_tuple(algos)
 
     for dset in dsets:
+        # don't tell dset_path about delta encoding; we'll use the benchmark's
+        # preprocessing abilities for that, so that the time gets taken into
+        # account
         dset_path = _dset_path(nbits=nbits, dset=dset, algos=algos,
-                               order=order, deltas=deltas)
+                               order=order, deltas=False)
+        preprocs = 'delta' if deltas else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
-                            memlimit=memlimit, minsecs=minsecs)
+                            preprocs=preprocs, memlimit=memlimit,
+                            minsecs=minsecs)
 
         if verbose > 0:
             print '------------------------'
@@ -253,12 +263,16 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
             # if deltas and algo != 'Memcpy':
             #     d['Algorithm'] = d['Algorithm'] + '-Delta'
             d.pop('Compressor name')
+            # d['Filename'] = d['Filename'].replace(os.path.expanduser('~'), '~')
+            d['Filename'] = d['Filename'].replace(os.path.expanduser(DATASETS_DIR), '')
             # d.pop('Filename')  # not useful because of -j
         results = pd.DataFrame.from_records(results_dicts)
 
         if verbose > 0:
             print "==== Results"
             print results
+
+        print "returning prematurely"  # TODO rm
 
         # dump raw results with a timestamp for archival purposes
         pyience.save_data_frame(results, RESULTS_SAVE_DIR,
@@ -268,8 +282,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
         if os.path.exists(ALL_RESULTS_PATH):
             existing_results = pd.read_csv(ALL_RESULTS_PATH)
             all_results = pd.concat([results, existing_results], axis=0)
-            relevant_cols = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
-            all_results.drop_duplicates(subset=relevant_cols, inplace=True)
+            all_results.drop_duplicates(subset=INDEPENDENT_VARS, inplace=True)
         else:
             all_results = results
 
@@ -299,7 +312,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
                  exclude_algos=None, **sink):
 
-    fig, axes = plt.subplots(2)
+    fig, axes = plt.subplots(2, figsize=(9, 9))
     dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
     fig.suptitle(dset_name)
 
