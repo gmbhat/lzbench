@@ -24,9 +24,14 @@ Usage
 usage: lzbench [options] input [input2] [input3]
 
 where [input] is a file or a directory and [options] are:
+ -a#   #=compression algorithms separated by '/' with parameters specified
+        after ',' (default=fast)
  -b#   set block/chunk size to # KB (default = MIN(filesize,1747626 KB))
- -c#   sort results by column # (1=algname, 2=ctime, 3=dtime, 4=comprsize)
- -e#   #=compressors separated by '/' with parameters specified after ',' (deflt=fast)
+ -c#   sort results by column; # (1=algname, 2=ctime, 3=dtime, 4=comprsize)
+ -d#   preprocessing steps (including in timing); # (1=delta encode, 2-4=delta
+        with delay of # (less compression but faster))
+ -e#   # = size of each element in bytes; only relevant if preprocessing (default = 1)
+ <!-- -g    include preprocessing time in compression and decompression timing -->
  -iX,Y set min. number of compression and decompression iterations (default = 1, 1)
  -j    join files in memory but compress them independently (for many small files)
  -l    list of available compressors and aliases
@@ -41,11 +46,11 @@ where [input] is a file or a directory and [options] are:
  -z    show (de)compression times instead of speed
 
 Example usage:
-  lzbench -ezstd filename = selects all levels of zstd
-  lzbench -ebrotli,2,5/zstd filename = selects levels 2 & 5 of brotli and zstd
-  lzbench -t3 -u5 fname = 3 sec compression and 5 sec decompression loops
-  lzbench -t0 -u0 -i3 -j5 -ezstd fname = 3 compression and 5 decompression iter.
-  lzbench -t0u0i3j5 -ezstd fname = the same as above with aggregated parameters
+  lzbench -azstd filename  # selects all levels of zstd
+  lzbench -abrotli,2,5/zstd filename  # selects levels 2 & 5 of brotli and zstd
+  lzbench -t3 -u5 fname  # 3 sec compression and 5 sec decompression loops
+  lzbench -t0 -u0 -i3 -j5 -ezstd fname  # 3 compression and 5 decompression iters
+  lzbench -t0u0i3j5 -ezstd fname  # the same as above with aggregated parameters
 ```
 
 
@@ -122,7 +127,7 @@ zstd 1.1.4
 Benchmarks
 -------------------------
 
-The following results are obtained with `lzbench 1.7.1` with the `-t16,16 -eall` options using 1 core of Intel Core i5-4300U, Windows 10 64-bit (MinGW-w64 compilation under gcc 6.3.0)
+The following results are obtained with `lzbench 1.7.1` with the `-t16,16 -aall` options using 1 core of Intel Core i5-4300U, Windows 10 64-bit (MinGW-w64 compilation under gcc 6.3.0)
 with ["silesia.tar"](https://drive.google.com/file/d/0BwX7dtyRLxThenZpYU9zLTZhR1k/view?usp=sharing) which contains tarred files from [Silesia compression corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia).
 The results sorted by ratio are available [here](lzbench171_sorted.md).
 
@@ -318,8 +323,8 @@ If you have another compressor that you would like to add to lzbench, this can b
     1. Add the relevant info in the array `comp_desc`. The fields are described in the struct immediately above it (`compressor_desc_t`).
         1. name and version are self explanatory
         1. First and last level refer to levels of compression. By convention, higher levels mean more compression.
-        1. TODO I don't know what `additional_param` means.
-        1. `max_block_size` is self-explanatory if your compressor splits the data into blocks and compresses each block (which it probably does).
+        1. `additional_param` is another (optional) argument that gets passed to the compression and decompression functions you will provide below.
+        1. `max_block_size`; lzbench splits the data into chunks, each of which it passes to the compressor/decompressor independently. This parameter limits how large the chunks can be.
         1. `compress` and `decompress` need to be pointers to functions matching the signatures immediately above the struct definition. Note that these should be wrapper functions (which we'll define in a moment), not your actual compression and decompression functions.
         1. The same is true for `init` and `deinit`, though these can be `NULL`.
     1. Optionally, add an alias to the `alias_desc` array below and increment `LZBENCH_ALIASES_COUNT`.

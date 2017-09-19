@@ -18,6 +18,7 @@
 
 #include "lzbench.h"
 #include "util.h"
+// #include <cmath>
 #include <numeric>
 #include <algorithm> // sort
 #include <stdlib.h>
@@ -25,6 +26,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifndef BENCH_REMOVE_FASTPFOR
+    #include "fastpfor/deltautil.h"  // for simd delta preproc
+#endif
 
 int istrcmp(const char *str1, const char *str2)
 {
@@ -282,9 +286,11 @@ uint8_t* alloc_data_buffer(size_t size) {
     } else {
         buf = calloc(1, size);
     }
-    volatile char zero = 0;
-    for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
-        static_cast<char * volatile>(buf)[i] = zero;
+    if (buf != NULL) {
+        volatile char zero = 0;
+        for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
+            static_cast<char * volatile>(buf)[i] = zero;
+        }
     }
     return reinterpret_cast<uint8_t*>(buf);
 }
@@ -298,10 +304,179 @@ void free_data_buffer(void* ptr) {
 }
 
 
+void apply_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbuf,
+                         size_t size, int element_sz, uint8_t* outbuf)
+{
+    // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
+
+    if (preprocessors.size() < 1) { return; }
+
+    int sz = element_sz;
+    if (sz < 1) {
+        sz = 1;
+    }
+    int64_t nelements = size / sz;
+
+    // printf("size=%lu, sz=%lu, element_sz=%d\n", size, sz, element_sz);
+    // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
+
+
+    for (auto preproc : preprocessors) {
+        // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
+        // continue;
+
+        if ((preproc < 1) || (preproc > 4)) {
+            printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
+            continue;
+        }
+
+        // memcpy(outbuf, inbuf, size); continue;  // TODO rm
+
+#ifndef BENCH_REMOVE_FASTPFOR   // use simd delta if available
+        if (sz == 4 && preproc == DELTA4)  {
+            memcpy(outbuf, inbuf, size);
+            FastPForLib::Delta::deltaSIMD((uint32_t*)outbuf, nelements);
+            continue;
+        }
+#endif
+        int offset = preproc;  // simplifying hack based on enum values
+
+        memcpy(outbuf, inbuf, offset * sz);
+        if (sz == 1) {
+            auto in = (uint8_t*)inbuf;
+            auto out = (uint8_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] - in[i-offset];
+            }
+        }
+        else if (sz == 2) {
+            auto in = (uint16_t*)inbuf;
+            auto out = (uint16_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] - in[i-offset];
+            }
+        } else if (sz == 4) {
+            auto in = (uint32_t*)inbuf;
+            auto out = (uint32_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] - in[i-offset];
+            }
+        } else if (sz == 8) {
+            auto in = (uint64_t*)inbuf;
+            auto out = (uint64_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] - in[i-offset];
+            }
+        } else {
+            printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+            // memcpy(outbuf, inbuf, size);
+        }
+
+        // offset = 1; // TODO rm
+        // if (offset < 0) {
+        //     offset = 1;
+        // }
+        // size_t end = nelements - 1;
+
+        // printf("---- end = %lu\n", end);
+        // continue; // TODO rm
+
+        // printf("applying preproc: %lld with element sz %lu\n", preproc, sz);
+
+        // if (sz <= 1) {
+        //     // printf("really gonna use preproc: %lld with element sz 1\n", preproc);
+        //     auto in = inbuf;
+        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        //     // for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        //     // printf("used preproc: %lld on input of size %lu\n", preproc, end);
+        // } else if (sz == 2) {
+        //     // printf("actually applying preproc: %lld with element sz %lu\n", preproc, sz);
+        //     uint16_t* in = (uint16_t*)inbuf;
+        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        // } else if (sz == 4) {
+        //     // printf("actually applying preproc: %lld with element sz %lu\n", preproc, sz);
+        //     uint32_t* in = (uint32_t*)inbuf;
+        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        // } else {
+        //     // printf("mysteriously didn't apply preproc...\n");
+        // }
+    }
+}
+
+void undo_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbuf,
+                        size_t size, int element_sz, uint8_t* outbuf)
+{
+    // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
+
+    if (preprocessors.size() < 1) { return; }
+
+    int sz = element_sz;
+    if (sz < 1) {
+        sz = 1;
+    }
+    int64_t nelements = size / sz;
+
+    // printf("size=%lu, sz=%lu, element_sz=%d\n", size, sz, element_sz);
+    // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
+
+
+    for (auto preproc : preprocessors) {
+        // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
+        // continue;
+
+        if ((preproc < 1) || (preproc > 4)) {
+            printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
+            continue;
+        }
+
+        // memcpy(outbuf, inbuf, size); continue;  // TODO rm
+
+#ifndef BENCH_REMOVE_FASTPFOR   // use simd delta if available
+        if (sz == 4 && preproc == DELTA4)  {
+            memcpy(outbuf, inbuf, size);
+            FastPForLib::Delta::inverseDeltaSIMD((uint32_t*)outbuf, nelements);
+            continue;
+        }
+#endif
+        int offset = preproc;  // simplifying hack based on enum values
+
+        memcpy(outbuf, inbuf, offset * sz);
+        if (sz <= 1) {
+            auto in = (uint8_t*)inbuf;
+            auto out = (uint8_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] + out[i-offset];
+            }
+        }
+        else if (sz == 2) {
+            auto in = (uint16_t*)inbuf;
+            auto out = (uint16_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] + out[i-offset];
+            }
+        } else if (sz == 4) {
+            auto in = (uint32_t*)inbuf;
+            auto out = (uint32_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] + out[i-offset];
+            }
+        } else if (sz == 8) {
+            auto in = (uint64_t*)inbuf;
+            auto out = (uint64_t*)outbuf;
+            for (int i = offset; i < nelements; i++) {
+                out[i] = in[i] + out[i-offset];
+            }
+        } else {
+            printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+        }
+    }
+}
+
 inline int64_t lzbench_compress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, compress_func compress,
     std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf,
-    size_t outsize, size_t param1, size_t param2, char* workmem)
+    uint8_t* tmpbuf, size_t outsize, size_t param1, size_t param2,
+    char* workmem)
 {
     int64_t clen;
     size_t outpart, part, sum = 0;
@@ -316,7 +491,13 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         outpart = GET_COMPRESS_BOUND(part);
         if (outpart > outsize) outpart = outsize;
 
-        clen = compress((char*)inbuf, part, (char*)outbuf, outpart, param1, param2, workmem);
+        uint8_t* inptr = inbuf;
+        if (params->preprocessors.size() > 0) {
+            apply_preprocessors(params->preprocessors, inbuf, part, params->element_sz, tmpbuf);
+            inptr = tmpbuf;
+        }
+
+        clen = compress((char*)inptr, part, (char*)outbuf, outpart, param1, param2, workmem);
         LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n", (int)part, (int)clen, (int)(inbuf-start));
 
         if (clen <= 0 || clen == part)
@@ -339,12 +520,14 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 inline int64_t lzbench_decompress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, compress_func decompress,
     std::vector<size_t> &compr_sizes, uint8_t *inbuf, uint8_t *outbuf,
-    size_t param1, size_t param2, char* workmem)
+    uint8_t* tmpbuf, size_t param1, size_t param2, char* workmem)
 {
     int64_t dlen;
     size_t part, sum = 0;
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
+
+    bool has_preproc = params->preprocessors.size() > 0;
 
     LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", (int)chunk_sizes.size());
     for (int i = 0; i < chunk_sizes.size(); i++) {
@@ -361,13 +544,18 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
         }
         else
         {
+            uint8_t* outptr = has_preproc ? tmpbuf : outbuf;
             LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
             // printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
-            dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
-            // inptr = align_ptr(inbuf);
-            // outptr = align_ptr(outbuf);
-            // dlen = decompress(inptr, part, outptr, chunk_sizes[i], param1, param2, workmem);
+            // uint8_t* outptr = outbuf; // TODO rm
+            // uint8_t* outptr = tmpbuf; // TODO rm
+            dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
+
+            if (has_preproc) {
+                undo_preprocessors(params->preprocessors, tmpbuf, dlen, params->element_sz, outbuf);
+            }
         }
+
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",
             i, (int)part, (int)dlen, (int)(outbuf - outstart));
         if (dlen <= 0) return dlen;
@@ -397,6 +585,9 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     char* workmem = NULL;
     size_t param2 = desc->additional_param;
     size_t chunk_size = (params->chunk_size > insize) ? insize : params->chunk_size;
+
+    uint8_t* tmpbuf = alloc_data_buffer(insize);
+    // memcpy(tmpbuf, inbuf, insize);
 
     LZBENCH_PRINT(5, "*** trying %s insize=%d comprsize=%d chunk_size=%d\n", desc->name, (int)insize, (int)comprsize, (int)chunk_size);
 
@@ -438,9 +629,12 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         GetTime(loop_ticks);
         do
         {
+            // if (!params->time_preproc) {
+            //     apply_preprocessors(params->preprocessors, inbuf, part, params->element_sz);
+            // }
             GetTime(start_ticks);
             complen = lzbench_compress(params, chunk_sizes, desc->compress,
-                compr_sizes, inbuf, compbuf, comprsize, param1, param2, workmem);
+                compr_sizes, inbuf, compbuf, tmpbuf, comprsize, param1, param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);
             if (nanosec >= 10000) { ctime.push_back(nanosec); }
@@ -474,7 +668,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         do
         {
             GetTime(start_ticks);
-            decomplen = lzbench_decompress(params, chunk_sizes, desc->decompress, compr_sizes, compbuf, decomp, param1, param2, workmem);
+            decomplen = lzbench_decompress(params, chunk_sizes, desc->decompress, compr_sizes, compbuf, decomp, tmpbuf, param1, param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);
             if (nanosec >= 10000) dtime.push_back(nanosec);
@@ -607,12 +801,12 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
         return 1;
     }
 
-    size_t inbuf_size = totalsize + PAD_SIZE + (ALIGN_BYTES * ifnIdx);
-    size_t outbuf_size = inbuf_size;
+    size_t data_buf_size = totalsize + PAD_SIZE + (ALIGN_BYTES * ifnIdx);
     comprsize = GET_COMPRESS_BOUND(totalsize) + (ALIGN_BYTES * ifnIdx);
-    inbuf = alloc_data_buffer(inbuf_size);
-    compbuf = alloc_data_buffer(inbuf_size);
-    decomp = alloc_data_buffer(outbuf_size);
+    inbuf = alloc_data_buffer(data_buf_size);
+    compbuf = alloc_data_buffer(data_buf_size);
+    // tmpbuf = alloc_data_buffer(data_buf_size);  // for preprocessing
+    decomp = alloc_data_buffer(data_buf_size);
 
     if (!inbuf || !compbuf || !decomp)
     {
@@ -662,10 +856,11 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames, unsigned if
 
     {
         std::vector<size_t> single_file;
-        lzbench_params_t params_memcpy;
+        // lzbench_params_t params_memcpy;
+        lzbench_params_t params_memcpy(*params);
 
         print_header(params);
-        memcpy(&params_memcpy, params, sizeof(lzbench_params_t));
+        // memcpy(&params_memcpy, params, sizeof(lzbench_params_t));
         params_memcpy.cmintime = params_memcpy.dmintime = 0;
         params_memcpy.c_iters = params_memcpy.d_iters = 0;
         params_memcpy.cloop_time = params_memcpy.dloop_time = DEFAULT_LOOP_TIME;
@@ -720,11 +915,11 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
             insize = real_insize;
 
         comprsize = GET_COMPRESS_BOUND(insize) + ALIGN_BYTES;
-        size_t inbuf_size = insize + PAD_SIZE + ALIGN_BYTES;
-        size_t outbuf_size = inbuf_size;
-        inbuf = alloc_data_buffer(inbuf_size);
-        compbuf = alloc_data_buffer(comprsize);
-        decomp = alloc_data_buffer(outbuf_size);
+        size_t data_buf_size = insize + PAD_SIZE + ALIGN_BYTES;
+        inbuf = alloc_data_buffer(data_buf_size);
+        compbuf = alloc_data_buffer(data_buf_size);
+        // tmpbuf = alloc_data_buffer(data_buf_size);  // for preprocessing
+        decomp = alloc_data_buffer(data_buf_size);
 
         if (!inbuf || !compbuf || !decomp)
         {
@@ -750,8 +945,9 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames, unsigned if
         {
             print_header(params);
 
-            lzbench_params_t params_memcpy;
-            memcpy(&params_memcpy, params, sizeof(lzbench_params_t));
+            // lzbench_params_t params_memcpy;
+            // memcpy(&params_memcpy, params, sizeof(lzbench_params_t));
+            lzbench_params_t params_memcpy(*params);
             params_memcpy.cmintime = params_memcpy.dmintime = 0;
             params_memcpy.c_iters = params_memcpy.d_iters = 0;
             params_memcpy.cloop_time = params_memcpy.dloop_time = DEFAULT_LOOP_TIME;
@@ -863,18 +1059,60 @@ int main( int argc, char** argv)
         char* numPtr = argument + 1;
         unsigned number = 0;
         while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
+
+        // // parse number passed
+        // int decimal_pos = -1;
+        // int length = 0;
+        // while (((*numPtr >='0') && (*numPtr <='9')) || *numPtr == '.') {
+        //     if (*numPtr == '.') {
+        //         decimal = true;
+        //         decimal_pos = length;
+        //         continue;
+        //     }
+        //     number *= 10;
+        //     number += *numPtr - '0';
+        //     numPtr++;
+        //     length++;
+        // }
+        // if (length < 1) {
+        //     LZBENCH_PRINT(1, 'Received malformed numeric argument: %s\n', argument);
+        //     return 1;
+        // }
+        // bool decimal = decimal_pos >= 0;
+        // bool ignored_decimal = decimal;
+        // int64_t divide_decimal_by = std::pow(10, length - decimal_pos);
+
         switch (argument[0])
         {
+        case 'a':
+            encoder_list = strdup(argument + 1);
+            numPtr += strlen(numPtr);
+            break;
         case 'b':
             params->chunk_size = number << 10;
             break;
         case 'c':
             sort_col = number;
             break;
-        case 'e':
-            encoder_list = strdup(argument + 1);
-            numPtr += strlen(numPtr);
+        case 'd':
+            // break; // TODO rm
+            params->preprocessors.push_back(number);
+            // printf("params preprocessors current size: %lu\n", params->preprocessors.size());
+            // params->preprocessors.push_back(1);
+            // printf("params preprocessors new size: %lu\n", params->preprocessors.size());
+            // params->preprocessors.clear();
+            // printf("params preprocessors cleared size: %lu\n", params->preprocessors.size());
             break;
+        case 'e':
+            params->element_sz = number;
+            break;
+        // case 'g':
+        //     params->time_preproc = true;
+        //     break;
+        // case 'e':
+        //     encoder_list = strdup(argument + 1);
+        //     numPtr += strlen(numPtr);
+        //     break;
         case 'i':
             params->c_iters = number;
             if (*numPtr == ',')
@@ -912,6 +1150,11 @@ int main( int argc, char** argv)
         case 't':
             params->cmintime = 1000*number;
             params->cloop_time = (params->cmintime)?DEFAULT_LOOP_TIME:0;
+            // if (decimal) {
+            //     params->cmintime /= divide_decimal_by;
+            //     params->cloop_time /= divide_decimal_by;
+            //     ignored_decimal = false;
+            // }
             if (*numPtr == ',')
             {
                 numPtr++;
@@ -959,6 +1202,12 @@ int main( int argc, char** argv)
             fprintf(stderr, "unknown option: %s\n", argv[1]);
             result = 1; goto _clean;
         }
+
+        // if (decimal and ignored_decimal) {
+        //     LZBENCH_PRINT(2, "Argument does not except decimal input!");
+        //     return 1;
+        // }
+
         argument = numPtr;
     }
     argv++;

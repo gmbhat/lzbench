@@ -92,8 +92,11 @@ typedef struct string_table
 enum textformat_e { MARKDOWN=1, TEXT, TEXT_FULL, CSV, TURBOBENCH, MARKDOWN2 };
 enum timetype_e { FASTEST=1, AVERAGE, MEDIAN };
 
-typedef struct
-{
+enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4};
+
+// typedef struct {
+class lzbench_params_t {
+public:
     int show_speed, compress_only;
     timetype_e timetype;
     textformat_e textformat;
@@ -102,8 +105,15 @@ typedef struct
     size_t mem_limit;
     int random_read;
     std::vector<string_table_t> results;
+    std::vector<int64_t> preprocessors;
     const char* in_filename;
-} lzbench_params_t;
+    int element_sz;
+    // bool time_preproc;
+
+    lzbench_params_t(const lzbench_params_t &) = default;
+    lzbench_params_t() = default;
+};
+// } lzbench_params_t;
 
 struct less_using_1st_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col1_algname < struct2.col1_algname); } };
 struct less_using_2nd_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col2_ctime > struct2.col2_ctime); } };
