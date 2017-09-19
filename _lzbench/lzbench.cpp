@@ -404,11 +404,13 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inb
 }
 
 void undo_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbuf,
-                        size_t size, int element_sz, uint8_t* outbuf)
+                        size_t size, int element_sz, uint8_t* outbuf=nullptr)
 {
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
 
     if (preprocessors.size() < 1) { return; }
+
+    if (outbuf == nullptr) { outbuf = inbuf; }
 
     int sz = element_sz;
     if (sz < 1) {
@@ -544,15 +546,16 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
         }
         else
         {
-            uint8_t* outptr = has_preproc ? tmpbuf : outbuf;
+            // uint8_t* outptr = has_preproc ? tmpbuf : outbuf;
             LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
             // printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
             // uint8_t* outptr = outbuf; // TODO rm
             // uint8_t* outptr = tmpbuf; // TODO rm
-            dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
+            // dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
+            dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
 
             if (has_preproc) {
-                undo_preprocessors(params->preprocessors, tmpbuf, dlen, params->element_sz, outbuf);
+                undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
             }
         }
 
