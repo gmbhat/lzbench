@@ -86,6 +86,8 @@ ALGO_INFO = {
                                  allowed_nbits=[8], group='Sprintz'),
     'DoubleDelta':      AlgoInfo('sprintzDblDelta', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
+    'DynDelta':         AlgoInfo('sprintzDynDelta', allow_delta=False,
+                                 allowed_nbits=[8], group='Sprintz'),
     'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':          AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),
@@ -101,14 +103,18 @@ ALGO_INFO = {
 }
 
 # associate each algorithm with a color
-cmap = plt.get_cmap('tab20')
+# cmap = plt.get_cmap('tab20')
+cmap = plt.get_cmap('tab10')
 for i, (name, info) in enumerate(sorted(ALGO_INFO.items())):
     if info.group == 'Sprintz':
-        info.color = 'r'
+        # info.color = 'r'
+        info.color = plt.get_cmap('tab20')(4 * 20. / 256)  # red
+        continue
+        # print "set info color to red for algorithm {} (group {})".format(name, info.group)
 
     if i >= 6:
         i += 1  # don't let anything be red (which is color6 in tab20)
-    frac = i * (20. / 256.)
+    frac = i * (13 / 256.)
     # frac = float(i) / len(ALGO_INFO)
     info.color = cmap(frac)
 
@@ -137,6 +143,7 @@ PREPROC_TO_INT = {
 }
 
 INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
+DEPENDENT_VARS = ['Ratio', 'Compression speed', 'Decompression speed']
 
 
 # ================================================================ experiments
@@ -244,6 +251,9 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
         trimmed = output[:output.find('\ndone...')]
         # trimmed = trimmed[:]
 
+        if not os.path.exists('./lzbench'):
+            os.path.system('make')
+
         if verbose > 1:
             print "raw output:\n" + output
             print "trimmed output:\n", trimmed
@@ -272,7 +282,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
             print "==== Results"
             print results
 
-        print "returning prematurely"  # TODO rm
+        # print "returning prematurely"; return  # TODO rm
 
         # dump raw results with a timestamp for archival purposes
         pyience.save_data_frame(results, RESULTS_SAVE_DIR,
@@ -282,7 +292,8 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
         if os.path.exists(ALL_RESULTS_PATH):
             existing_results = pd.read_csv(ALL_RESULTS_PATH)
             all_results = pd.concat([results, existing_results], axis=0)
-            all_results.drop_duplicates(subset=INDEPENDENT_VARS, inplace=True)
+            all_results.drop_duplicates(  # add filename since not doing '-j'
+                subset=(INDEPENDENT_VARS + ['Filename']), inplace=True)
         else:
             all_results = results
 
@@ -310,7 +321,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
 
 
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
-                 exclude_algos=None, **sink):
+                 exclude_algos=None, avg_across_files=True, **sink):
 
     fig, axes = plt.subplots(2, figsize=(9, 9))
     dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
@@ -331,18 +342,34 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     df = df[df['Dataset'] == dset]
     df = df[df['Algorithm'] != 'Memcpy']
 
+    if avg_across_files:
+        df = df.groupby(INDEPENDENT_VARS, as_index=False)[DEPENDENT_VARS].mean()
+        # print "means: "
+        # print df
+        # return
+
     if nbits is not None:
         df = df[df['Nbits'] == nbits]
 
-    if algos is None:
-        algos = list(df['Algorithm'])
-    else:
-        df = df[df['Algorithm'].isin(algos)]
+    # if algos is None:
+        # algos = list(df['Algorithm'])
+    # else:
+    if algos is not None:
+        algos_set = set(pyience.ensure_list_or_tuple(algos))
+        mask = [algo.split()[0] in algos_set for algo in df['Algorithm']]
+        df = df[mask]
 
     if exclude_algos is not None:
-        df = df[~df['Algorithm'].isin(exclude_algos)]
+        exclude_set = set(pyience.ensure_list_or_tuple(exclude_algos))
+        # print "exclude algos set:", exclude_set
+        mask = [algo.split()[0] not in exclude_set for algo in df['Algorithm']]
+        df = df[mask]
 
+    algos = list(df['Algorithm'])
     used_delta = list(df['Deltas'])
+
+    # print "pruned df to:"
+    # print df; return
 
     # # munge algorithm names
     # new_algos = []
@@ -392,16 +419,6 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     scatter_plot(axes[0], compress_speeds, ratios, colors=colors)
     scatter_plot(axes[1], decompress_speeds, ratios, colors=colors)
-
-    # # option 2: color the points by algorithm and have a legend
-    # # EDIT: I can't get this to plot into a particular ax; dealbreaker
-    # def scatter_plot(ax, x, y, df):
-    #     groups = df.groupby('Algorithm')
-    #     sb.pairplot(x_vars=[x], y_vars=[y], data=df, hue='Algorithm',
-    #                 diag_kws=dict(ax=ax))
-
-    # scatter_plot(axes[0], 'Compression speed', 'Ratio', df)
-    # scatter_plot(axes[1], 'Decompression speed', 'Ratio', df)
 
     plt.tight_layout()
     plt.subplots_adjust(top=.88)

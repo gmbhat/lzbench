@@ -204,6 +204,8 @@ def _to_appropriate_type(s):
         return True
     elif s == 'False' or s == 'F':
         return False
+    elif s == 'None':
+        return None
     try:
         return int(s)
     except Exception:
