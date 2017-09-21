@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 82
+#define LZBENCH_COMPRESSOR_COUNT 84
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -229,15 +229,18 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     FASTPFOR_ENTRY("varintg8iu", varintg8iu),
     FASTPFOR_ENTRY("simple8b", simple8b),
     FASTPFOR_ENTRY("simdgroupsimple", simdgroupsimple),
-    { "blosclz",        "1.12.1",   1,   9,    0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,         NULL,           NULL },
-    { "blosc_bitshuf8b",  "1.12.1",  1,   9,    1,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,   NULL,           NULL },
-    { "blosc_byteshuf8b", "1.12.1",  1,   9,    1,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,  NULL,           NULL },
-    { "blosc_bitshuf16b",  "1.12.1", 1,   9,    2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,   NULL,           NULL },
-    { "blosc_byteshuf16b", "1.12.1", 1,   9,    2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,  NULL,           NULL },
-    { "bbp", "2017-9-13",           0,   0,    0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,   lzbench_bbp_init,         lzbench_bbp_deinit },
-    { "sprintzDelta", "2017-9-16",  0,   0,    0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,   NULL,           NULL },
-    { "sprintzDblDelta", "2017-9-16", 0, 0,    0,       0, lzbench_sprintz_dbldelta_compress,  lzbench_sprintz_dbldelta_decompress,   NULL,           NULL },
-    { "sprintzDynDelta",    "2017-9-16",    0,   0,    0,       0, lzbench_sprintz_dyndelta_compress,  lzbench_sprintz_dyndelta_decompress,   NULL,           NULL },
+    { "blosclz",        "1.12.1",     1, 9,   0,       0, lzbench_blosclz_compress,        lzbench_blosclz_decompress,              NULL,       NULL },
+    { "blosc_bitshuf8b",  "1.12.1",   1, 9,   1,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,        NULL,       NULL },
+    { "blosc_byteshuf8b", "1.12.1",   1, 9,   1,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,       NULL,       NULL },
+    { "blosc_bitshuf16b",  "1.12.1",  1, 9,   2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,        NULL,       NULL },
+    { "blosc_byteshuf16b", "1.12.1",  1, 9,   2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,       NULL,       NULL },
+    { "bbp", "2017-9-13",             0, 0,   0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,  lzbench_bbp_init, lzbench_bbp_deinit },
+    { "sprintzDelta",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,        NULL,       NULL },
+    { "sprintzDblDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,  lzbench_sprintz_dbldelta_decompress,  NULL,       NULL },
+    { "sprintzDynDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,  lzbench_sprintz_dyndelta_decompress,  NULL,       NULL },
+    // NOTE: the following 2 codecs are unsafe and should only used for speed profiling
+    { "sprFixedBitpack", "2017-9-16", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
+    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,  lzbench_just_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 15
 };
 
 #undef FASTPFOR_ENTRY

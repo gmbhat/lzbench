@@ -2054,11 +2054,13 @@ void lzbench_bbp_deinit(char* workmem) {
 
 #ifndef BENCH_REMOVE_SPRINTZ
 #include "sprintz/sprintz.h"
+#include "sprintz/bitpack.h"
 
 int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t level, size_t, char*)
 {
-    return compress8b_delta((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    // return compress8b_delta((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+    return compress8b_delta_online((uint8_t*)inbuf, insize, (int8_t*)outbuf);
     // return compress8b_delta_simple((uint8_t*)inbuf, insize, (int8_t*)outbuf);
     // memcpy(outbuf, inbuf, insize);
     // return insize;
@@ -2067,7 +2069,8 @@ int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbu
     size_t outsize, size_t, size_t, char*)
 {
     // printf("about to call delta decompress func...\n");
-    return decompress8b_delta((int8_t*)inbuf, (uint8_t*)outbuf);
+    // return decompress8b_delta((int8_t*)inbuf, (uint8_t*)outbuf);
+    return decompress8b_delta_online((int8_t*)inbuf, (uint8_t*)outbuf);
     // return decompress8b_delta_simple((int8_t*)inbuf, (uint8_t*)outbuf);
     // memcpy(outbuf, inbuf, insize);
     // return insize;
@@ -2104,6 +2107,28 @@ int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *ou
     // return insize;
 }
 
+
+int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t nbits, size_t, char*)
+{
+    return compress8b_bitpack((const uint8_t*)inbuf, insize, (uint8_t*)outbuf, nbits);
+}
+int64_t lzbench_fixed_bitpack_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t nbits, size_t, char*)
+{
+    return decompress8b_bitpack((const uint8_t*)inbuf, insize, (uint8_t*)outbuf, nbits);
+}
+
+int64_t lzbench_just_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t nbits, size_t, char*)
+{
+    return compress8b_online((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+}
+int64_t lzbench_just_bitpack_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t nbits, size_t, char*)
+{
+    return decompress8b_online((int8_t*)inbuf, (uint8_t*)outbuf);
+}
 
 #endif
 

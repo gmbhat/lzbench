@@ -31,7 +31,6 @@ where [input] is a file or a directory and [options] are:
  -d#   preprocessing steps (including in timing); # (1=delta encode, 2-4=delta
         with delay of # (less compression but faster))
  -e#   # = size of each element in bytes; only relevant if preprocessing (default = 1)
- <!-- -g    include preprocessing time in compression and decompression timing -->
  -iX,Y set min. number of compression and decompression iterations (default = 1, 1)
  -j    join files in memory but compress them independently (for many small files)
  -l    list of available compressors and aliases
@@ -53,6 +52,7 @@ Example usage:
   lzbench -t0u0i3j5 -ezstd fname  # the same as above with aggregated parameters
 ```
 
+ <!-- -g    include preprocessing time in compression and decompression timing -->
 
 Compilation
 -------------------------

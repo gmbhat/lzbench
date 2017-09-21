@@ -562,14 +562,27 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
         size_t outsize, size_t level, size_t, char*);
     int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
+
     int64_t lzbench_sprintz_dbldelta_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t level, size_t, char*);
     int64_t lzbench_sprintz_dbldelta_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
+
     int64_t lzbench_sprintz_dyndelta_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t level, size_t, char*);
     int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
+
+    int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+    int64_t lzbench_fixed_bitpack_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+
+    int64_t lzbench_just_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+    int64_t lzbench_just_bitpack_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+
 #else
     #define lzbench_sprintz_delta_compress
     #define lzbench_sprintz_delta_decompress

@@ -449,8 +449,7 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbu
             for (int i = offset; i < nelements; i++) {
                 out[i] = in[i] + out[i-offset];
             }
-        }
-        else if (sz == 2) {
+        } else if (sz == 2) {
             auto in = (uint16_t*)inbuf;
             auto out = (uint16_t*)outbuf;
             for (int i = offset; i < nelements; i++) {
