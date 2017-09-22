@@ -150,11 +150,12 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 84
+#define LZBENCH_COMPRESSOR_COUNT 85
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
-    { "memcpy",     "",            0,   0,    0,       0, lzbench_return_0,            lzbench_memcpy,                NULL,                    NULL },
+    // { "memcpy",     "",            0,   0,    0,       0, lzbench_return_0,            lzbench_memcpy,                NULL,                    NULL },
+    { "memcpy",     "",            0,   0,    0,       0, lzbench_memcpy,            lzbench_memcpy,                NULL,                    NULL },
     // General-purpose compressors
     { "brieflz",    "1.1.0",       0,   0,    0,       0, lzbench_brieflz_compress,    lzbench_brieflz_decompress,    lzbench_brieflz_init,    lzbench_brieflz_deinit },
     { "brotli",     "2017-03-10",  0,  11,    0,       0, lzbench_brotli_compress,     lzbench_brotli_decompress,     NULL,                    NULL },
@@ -238,9 +239,10 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprintzDelta",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,        NULL,       NULL },
     { "sprintzDblDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,  lzbench_sprintz_dbldelta_decompress,  NULL,       NULL },
     { "sprintzDynDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,  lzbench_sprintz_dyndelta_decompress,  NULL,       NULL },
+    { "sprDelta2",       "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,  lzbench_sprintz_delta2_decompress,      NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only used for speed profiling
     { "sprFixedBitpack", "2017-9-16", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
-    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,  lzbench_just_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 15
+    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,  lzbench_just_bitpack_decompress,          NULL,       NULL }, // input bytes must all be <= 15
 };
 
 #undef FASTPFOR_ENTRY

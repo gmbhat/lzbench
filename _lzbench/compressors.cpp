@@ -2107,6 +2107,17 @@ int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *ou
     // return insize;
 }
 
+int64_t lzbench_sprintz_delta2_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return compress8b_delta2_online((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+}
+int64_t lzbench_sprintz_delta2_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    return decompress8b_delta2_online((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
 
 int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t nbits, size_t, char*)

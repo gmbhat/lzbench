@@ -342,63 +342,121 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inb
         int offset = preproc;  // simplifying hack based on enum values
 
         memcpy(outbuf, inbuf, offset * sz);
-        if (sz == 1) {
-            auto in = (uint8_t*)inbuf;
-            auto out = (uint8_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] - in[i-offset];
-            }
+
+
+#define DELTAS_FOR_OFFSET(OFFSET) \
+        switch(sz) { \
+        case 1: \
+            { \
+                auto in = (uint8_t*)inbuf; \
+                auto out = (uint8_t*)outbuf; \
+                for (int i = OFFSET; i < nelements; i++) { \
+                    out[i] = in[i] - in[i-OFFSET]; \
+                } \
+            } break; \
+        case 2: \
+            { \
+                auto in = (uint16_t*)inbuf; \
+                auto out = (uint16_t*)outbuf; \
+                for (int i = OFFSET; i < nelements; i++) { \
+                    out[i] = in[i] - in[i-OFFSET]; \
+                } \
+            } break; \
+        case 4: \
+            { \
+                auto in = (uint32_t*)inbuf; \
+                auto out = (uint32_t*)outbuf; \
+                for (int i = OFFSET; i < nelements; i++) { \
+                    out[i] = in[i] - in[i-OFFSET]; \
+                } \
+            } break; \
+        case 8: \
+            { \
+                auto in = (uint64_t*)inbuf; \
+                auto out = (uint64_t*)outbuf; \
+                for (int i = OFFSET; i < nelements; i++) { \
+                    out[i] = in[i] - in[i-OFFSET]; \
+                } \
+            } break; \
+        default: \
+            printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz); \
         }
-        else if (sz == 2) {
-            auto in = (uint16_t*)inbuf;
-            auto out = (uint16_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] - in[i-offset];
-            }
-        } else if (sz == 4) {
-            auto in = (uint32_t*)inbuf;
-            auto out = (uint32_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] - in[i-offset];
-            }
-        } else if (sz == 8) {
-            auto in = (uint64_t*)inbuf;
-            auto out = (uint64_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] - in[i-offset];
-            }
-        } else {
+
+        // if (sz == 1) {
+        //     auto in = (uint8_t*)inbuf;
+        //     auto out = (uint8_t*)outbuf;
+        //     for (int i = OFFSET; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-OFFSET];
+        //     }
+        // }
+        // else if (sz == 2) {
+        //     auto in = (uint16_t*)inbuf;
+        //     auto out = (uint16_t*)outbuf;
+        //     for (int i = OFFSET; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-OFFSET];
+        //     }
+        // } else if (sz == 4) {
+            // auto in = (uint32_t*)inbuf;
+            // auto out = (uint32_t*)outbuf;
+            // for (int i = OFFSET; i < nelements; i++) {
+            //     out[i] = in[i] - in[i-OFFSET];
+            // }
+        // } else if (sz == 8) {
+            // auto in = (uint64_t*)inbuf;
+            // auto out = (uint64_t*)outbuf;
+            // for (int i = OFFSET; i < nelements; i++) {
+            //     out[i] = in[i] - in[i-OFFSET];
+            // }
+        //
+        // } else {
+        //     printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+        //     // memcpy(outbuf, inbuf, size);
+        // }
+
+        // tell compiler that offset is only going to be one of these 4
+        // values (2x speedup or more)
+        switch (offset) {
+        case 1:
+            DELTAS_FOR_OFFSET(1); break;
+        case 2:
+            DELTAS_FOR_OFFSET(2); break;
+        case 3:
+            DELTAS_FOR_OFFSET(3); break;
+        case 4:
+            DELTAS_FOR_OFFSET(4); break;
+        default:
             printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
             // memcpy(outbuf, inbuf, size);
         }
 
-        // offset = 1; // TODO rm
-        // if (offset < 0) {
-        //     offset = 1;
+        // if (sz == 1) {
+        //     auto in = (uint8_t*)inbuf;
+        //     auto out = (uint8_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-offset];
+        //     }
         // }
-        // size_t end = nelements - 1;
-
-        // printf("---- end = %lu\n", end);
-        // continue; // TODO rm
-
-        // printf("applying preproc: %lld with element sz %lu\n", preproc, sz);
-
-        // if (sz <= 1) {
-        //     // printf("really gonna use preproc: %lld with element sz 1\n", preproc);
-        //     auto in = inbuf;
-        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
-        //     // for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
-        //     // printf("used preproc: %lld on input of size %lu\n", preproc, end);
-        // } else if (sz == 2) {
-        //     // printf("actually applying preproc: %lld with element sz %lu\n", preproc, sz);
-        //     uint16_t* in = (uint16_t*)inbuf;
-        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        // else if (sz == 2) {
+        //     auto in = (uint16_t*)inbuf;
+        //     auto out = (uint16_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-offset];
+        //     }
         // } else if (sz == 4) {
-        //     // printf("actually applying preproc: %lld with element sz %lu\n", preproc, sz);
-        //     uint32_t* in = (uint32_t*)inbuf;
-        //     for (size_t i = end; i >= offset; i--) { in[i] -= in[i-offset]; }
+        //     auto in = (uint32_t*)inbuf;
+        //     auto out = (uint32_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-offset];
+        //     }
+        // } else if (sz == 8) {
+        //     auto in = (uint64_t*)inbuf;
+        //     auto out = (uint64_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] - in[i-offset];
+        //     }
         // } else {
-        //     // printf("mysteriously didn't apply preproc...\n");
+        //     printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+        //     // memcpy(outbuf, inbuf, size);
         // }
     }
 }
@@ -443,33 +501,80 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbu
         int offset = preproc;  // simplifying hack based on enum values
 
         memcpy(outbuf, inbuf, offset * sz);
-        if (sz <= 1) {
-            auto in = (uint8_t*)inbuf;
-            auto out = (uint8_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] + out[i-offset];
-            }
-        } else if (sz == 2) {
-            auto in = (uint16_t*)inbuf;
-            auto out = (uint16_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] + out[i-offset];
-            }
-        } else if (sz == 4) {
-            auto in = (uint32_t*)inbuf;
-            auto out = (uint32_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] + out[i-offset];
-            }
-        } else if (sz == 8) {
-            auto in = (uint64_t*)inbuf;
-            auto out = (uint64_t*)outbuf;
-            for (int i = offset; i < nelements; i++) {
-                out[i] = in[i] + out[i-offset];
-            }
-        } else {
-            printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+
+#define UNDO_DELTA_FOR_OFFSET(OFFSET) \
+        if (sz <= 1) { \
+            auto in = (uint8_t*)inbuf; \
+            auto out = (uint8_t*)outbuf; \
+            for (int i = OFFSET; i < nelements; i++) { \
+                out[i] = in[i] + out[i-OFFSET]; \
+            } \
+        } else if (sz == 2) { \
+            auto in = (uint16_t*)inbuf; \
+            auto out = (uint16_t*)outbuf; \
+            for (int i = OFFSET; i < nelements; i++) { \
+                out[i] = in[i] + out[i-OFFSET]; \
+            } \
+        } else if (sz == 4) { \
+            auto in = (uint32_t*)inbuf; \
+            auto out = (uint32_t*)outbuf; \
+            for (int i = OFFSET; i < nelements; i++) { \
+                out[i] = in[i] + out[i-OFFSET]; \
+            } \
+        } else if (sz == 8) { \
+            auto in = (uint64_t*)inbuf; \
+            auto out = (uint64_t*)outbuf; \
+            for (int i = OFFSET; i < nelements; i++) { \
+                out[i] = in[i] + out[i-OFFSET]; \
+            } \
+        } else { \
+            printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz); \
         }
+
+        // compiler doesn't know that offset is only going to be one of these
+        // 4 values, and so produces 2-3x slower code if we don't this
+        switch (offset) {
+        case 1:
+            UNDO_DELTA_FOR_OFFSET(1); break;
+        case 2:
+            UNDO_DELTA_FOR_OFFSET(2); break;
+        case 3:
+            UNDO_DELTA_FOR_OFFSET(3); break;
+        case 4:
+            UNDO_DELTA_FOR_OFFSET(4); break;
+        default:
+            break; // we checked that offset was in {1,..,4} above
+        }
+
+#undef UNDO_DELTA_FOR_OFFSET
+
+        // if (sz <= 1) {
+        //     auto in = (uint8_t*)inbuf;
+        //     auto out = (uint8_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] + out[i-offset];
+        //     }
+        // } else if (sz == 2) {
+        //     auto in = (uint16_t*)inbuf;
+        //     auto out = (uint16_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] + out[i-offset];
+        //     }
+        // } else if (sz == 4) {
+        //     auto in = (uint32_t*)inbuf;
+        //     auto out = (uint32_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] + out[i-offset];
+        //     }
+        // } else if (sz == 8) {
+        //     auto in = (uint64_t*)inbuf;
+        //     auto out = (uint64_t*)outbuf;
+        //     for (int i = offset; i < nelements; i++) {
+        //         out[i] = in[i] + out[i-offset];
+        //     }
+        // } else {
+        //     printf("WARNING: ignoring invalid element size '%d'; must be in {1,2,4,8}\n", element_sz);
+        // }
     }
 }
 
@@ -501,8 +606,8 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         clen = compress((char*)inptr, part, (char*)outbuf, outpart, param1, param2, workmem);
         LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n", (int)part, (int)clen, (int)(inbuf-start));
 
-        if (clen <= 0 || clen == part)
-        {
+        // if (clen <= 0 || clen == part)
+        if (clen <= 0) {
             if (part > outsize) return 0;
             memcpy(outbuf, inbuf, part);
             clen = part;
@@ -553,9 +658,13 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
             dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
 
-            if (has_preproc) {
-                undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
-            }
+            // if (has_preproc) {
+            //     undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
+            // }
+        }
+
+        if (has_preproc) {
+            undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
         }
 
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",
