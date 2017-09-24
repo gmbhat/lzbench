@@ -2119,6 +2119,29 @@ int64_t lzbench_sprintz_delta2_decompress(char *inbuf, size_t insize, char *outb
 }
 
 
+int64_t lzbench_sprintz_delta_rle_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return compress8b_delta_rle((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+}
+int64_t lzbench_sprintz_delta_rle_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    return decompress8b_delta_rle((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_delta_rle2_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t, char*)
+{
+    return compress8b_delta_rle2((uint8_t*)inbuf, insize, (int8_t*)outbuf);
+}
+int64_t lzbench_sprintz_delta_rle2_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char*)
+{
+    return decompress8b_delta_rle2((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+
 int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t nbits, size_t, char*)
 {

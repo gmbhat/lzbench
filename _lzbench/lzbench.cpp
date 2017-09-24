@@ -794,7 +794,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         if (insize != decomplen)
         {
             decomp_error = true;
-            LZBENCH_PRINT(5, "ERROR: input length (%d) != decompressed length (%d)\n", (int32_t)insize, (int32_t)decomplen);
+            LZBENCH_PRINT(3, "ERROR: input length (%d) != decompressed length (%d)\n", (int32_t)insize, (int32_t)decomplen);
         }
 
         if (memcmp(inbuf, decomp, insize) != 0)
@@ -802,7 +802,8 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
             decomp_error = true;
 
             size_t cmn = common(inbuf, decomp);
-            LZBENCH_PRINT(5, "ERROR in %s: only = %d / %d decompressed bytes were correct\n", desc->name, (int32_t)cmn, (int32_t)insize);
+            LZBENCH_PRINT(3, "ERROR in %s: only first %d / %d decompressed bytes were correct\n",
+                desc->name, (int32_t)cmn, (int32_t)insize);
 
             if (params->verbose >= 10)
             {

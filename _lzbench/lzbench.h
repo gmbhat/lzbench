@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 85
+#define LZBENCH_COMPRESSOR_COUNT 87
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -237,12 +237,14 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "blosc_byteshuf16b", "1.12.1",  1, 9,   2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,       NULL,       NULL },
     { "bbp", "2017-9-13",             0, 0,   0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,  lzbench_bbp_init, lzbench_bbp_deinit },
     { "sprintzDelta",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,        NULL,       NULL },
-    { "sprintzDblDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,  lzbench_sprintz_dbldelta_decompress,  NULL,       NULL },
-    { "sprintzDynDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,  lzbench_sprintz_dyndelta_decompress,  NULL,       NULL },
+    { "sprintzDblDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,lzbench_sprintz_dbldelta_decompress,    NULL,       NULL },
+    { "sprintzDynDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,lzbench_sprintz_dyndelta_decompress,    NULL,       NULL },
     { "sprDelta2",       "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,  lzbench_sprintz_delta2_decompress,      NULL,       NULL },
-    // NOTE: the following 2 codecs are unsafe and should only used for speed profiling
+    { "sprDeltaRLE",     "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_compress, lzbench_sprintz_delta_rle_decompress, NULL,       NULL },
+    { "sprDeltaRLE2",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,lzbench_sprintz_delta_rle2_decompress,NULL,       NULL },
+    // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "2017-9-16", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
-    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,  lzbench_just_bitpack_decompress,          NULL,       NULL }, // input bytes must all be <= 15
+    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,         NULL,       NULL }, // input bytes must all be <= 15
 };
 
 #undef FASTPFOR_ENTRY
