@@ -28,7 +28,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sb
+# import seaborn as sb
 
 import sys
 from . import files
@@ -50,7 +50,8 @@ FIG_SAVE_DIR = 'figs'
 RESULTS_SAVE_DIR = 'results'
 ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 
-DEFAULT_LEVELS = [1, 5, 9]  # many compressors have levels 1-9
+# DEFAULT_LEVELS = [1, 5, 9]  # many compressors have levels 1-9
+DEFAULT_LEVELS = [1, 9]  # many compressors have levels 1-9
 
 # NEEDS_NBITS = '<nbits>'
 
@@ -82,6 +83,8 @@ ALGO_INFO = {
     'FSE':              AlgoInfo('fse'),
     'Huffman':          AlgoInfo('huff0'),
     # integer compressors
+    'DeltaRLE':         AlgoInfo('sprDeltaRLE', allow_delta=False,
+                                 allowed_nbits=[8], group='Sprintz'),
     'Delta':            AlgoInfo('sprintzDelta', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
     'DoubleDelta':      AlgoInfo('sprintzDblDelta', allow_delta=False,
@@ -186,8 +189,8 @@ def _dset_path(nbits, dset, algos, order, deltas):
     if deltas and want_32b:
         # also zigzag encode since fastpfor and company assume nonnegative ints
         subdir = 'uint{}-as-uint32_deltas_zigzag'.format(nbits)
-    elif deltas:
-        subdir = 'int{}_deltas'.format(nbits)
+    # elif deltas:
+        # subdir = 'int{}_deltas'.format(nbits)
     elif want_32b:
         subdir = 'uint{}-as-uint32'.format(nbits)
     else:
@@ -198,11 +201,11 @@ def _dset_path(nbits, dset, algos, order, deltas):
     return join(path, dset)
 
 
-def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, minsecs=1):
+def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, miniters=1):
     algos = pyience.ensure_list_or_tuple(algos)
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
-    cmd = './lzbench -r -o4 -a'  # o4 is csv
+    cmd = './lzbench -r -o4 -t0,0 -a'  # o4 is csv
     algo_strs = []
     for algo in algos:
         algo = algo.split('-')[0]  # rm possible '-Delta' suffix
@@ -216,7 +219,7 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, minsecs
     cmd += '/'.join(algo_strs)
     if memlimit is not None and int(memlimit) > 0:
         cmd += ' -b{}'.format(int(memlimit))
-    cmd += ' -t{},{}'.format(int(minsecs), int(minsecs))
+    cmd += ' -i{},{}'.format(int(miniters), int(miniters))
     if preprocs is not None:
         preprocs = pyience.ensure_list_or_tuple(preprocs)
         for preproc in preprocs:
@@ -226,7 +229,7 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, minsecs
     return cmd
 
 
-def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
+def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
                     deltas=False, create_fig=False, verbose=1):
     dsets = ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
@@ -237,11 +240,11 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
         # preprocessing abilities for that, so that the time gets taken into
         # account
         dset_path = _dset_path(nbits=nbits, dset=dset, algos=algos,
-                               order=order, deltas=False)
+                               order=order, deltas=deltas)
         preprocs = 'delta' if deltas else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
-                            minsecs=minsecs)
+                            miniters=miniters)
 
         if verbose > 0:
             print '------------------------'
@@ -265,7 +268,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
         for i, d in enumerate(results_dicts):
             d['Dataset'] = dset
             d['Memlimit'] = memlimit
-            d['Minsecs'] = minsecs
+            d['MinIters'] = miniters
             d['Nbits'] = nbits
             d['Order'] = order
             d['Deltas'] = deltas
@@ -321,7 +324,8 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, minsecs=0, order='f',
 
 
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
-                 exclude_algos=None, avg_across_files=True, **sink):
+                 exclude_algos=None, exclude_deltas=False,
+                 avg_across_files=True, **sink):
 
     fig, axes = plt.subplots(2, figsize=(9, 9))
     dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
@@ -341,6 +345,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     df = df[df['Dataset'] == dset]
     df = df[df['Algorithm'] != 'Memcpy']
+
+    if exclude_deltas:
+        df = df[~df['Deltas']]
 
     if avg_across_files:
         df = df.groupby(INDEPENDENT_VARS, as_index=False)[DEPENDENT_VARS].mean()
@@ -420,6 +427,10 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     scatter_plot(axes[0], compress_speeds, ratios, colors=colors)
     scatter_plot(axes[1], decompress_speeds, ratios, colors=colors)
 
+    for ax in axes:
+        # ax.set_xscale('log')
+        ax.set_ylim([.95, ax.get_ylim()[1]])
+
     plt.tight_layout()
     plt.subplots_adjust(top=.88)
     save_dir = FIG_SAVE_DIR
@@ -454,13 +465,13 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
         all_use_deltas = [True, False]
 
     all_algorithms = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
-                      'DoubleDelta BitShuffle8b ByteShuffle8b').split()
+                      'DoubleDelta DeltaRLE BitShuffle8b ByteShuffle8b').split()
     # all_algorithms = ('BitShuffle8b ByteShuffle8b').split()
     all_dsets = ALL_DSET_NAMES
     # all_dsets = ['PAMAP']
 
     memlimit = -1
-    minsecs = 0  # TODO larger num for real experiments
+    miniters = 0  # TODO larger num for real experiments
     order = 'f'  # might need to iterate over 'c' and 'f' order at some point
 
     # delta_algos = [algo for algo in algos if ALGO_INFO[algo].allow_delta]
@@ -488,7 +499,7 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
             continue
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
-                        deltas=use_deltas, memlimit=memlimit, minsecs=minsecs,
+                        deltas=use_deltas, memlimit=memlimit, miniters=miniters,
                         order=order, create_fig=create_fig)
 
 
