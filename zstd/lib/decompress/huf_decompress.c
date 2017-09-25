@@ -836,9 +836,14 @@ size_t HUF_decompress (void* dst, size_t dstSize, const void* cSrc, size_t cSrcS
 {
     static const decompressionAlgo decompress[2] = { HUF_decompress4X2, HUF_decompress4X4 };
 
+    // printf("HUF_decompress: received dstSize, cSrcSize: %lu, %lu\n", dstSize, cSrcSize);
+
     /* validation checks */
     if (dstSize == 0) return ERROR(dstSize_tooSmall);
-    if (cSrcSize > dstSize) return ERROR(corruption_detected);   /* invalid */
+    if (cSrcSize > dstSize) {
+        printf("HUF_decompress: ERROR: cSrcSize > destSize\n");
+        return ERROR(corruption_detected);   /* invalid */
+    }
     if (cSrcSize == dstSize) { memcpy(dst, cSrc, dstSize); return dstSize; }   /* not compressed */
     if (cSrcSize == 1) { memset(dst, *(const BYTE*)cSrc, dstSize); return dstSize; }   /* RLE */
 

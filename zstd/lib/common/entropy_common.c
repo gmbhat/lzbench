@@ -166,6 +166,7 @@ size_t HUF_readStats(BYTE* huffWeight, size_t hwSize, U32* rankStats,
     size_t iSize;
     size_t oSize;
 
+    if (!srcSize) printf("received srcSize of 0!\n");
     if (!srcSize) return ERROR(srcSize_wrong);
     iSize = ip[0];
     /* memset(huffWeight, 0, hwSize);   *//* is not necessary, even though some analyzer complain ... */
@@ -173,6 +174,7 @@ size_t HUF_readStats(BYTE* huffWeight, size_t hwSize, U32* rankStats,
     if (iSize >= 128) {  /* special header */
         oSize = iSize - 127;
         iSize = ((oSize+1)/2);
+        if (iSize+1 > srcSize) printf("iSize+1 > srcSize\n");
         if (iSize+1 > srcSize) return ERROR(srcSize_wrong);
         if (oSize >= hwSize) return ERROR(corruption_detected);
         ip += 1;
@@ -183,6 +185,7 @@ size_t HUF_readStats(BYTE* huffWeight, size_t hwSize, U32* rankStats,
     }   }   }
     else  {   /* header compressed with FSE (normal case) */
         FSE_DTable fseWorkspace[FSE_DTABLE_SIZE_U32(6)];  /* 6 is max possible tableLog for HUF header (maybe even 5, to be tested) */
+        if (iSize+1 > srcSize) printf("iSize+1 > srcSize (case 2)\n");
         if (iSize+1 > srcSize) return ERROR(srcSize_wrong);
         oSize = FSE_decompress_wksp(huffWeight, hwSize-1, ip+1, iSize, fseWorkspace, 6);   /* max (hwSize-1) values decoded, as last one is implied */
         if (FSE_isError(oSize)) return oSize;

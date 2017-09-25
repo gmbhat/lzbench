@@ -246,63 +246,6 @@ size_t common(uint8_t *p1, uint8_t *p2)
 //     return remainder ? (multipleof - remainder) : x;
 // }
 
-/* Allocate aligned memory in a portable way.
- *
- * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
- *
- * @param alignment The number of bytes to which memory must be aligned. This
- *  value *must* be <= 255.
- * @param bytes The number of bytes to allocate.
- * @param zero If true, the returned memory will be zeroed. If false, the
- *  contents of the returned memory are undefined.
- * @returns A pointer to `size` bytes of memory, aligned to an `alignment`-byte
- *  boundary.
- */
-void *aligned_alloc(size_t alignment, size_t size, bool zero) {
-    size_t request_size = size + alignment;
-    char* buf = (char*)(zero ? calloc(1, request_size) : malloc(request_size));
-
-    size_t remainder = ((size_t)buf) % alignment;
-    size_t offset = alignment - remainder;
-    char* ret = buf + (unsigned char)offset;
-
-    // store how many extra bytes we allocated in the byte just before the
-    // pointer we return
-    *(unsigned char*)(ret - 1) = offset;
-
-    return (void*)ret;
-}
-
-/* Free memory allocated with aligned_alloc */
-void aligned_free(void* aligned_ptr) {
-    int offset = *(((char*)aligned_ptr) - 1);
-    free(((char*)aligned_ptr) - offset);
-}
-
-uint8_t* alloc_data_buffer(size_t size) {
-    void* buf;
-    if (ALIGN_BYTES > 1) {
-        buf = aligned_alloc(ALIGN_BYTES, size, true);
-    } else {
-        buf = calloc(1, size);
-    }
-    if (buf != NULL) {
-        volatile char zero = 0;
-        for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
-            static_cast<char * volatile>(buf)[i] = zero;
-        }
-    }
-    return reinterpret_cast<uint8_t*>(buf);
-}
-
-void free_data_buffer(void* ptr) {
-    if (ALIGN_BYTES > 1) {
-        aligned_free(ptr);
-    } else {
-        free(ptr);
-    }
-}
-
 
 void apply_preprocessors(const std::vector<int64_t>& preprocessors, uint8_t* inbuf,
                          size_t size, int element_sz, uint8_t* outbuf)
