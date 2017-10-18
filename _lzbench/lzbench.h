@@ -15,7 +15,7 @@
 #define ALIGN_BYTES 32  // input and output buffs aligned to this many bytes
 #define MIN_PAGE_SIZE 4096  // smallest page size we expect, if it's wrong the first algorithm might be a bit slower
 #define DEFAULT_LOOP_TIME (100*1000000)  // 1/10 of a second
-#define GET_COMPRESS_BOUND(insize) (insize + insize/6 + PAD_SIZE)  // for pithy
+#define GET_COMPRESS_BOUND(insize) (insize + 6*insize/15 + PAD_SIZE)
 #define LZBENCH_PRINT(level, fmt, ...) if (params->verbose >= level) printf(fmt, __VA_ARGS__)
 
 #define MAX(a,b) ((a)>(b))?(a):(b)
@@ -45,7 +45,7 @@
 	#define InitTimer(rate) if (!QueryPerformanceFrequency(&rate)) { printf("QueryPerformance not present"); };
 	#define GetTime(now) QueryPerformanceCounter(&now);
 	#define GetDiffTime(rate, start_ticks, end_ticks) (1000000000ULL*(end_ticks.QuadPart - start_ticks.QuadPart)/rate.QuadPart)
-	void uni_sleep(UINT milisec) { Sleep(milisec); };
+	static inline void uni_sleep(UINT milisec) { Sleep(milisec); };
     #ifndef fseeko
 		#ifdef _fseeki64
             #define fseeko _fseeki64
@@ -61,7 +61,7 @@
 	#include <time.h>
 	#include <unistd.h>
 	#include <sys/resource.h>
-	void uni_sleep(uint32_t milisec) { usleep(milisec * 1000); };
+	static inline void uni_sleep(uint32_t milisec) { usleep(milisec * 1000); };
 #if defined(__APPLE__) || defined(__MACH__)
     #include <mach/mach_time.h>
 	typedef mach_timebase_info_data_t bench_rate_t;
@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 89
+#define LZBENCH_COMPRESSOR_COUNT 91
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -242,8 +242,10 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprDelta2",       "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,  lzbench_sprintz_delta2_decompress,      NULL,       NULL },
     { "sprDeltaRLE",     "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_compress, lzbench_sprintz_delta_rle_decompress, NULL,       NULL },
     { "sprDeltaRLE2",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,lzbench_sprintz_delta_rle2_decompress,NULL,       NULL },
-    { "sprDeltaRLE_FSE", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_fse_compress,lzbench_sprintz_delta_rle_fse_decompress,NULL,       NULL },
-    { "sprDeltaRLE_HUF", "2017-9-16", 0, 0,   0, 127<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL,       NULL },
+    { "sprDeltaRLE_FSE", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_fse_compress,lzbench_sprintz_delta_rle_fse_decompress,NULL, NULL },
+    { "sprDeltaRLE_HUF", "2017-9-16", 0, 0,   0, 127<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL, NULL },
+    { "sprDeltaRLE_Zstd","2017-9-16", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit },
+    { "sprRowMajor","2017-9-16",      1, 128, 0,       0, lzbench_sprintz_row_compress,    lzbench_sprintz_row_decompress,          NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "2017-9-16", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
     { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,         NULL,       NULL }, // input bytes must all be <= 15
@@ -285,5 +287,12 @@ static const alias_desc_t alias_desc[LZBENCH_ALIASES_COUNT] =
     { "lzo",   "lzo1/lzo1a/lzo1b/lzo1c/lzo1f/lzo1x/lzo1y/lzo1z/lzo2a" },
     { "ucl",   "ucl_nrv2b/ucl_nrv2d/ucl_nrv2e" },
 };
+
+// functions used by main.cpp
+int lzbench_main(lzbench_params_t* params, const char** inFileNames,
+    unsigned ifnIdx, char* encoder_list);
+int lzbench_join(lzbench_params_t* params, const char** inFileNames,
+    unsigned ifnIdx, char* encoder_list);
+
 
 #endif

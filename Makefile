@@ -68,6 +68,9 @@ LDFLAGS += $(MOREFLAGS)
 # enable cpp11, but disable this warning as a hacky workaround for Tornado
 CXX_ONLY_FLAGS = -std=c++0x -Wno-c++11-narrowing
 
+LZBENCH_FILES =  _lzbench/lzbench.o _lzbench/compressors.o _lzbench/output.o
+LZBENCH_FILES += _lzbench/main.o
+
 LZO_FILES = lzo/lzo1.o lzo/lzo1a.o lzo/lzo1a_99.o lzo/lzo1b_1.o lzo/lzo1b_2.o lzo/lzo1b_3.o lzo/lzo1b_4.o lzo/lzo1b_5.o
 LZO_FILES += lzo/lzo1b_6.o lzo/lzo1b_7.o lzo/lzo1b_8.o lzo/lzo1b_9.o lzo/lzo1b_99.o lzo/lzo1b_9x.o lzo/lzo1b_cc.o
 LZO_FILES += lzo/lzo1b_d1.o lzo/lzo1b_d2.o lzo/lzo1b_rr.o lzo/lzo1b_xx.o lzo/lzo1c_1.o lzo/lzo1c_2.o lzo/lzo1c_3.o
@@ -150,7 +153,7 @@ BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.
 BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
-SPRINTZ_FILES = sprintz/sprintz.o
+SPRINTZ_FILES = sprintz/sprintz.o sprintz/sprintz2.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
@@ -216,7 +219,6 @@ ifeq "$(BENCH_HAS_NAKAMICHI)" "1"
 	MISC_FILES += nakamichi/Nakamichi_Okamigan.o
 endif
 
-
 all: lzbench
 
 # FIX for SEGFAULT on GCC 4.9+
@@ -263,7 +265,7 @@ lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
 		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
 		$(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(FASTPFOR_FILES) 				\
 		$(BLOSC_FILES) $(BBP_FILES)	$(SPRINTZ_FILES)						\
-		$(MISC_FILES) _lzbench/lzbench.o _lzbench/compressors.o
+		$(MISC_FILES) $(LZBENCH_FILES)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	@echo Linked GCC_VERSION=$(GCC_VERSION) CLANG_VERSION=$(CLANG_VERSION) COMPILER=$(COMPILER)
 

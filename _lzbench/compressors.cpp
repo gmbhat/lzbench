@@ -2096,6 +2096,7 @@ void lzbench_bbp_deinit(char* workmem) {
 
 #ifndef BENCH_REMOVE_SPRINTZ
 #include "sprintz/sprintz.h"
+#include "sprintz/sprintz2.h"
 #include "sprintz/bitpack.h"
 
 // #include "util.h" // TODO rm; just for aligned alloc to debug rle + huff0
@@ -2257,6 +2258,21 @@ int64_t lzbench_sprintz_delta_rle_huf_decompress(char *inbuf, size_t insize, cha
     // return lzbench_huff0_decompress(inbuf, insize, outbuf, outsize, level, 0, NULL);
 }
 
+int64_t lzbench_sprintz_delta_rle_zstd_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t level, size_t windowLog, char* workmem)
+{
+    char* tmp = (char*)malloc(insize);
+    auto len = compress8b_delta_rle((uint8_t*)inbuf, insize, (int8_t*)tmp);
+    return lzbench_zstd_compress(tmp, len, outbuf, outsize, level, windowLog, workmem);
+}
+int64_t lzbench_sprintz_delta_rle_zstd_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t, size_t, char* workmem)
+{
+    char* tmp = (char*)malloc(outsize);
+    auto len = lzbench_zstd_decompress(inbuf, insize, tmp, outsize, 0, 0, workmem);
+    return decompress8b_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
+}
+
 int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t nbits, size_t, char*)
 {
@@ -2277,6 +2293,17 @@ int64_t lzbench_just_bitpack_decompress(char *inbuf, size_t insize, char *outbuf
     size_t outsize, size_t nbits, size_t, char*)
 {
     return decompress8b_online((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_row_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return compress8b_rowmajor((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_row_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decompress8b_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
 #endif

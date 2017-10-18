@@ -594,9 +594,16 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
         size_t outsize, size_t, size_t, char*);
 
     int64_t lzbench_sprintz_delta_rle_huf_compress(char *inbuf, size_t insize, char *outbuf,
-        size_t outsize, size_t level, size_t, char*);
+        size_t outsize, size_t level, size_t, char* workmem);
     int64_t lzbench_sprintz_delta_rle_huf_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char* workmem);
+
+#ifndef BENCH_REMOVE_ZSTD
+    int64_t lzbench_sprintz_delta_rle_zstd_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t level, size_t, char*);
+    int64_t lzbench_sprintz_delta_rle_zstd_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
+#endif
 
     int64_t lzbench_fixed_bitpack_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t nbits, size_t, char*);
@@ -608,13 +615,32 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_just_bitpack_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t nbits, size_t, char*);
 
+    int64_t lzbench_sprintz_row_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+    int64_t lzbench_sprintz_row_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+
 #else
     #define lzbench_sprintz_delta_compress
     #define lzbench_sprintz_delta_decompress
+    #define lzbench_sprintz_delta2_compress
+    #define lzbench_sprintz_delta2_decompress
     #define lzbench_sprintz_dbldelta_compress
     #define lzbench_sprintz_dbldelta_decompress
     #define lzbench_sprintz_dyndelta_compress
     #define lzbench_sprintz_dyndelta_decompress
+
+    #define lzbench_sprintz_delta_rle_compress
+    #define lzbench_sprintz_delta_rle_decompress
+    #define lzbench_sprintz_delta_rle2_compress
+    #define lzbench_sprintz_delta_rle2_decompress
+
+    #define lzbench_sprintz_delta_rle_fse_compress
+    #define lzbench_sprintz_delta_rle_fse_decompress
+    #define lzbench_sprintz_delta_rle_huf_compress
+    #define lzbench_sprintz_delta_rle_huf_decompress
+    #define lzbench_sprintz_delta_rle_zstd_compress
+    #define lzbench_sprintz_delta_rle_zstd_decompress
 #endif
 
 #endif // LZBENCH_COMPRESSORS_H
