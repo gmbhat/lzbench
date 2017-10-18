@@ -533,6 +533,7 @@ UTIL_STATIC uint8_t* alloc_data_buffer(size_t size) {
     } else {
         buf = calloc(1, size);
     }
+    // printf("allocating buffer of size %lu\n", size);
     if (buf != NULL) {
         volatile char zero = 0;
         for (size_t i = 0; i < size; i += MIN_PAGE_SIZE) {
