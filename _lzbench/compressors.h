@@ -620,6 +620,11 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_sprintz_row_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t nbits, size_t, char*);
 
+    int64_t lzbench_sprintz_row_delta_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+    int64_t lzbench_sprintz_row_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t nbits, size_t, char*);
+
 #else
     #define lzbench_sprintz_delta_compress
     #define lzbench_sprintz_delta_decompress

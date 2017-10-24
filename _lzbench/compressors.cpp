@@ -2306,6 +2306,17 @@ int64_t lzbench_sprintz_row_decompress(char *inbuf, size_t insize, char *outbuf,
     return decompress8b_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
+int64_t lzbench_sprintz_row_delta_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return compress8b_rowmajor_delta((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_row_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decompress8b_rowmajor_delta((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
 #endif
 
 
