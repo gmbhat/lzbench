@@ -2206,15 +2206,7 @@ int64_t lzbench_sprintz_delta_rle_huf_compress(char *inbuf, size_t insize, char 
     size_t outsize, size_t level, size_t, char*)
 {
     char* tmp = (char*)malloc(outsize);
-    // auto tmp = alloc_data_buffer(outsize);
     auto len = compress8b_delta_rle((uint8_t*)inbuf, insize, (int8_t*)tmp);
-    // auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, level, 0, NULL);
-
-    // free(tmp);
-
-    // memcpy(tmp, inbuf, insize);
-    // auto ret = lzbench_huff0_compress((char*)tmp, insize, outbuf, outsize, level, 0, NULL);
-    // auto ret = lzbench_huff0_compress((char*)tmp, outsize, outbuf, outsize, level, 0, NULL);
     auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, level, 0, NULL);
 
     // if (ret == 4) {
@@ -2226,36 +2218,19 @@ int64_t lzbench_sprintz_delta_rle_huf_compress(char *inbuf, size_t insize, char 
     //     printf("orig insize, outsize, insize after deltaRLE, final size: %lu, %lu, %lld, %lld\n", insize, outsize, len, ret);
     // }
 
-    // free_data_buffer(tmp);
     free(tmp);
     return ret;
-
-    // return lzbench_huff0_compress(inbuf, insize, outbuf, outsize, level, 0, NULL);
 }
 int64_t lzbench_sprintz_delta_rle_huf_decompress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t level, size_t, char*)
 {
     char* tmp = (char*)malloc(outsize);
-    // auto tmp = alloc_data_buffer(outsize);
-
-    // memcpy(tmp, inbuf, insize);
-    // auto len = lzbench_huff0_decompress((char*)tmp, insize, (char*)outbuf, outsize, level, 0, NULL);
-
-    // printf("insize, outsize at decompressor: %lu, %lu\n", insize, outsize);
-
     auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, outsize, level, 0, NULL);
-    memcpy(outbuf, tmp, len);
-
-    // free_data_buffer(tmp);
-    // return len; // TODO rm
-
+    // memcpy(outbuf, tmp, len); // TODO might need to uncomment this?
 
     auto ret = decompress8b_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
     free(tmp);
-    // free_data_buffer(tmp);
     return ret;
-
-    // return lzbench_huff0_decompress(inbuf, insize, outbuf, outsize, level, 0, NULL);
 }
 
 int64_t lzbench_sprintz_delta_rle_zstd_compress(char *inbuf, size_t insize, char *outbuf,
@@ -2315,6 +2290,35 @@ int64_t lzbench_sprintz_row_delta_decompress(char *inbuf, size_t insize, char *o
     size_t outsize, size_t ndims, size_t, char*)
 {
     return decompress8b_rowmajor_delta((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_row_delta_huf_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)calloc(outsize, 1);
+    // auto len = compress8b_delta_rle((uint8_t*)inbuf, insize, (int8_t*)tmp);
+    auto len = compress8b_rowmajor_delta((uint8_t*)inbuf, insize, (int8_t*)tmp, ndims);
+
+    // printf("rowmajor compressed len: %lld\n", len);
+
+    auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, 0, 0, NULL);
+
+    // printf("huff compressed len: %lld\n", ret);
+
+    free(tmp);
+    return ret;
+}
+int64_t lzbench_sprintz_row_delta_huf_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+
+    char* tmp = (char*)calloc(outsize, 1);
+    auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, outsize, 0, 0, NULL);
+    // auto ret = decompress8b_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
+    auto ret = decompress8b_rowmajor_delta((int8_t*)tmp, (uint8_t*)outbuf);
+    free(tmp);
+    return ret;
+
 }
 
 #endif

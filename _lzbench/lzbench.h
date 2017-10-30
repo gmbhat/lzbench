@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 92
+#define LZBENCH_COMPRESSOR_COUNT 93
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -236,20 +236,21 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "blosc_bitshuf16b",  "1.12.1",  1, 9,   2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,        NULL,       NULL },
     { "blosc_byteshuf16b", "1.12.1",  1, 9,   2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,       NULL,       NULL },
     { "bbp", "2017-9-13",             0, 0,   0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,  lzbench_bbp_init, lzbench_bbp_deinit },
-    { "sprintzDelta",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,        NULL,       NULL },
-    { "sprintzDblDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,lzbench_sprintz_dbldelta_decompress,    NULL,       NULL },
-    { "sprintzDynDelta", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,lzbench_sprintz_dyndelta_decompress,    NULL,       NULL },
-    { "sprDelta2",       "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,  lzbench_sprintz_delta2_decompress,      NULL,       NULL },
-    { "sprDeltaRLE",     "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_compress, lzbench_sprintz_delta_rle_decompress, NULL,       NULL },
-    { "sprDeltaRLE2",    "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,lzbench_sprintz_delta_rle2_decompress,NULL,       NULL },
-    { "sprDeltaRLE_FSE", "2017-9-16", 0, 0,   0,       0, lzbench_sprintz_delta_rle_fse_compress,lzbench_sprintz_delta_rle_fse_decompress,NULL, NULL },
-    { "sprDeltaRLE_HUF", "2017-9-16", 0, 0,   0, 127<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL, NULL },
-    { "sprDeltaRLE_Zstd","2017-9-16", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit },
-    { "sprRowMajor",     "2017-9-16", 1, 128, 0,       0, lzbench_sprintz_row_compress,    lzbench_sprintz_row_decompress,          NULL,       NULL },
-    { "sprRowMajorDelta","2017-9-16", 1, 128, 0,       0, lzbench_sprintz_row_delta_compress,lzbench_sprintz_row_delta_decompress,  NULL,       NULL },
+    { "sprintzDelta",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,        NULL,       NULL },
+    { "sprintzDblDelta", "0.0", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,lzbench_sprintz_dbldelta_decompress,    NULL,       NULL },
+    { "sprintzDynDelta", "0.0", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,lzbench_sprintz_dyndelta_decompress,    NULL,       NULL },
+    { "sprDelta2",       "0.0", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,  lzbench_sprintz_delta2_decompress,      NULL,       NULL },
+    { "sprDeltaRLE",     "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle_compress, lzbench_sprintz_delta_rle_decompress, NULL,       NULL },
+    { "sprDeltaRLE2",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,lzbench_sprintz_delta_rle2_decompress,NULL,       NULL },
+    { "sprDeltaRLE_FSE", "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle_fse_compress,lzbench_sprintz_delta_rle_fse_decompress,NULL, NULL },
+    { "sprDeltaRLE_HUF", "0.0", 0, 0,   0,  64<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL, NULL },
+    { "sprDeltaRLE_Zstd","0.0", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit },
+    { "sprRowMajor",     "0.0", 1, 128, 0,       0, lzbench_sprintz_row_compress,    lzbench_sprintz_row_decompress,          NULL,       NULL },
+    { "sprRowMajorDelta","0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_compress,lzbench_sprintz_row_delta_decompress,  NULL,       NULL },
+    { "sprRowDelta_HUF", "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_row_delta_huf_compress,lzbench_sprintz_row_delta_huf_decompress,  NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
-    { "sprFixedBitpack", "2017-9-16", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
-    { "sprJustBitpack",  "2017-9-16", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,         NULL,       NULL }, // input bytes must all be <= 15
+    { "sprFixedBitpack", "0.0", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,        NULL,       NULL }, // input bytes must all be <= 1
+    { "sprJustBitpack",  "0.0", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,         NULL,       NULL }, // input bytes must all be <= 15
 };
 
 #undef FASTPFOR_ENTRY
