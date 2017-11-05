@@ -153,7 +153,7 @@ BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.
 BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
-SPRINTZ_FILES = sprintz/sprintz.o sprintz/sprintz2.o
+SPRINTZ_FILES = sprintz/sprintz.o sprintz/sprintz2.o sprintz/delta.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC

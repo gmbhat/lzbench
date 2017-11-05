@@ -7,6 +7,9 @@
 #ifndef BENCH_REMOVE_FASTPFOR
     #include "fastpfor/deltautil.h"  // for simd delta preproc
 #endif
+#ifndef BENCH_REMOVE_SPRINTZ
+    #include "sprintz/delta.h"  // for simd delta preproc
+#endif
 
 void apply_preprocessors(const std::vector<int64_t>& preprocessors,
     const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
@@ -27,19 +30,34 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors,
         // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
         // continue;
 
-        if ((preproc < 1) || (preproc > 4)) {
+        // if ((preproc < 1) || (preproc > 4)) {
+        if (preproc < 1) {
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
 
-#ifndef BENCH_REMOVE_FASTPFOR   // use simd delta if available
+        int offset = preproc;  // simplifying hack based on enum values
+
+        // use simd delta if available
+#ifndef BENCH_REMOVE_FASTPFOR
         if (sz == 4 && preproc == DELTA4)  {
             memcpy(outbuf, inbuf, size);
             FastPForLib::Delta::deltaSIMD((uint32_t*)outbuf, nelements);
             continue;
         }
 #endif
-        int offset = preproc;  // simplifying hack based on enum values
+#ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
+        if (sz == 1 && offset > 2) {
+            encode_delta_rowmajor(inbuf, size, (int8_t*)outbuf, offset, false);
+            continue;
+        }
+#else
+        if ((preproc > 4)) { // TODO better err message saying need sprintz
+            printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
+            continue;
+        }
+#endif
+
 
         memcpy(outbuf, inbuf, offset * sz);
 
@@ -123,13 +141,14 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
         // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
         // continue;
 
-        if ((preproc < 1) || (preproc > 4)) {
+        if (preproc < 1) {
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
 
         // memcpy(outbuf, inbuf, size); continue;  // TODO rm
 
+        int offset = preproc;  // simplifying hack based on enum values
 #ifndef BENCH_REMOVE_FASTPFOR   // use simd delta if available
         if (sz == 4 && preproc == DELTA4)  {
             memcpy(outbuf, inbuf, size);
@@ -137,7 +156,24 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
             continue;
         }
 #endif
-        int offset = preproc;  // simplifying hack based on enum values
+#ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
+        if (sz == 1 && offset > 2) {
+            if (inbuf != outbuf) {
+                decode_delta_rowmajor((int8_t*)inbuf, size, outbuf, offset);
+            } else {
+                decode_delta_rowmajor_inplace(inbuf, size, offset);
+                // uint8_t* tmp = (uint8_t*)malloc(size);
+                // decode_delta_rowmajor((int8_t*)inbuf, size, tmp, offset);
+                // memcpy(inbuf, tmp, size);
+            }
+            continue;
+        }
+#else
+        if ((preproc > 4)) { // TODO better err message saying need sprintz
+            printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
+            continue;
+        }
+#endif
 
         memcpy(outbuf, inbuf, offset * sz);
 

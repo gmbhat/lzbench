@@ -2321,6 +2321,23 @@ int64_t lzbench_sprintz_row_delta_huf_decompress(char *inbuf, size_t insize, cha
 
 }
 
+int64_t lzbench_sprintz_row_delta_fse_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)malloc(insize);
+    // auto len = compress8b_delta_rle((uint8_t*)inbuf, insize, (int8_t*)tmp);
+    auto len = compress8b_rowmajor_delta((uint8_t*)inbuf, insize, (int8_t*)tmp, ndims);
+    return lzbench_fse_compress(tmp, len, outbuf, outsize, 0, 0, NULL);
+}
+int64_t lzbench_sprintz_row_delta_fse_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)malloc(outsize);
+    auto len = lzbench_fse_decompress(inbuf, insize, tmp, outsize, 0, 0, NULL);
+    // return decompress8b_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
+    return decompress8b_rowmajor_delta((int8_t*)tmp, (uint8_t*)outbuf);
+}
+
 #endif
 
 
