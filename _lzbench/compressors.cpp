@@ -2350,6 +2350,17 @@ int64_t lzbench_sprintz_delta_decode(char *inbuf, size_t insize, char *outbuf,
     return decode_delta_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
+int64_t lzbench_sprintz_doubledelta_encode(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return encode_doubledelta_rowmajor((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_doubledelta_decode(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decode_doubledelta_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
 #endif
 
 
