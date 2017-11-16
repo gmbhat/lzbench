@@ -645,6 +645,11 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_sprintz_doubledelta_decode(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    int64_t lzbench_sprintz_xff_encode(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_xff_decode(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+
 #else
     #define lzbench_sprintz_delta_compress
     #define lzbench_sprintz_delta_decompress

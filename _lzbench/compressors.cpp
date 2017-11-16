@@ -2099,6 +2099,7 @@ void lzbench_bbp_deinit(char* workmem) {
 #include "sprintz/sprintz2.h"
 #include "sprintz/bitpack.h"
 #include "sprintz/delta.h"
+#include "sprintz/predict.h"
 
 // #include "util.h" // TODO rm; just for aligned alloc to debug rle + huff0
 
@@ -2359,6 +2360,17 @@ int64_t lzbench_sprintz_doubledelta_decode(char *inbuf, size_t insize, char *out
     size_t outsize, size_t ndims, size_t, char*)
 {
     return decode_doubledelta_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_xff_encode(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return encode_xff_rowmajor((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_xff_decode(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decode_xff_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
 #endif
