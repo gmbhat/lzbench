@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 97
+#define LZBENCH_COMPRESSOR_COUNT 99
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -246,9 +246,11 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprDeltaRLE_HUF", "0.0", 0, 0,   0,  64<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL, NULL },
     { "sprDeltaRLE_Zstd","0.0", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit },
     { "sprRowMajor",     "0.0", 1, 128, 0,       0, lzbench_sprintz_row_compress,          lzbench_sprintz_row_decompress,          NULL,       NULL },
-    { "sprRowMajorDelta","0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_compress,    lzbench_sprintz_row_delta_decompress,    NULL,       NULL },
+    { "sprRowDelta",     "0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_compress,    lzbench_sprintz_row_delta_decompress,    NULL,       NULL },
     { "sprRowDelta_HUF", "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_row_delta_huf_compress,lzbench_sprintz_row_delta_huf_decompress,NULL,       NULL },
     { "sprRowDelta_FSE", "0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_fse_compress,lzbench_sprintz_row_delta_fse_decompress,NULL,       NULL },
+    { "sprRowDeltaRLE",  "0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_rle_compress,lzbench_sprintz_row_delta_rle_decompress,NULL,       NULL },
+    { "sprRowDeltaRLE_HUF","0.0",1,128, 0,  64<<10, lzbench_sprintz_row_delta_rle_huf_compress,lzbench_sprintz_row_delta_rle_huf_decompress,NULL,       NULL },
     { "sprJustDelta",    "0.0", 1, 128, 0,       0, lzbench_sprintz_delta_encode,          lzbench_sprintz_delta_decode,            NULL,       NULL },
     { "sprJustDblDelta", "0.0", 1, 128, 0,       0, lzbench_sprintz_doubledelta_encode,    lzbench_sprintz_doubledelta_decode,      NULL,       NULL },
     { "sprJustXFF",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_encode,            lzbench_sprintz_xff_decode,              NULL,       NULL },
