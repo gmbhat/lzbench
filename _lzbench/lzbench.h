@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 99
+#define LZBENCH_COMPRESSOR_COUNT 100
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -254,6 +254,7 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprJustDelta",    "0.0", 1, 128, 0,       0, lzbench_sprintz_delta_encode,          lzbench_sprintz_delta_decode,            NULL,       NULL },
     { "sprJustDblDelta", "0.0", 1, 128, 0,       0, lzbench_sprintz_doubledelta_encode,    lzbench_sprintz_doubledelta_decode,      NULL,       NULL },
     { "sprJustXFF",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_encode,            lzbench_sprintz_xff_decode,              NULL,       NULL },
+    { "sprXffRLE",       "0.0", 1, 128, 0,       0, lzbench_sprintz_row_xff_rle_compress,  lzbench_sprintz_row_xff_rle_decompress,  NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "0.0", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,              NULL,       NULL }, // input bytes must all be <= 1
     { "sprJustBitpack",  "0.0", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,               NULL,       NULL }, // input bytes must all be <= 15

@@ -2097,6 +2097,7 @@ void lzbench_bbp_deinit(char* workmem) {
 #ifndef BENCH_REMOVE_SPRINTZ
 #include "sprintz/sprintz.h"
 #include "sprintz/sprintz2.h"
+#include "sprintz/sprintz_xff.h"
 #include "sprintz/bitpack.h"
 #include "sprintz/delta.h"
 #include "sprintz/predict.h"
@@ -2402,6 +2403,17 @@ int64_t lzbench_sprintz_xff_decode(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, char*)
 {
     return decode_xff_rowmajor((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_row_xff_rle_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    return compress8b_rowmajor_xff_rle((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_row_xff_rle_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decompress8b_rowmajor_xff_rle((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
 #endif
