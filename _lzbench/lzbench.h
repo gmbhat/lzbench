@@ -150,7 +150,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 102
+#define LZBENCH_COMPRESSOR_COUNT 106
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -236,9 +236,9 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "blosc_bitshuf16b",  "1.12.1",  1, 9,   2,       0, lzbench_blosc_bitshuf_compress,  lzbench_blosc_bitshuf_decompress,        NULL,       NULL },
     { "blosc_byteshuf16b", "1.12.1",  1, 9,   2,       0, lzbench_blosc_byteshuf_compress, lzbench_blosc_byteshuf_decompress,       NULL,       NULL },
     { "bbp",       "2017-9-13", 0, 0,   0,       0, lzbench_bbp_compress,            lzbench_bbp_decompress,  lzbench_bbp_init, lzbench_bbp_deinit },
-    { "sprintzDelta",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_compress,        lzbench_sprintz_delta_decompress,        NULL,       NULL },
-    { "sprintzDblDelta", "0.0", 0, 0,   0,       0, lzbench_sprintz_dbldelta_compress,     lzbench_sprintz_dbldelta_decompress,     NULL,       NULL },
-    { "sprintzDynDelta", "0.0", 0, 0,   0,       0, lzbench_sprintz_dyndelta_compress,     lzbench_sprintz_dyndelta_decompress,     NULL,       NULL },
+    { "sprintzDelta1d",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_1d_compress,        lzbench_sprintz_delta_1d_decompress,        NULL,       NULL },
+    { "sprintzDblDelta1d", "0.0", 0, 0,   0,       0, lzbench_sprintz_dbldelta_1d_compress,     lzbench_sprintz_dbldelta_1d_decompress,     NULL,       NULL },
+    { "sprintzDynDelta1d", "0.0", 0, 0,   0,       0, lzbench_sprintz_dyndelta_1d_compress,     lzbench_sprintz_dyndelta_1d_decompress,     NULL,       NULL },
     { "sprDelta2",       "0.0", 0, 0,   0,       0, lzbench_sprintz_delta2_compress,       lzbench_sprintz_delta2_decompress,       NULL,       NULL },
     { "sprDeltaRLE",     "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle_compress,    lzbench_sprintz_delta_rle_decompress,    NULL,       NULL },
     { "sprDeltaRLE2",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,   lzbench_sprintz_delta_rle2_decompress,   NULL,       NULL },
@@ -257,6 +257,11 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprJustXFF",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_encode,            lzbench_sprintz_xff_decode,              NULL,       NULL },
     { "sprXffRLE",       "0.0", 1, 128, 0,       0, lzbench_sprintz_row_xff_rle_compress,  lzbench_sprintz_row_xff_rle_decompress,  NULL,       NULL },
     { "sprXffRLE_lowdim","0.0", 1, 4,   0,       0, lzbench_sprintz_row_xff_rle_lowdim_compress,  lzbench_sprintz_row_xff_rle_lowdim_decompress,  NULL,       NULL },
+    // sprintz top-level functions
+    { "sprintzDelta",    "0.0", 1, 128, 0,       0, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_decompress,              NULL,       NULL },
+    { "sprintzXff",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_compress,  lzbench_sprintz_xff_decompress,                  NULL,       NULL },
+    { "sprintzDelta_HUF","0.0", 1, 128, 0,  64<<10, lzbench_sprintz_delta_huf_compress,  lzbench_sprintz_delta_huf_decompress,      NULL,       NULL },
+    { "sprintzXff_HUF",  "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_xff_huf_compress,  lzbench_sprintz_xff_huf_decompress,          NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "0.0", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,              NULL,       NULL }, // input bytes must all be <= 1
     { "sprJustBitpack",  "0.0", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,               NULL,       NULL }, // input bytes must all be <= 15

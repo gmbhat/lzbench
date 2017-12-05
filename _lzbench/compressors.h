@@ -558,19 +558,19 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 #endif
 
 #ifndef BENCH_REMOVE_SPRINTZ
-    int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_delta_1d_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t level, size_t, char*);
-    int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_delta_1d_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
 
-    int64_t lzbench_sprintz_dbldelta_compress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_dbldelta_1d_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t level, size_t, char*);
-    int64_t lzbench_sprintz_dbldelta_decompress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_dbldelta_1d_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
 
-    int64_t lzbench_sprintz_dyndelta_compress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_dyndelta_1d_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t level, size_t, char*);
-    int64_t lzbench_sprintz_dyndelta_decompress(char *inbuf, size_t insize, char *outbuf,
+    int64_t lzbench_sprintz_dyndelta_1d_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t, size_t, char*);
 
     int64_t lzbench_sprintz_delta2_compress(char *inbuf, size_t insize, char *outbuf,
@@ -662,30 +662,57 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_sprintz_doubledelta_decode(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    // raw xff
     int64_t lzbench_sprintz_xff_encode(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
     int64_t lzbench_sprintz_xff_decode(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    // xff + rle
     int64_t lzbench_sprintz_row_xff_rle_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
     int64_t lzbench_sprintz_row_xff_rle_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    // xff lowdim
     int64_t lzbench_sprintz_row_xff_rle_lowdim_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
     int64_t lzbench_sprintz_row_xff_rle_lowdim_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    // ------------------------ top-level sprintz functions
+
+    // delta
+    int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    // xff
+    int64_t lzbench_sprintz_xff_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_xff_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+
+    // delta + huffman
+    int64_t lzbench_sprintz_delta_huf_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_delta_huf_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    // xff + huffmans
+    int64_t lzbench_sprintz_xff_huf_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_xff_huf_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+
 #else
-    #define lzbench_sprintz_delta_compress
-    #define lzbench_sprintz_delta_decompress
+    #define lzbench_sprintz_delta_1d_compress
+    #define lzbench_sprintz_delta_1d_decompress
     #define lzbench_sprintz_delta2_compress
     #define lzbench_sprintz_delta2_decompress
-    #define lzbench_sprintz_dbldelta_compress
-    #define lzbench_sprintz_dbldelta_decompress
-    #define lzbench_sprintz_dyndelta_compress
-    #define lzbench_sprintz_dyndelta_decompress
+    #define lzbench_sprintz_dbldelta_1d_compress
+    #define lzbench_sprintz_dbldelta_1d_decompress
+    #define lzbench_sprintz_dyndelta_1d_compress
+    #define lzbench_sprintz_dyndelta_1d_decompress
 
     #define lzbench_sprintz_delta_rle_compress
     #define lzbench_sprintz_delta_rle_decompress

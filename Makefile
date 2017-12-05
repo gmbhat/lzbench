@@ -153,9 +153,10 @@ BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.
 BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
-SPRINTZ_FILES = sprintz/sprintz.o sprintz/sprintz2.o sprintz/delta.o
-SPRINTZ_FILES += sprintz/predict.o sprintz/sprintz_xff.o sprintz/sprintz3.o
-SPRINTZ_FILES += sprintz/sprintz_xff_lowdim.o
+SPRINTZ_FILES = sprintz/univariate_8b.o sprintz/delta.o sprintz/predict.o
+SPRINTZ_FILES += sprintz/sprintz_delta.o sprintz/sprintz_delta_lowdim.o
+SPRINTZ_FILES += sprintz/sprintz_xff.o sprintz/sprintz_xff_lowdim.o
+SPRINTZ_FILES += sprintz/sprintz_8b.o sprintz/format.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC
