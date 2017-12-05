@@ -154,7 +154,8 @@ BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
 SPRINTZ_FILES = sprintz/sprintz.o sprintz/sprintz2.o sprintz/delta.o
-SPRINTZ_FILES += sprintz/predict.o sprintz/sprintz_xff.o
+SPRINTZ_FILES += sprintz/predict.o sprintz/sprintz_xff.o sprintz/sprintz3.o
+SPRINTZ_FILES += sprintz/sprintz_xff_lowdim.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC

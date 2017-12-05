@@ -2098,6 +2098,7 @@ void lzbench_bbp_deinit(char* workmem) {
 #include "sprintz/sprintz.h"
 #include "sprintz/sprintz2.h"
 #include "sprintz/sprintz_xff.h"
+// #include "sprintz/sprintz_xff_lowdim.h"
 #include "sprintz/bitpack.h"
 #include "sprintz/delta.h"
 #include "sprintz/predict.h"
@@ -2334,6 +2335,17 @@ int64_t lzbench_sprintz_row_delta_rle_decompress(char *inbuf, size_t insize, cha
     return decompress8b_rowmajor_delta_rle((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
+int64_t lzbench_sprintz_row_delta_rle_lowdim_compress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return compress8b_rowmajor_delta_rle_lowdim((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_row_delta_rle_lowdim_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decompress8b_rowmajor_delta_rle_lowdim((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
 int64_t lzbench_sprintz_row_delta_rle_huf_compress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2414,6 +2426,17 @@ int64_t lzbench_sprintz_row_xff_rle_decompress(char *inbuf, size_t insize, char 
     size_t outsize, size_t ndims, size_t, char*)
 {
     return decompress8b_rowmajor_xff_rle((int8_t*)inbuf, (uint8_t*)outbuf);
+}
+
+int64_t lzbench_sprintz_row_xff_rle_lowdim_compress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    return compress8b_rowmajor_xff_rle_lowdim((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
+}
+int64_t lzbench_sprintz_row_xff_rle_lowdim_decompress(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decompress8b_rowmajor_xff_rle_lowdim((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
 #endif
