@@ -9,6 +9,7 @@
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ
     #include "sprintz/delta.h"  // for simd delta preproc
+    #include "sprintz/format.h"  // for simd delta preproc
 #endif
 
 void apply_preprocessors(const std::vector<int64_t>& preprocessors,
@@ -48,7 +49,12 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors,
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
         if (sz == 1 && offset > 2) {
-            encode_delta_rowmajor(inbuf, size, (int8_t*)outbuf, offset, false);
+            encode_delta_rowmajor_8b(inbuf, size, (int8_t*)outbuf, offset, false);
+            continue;
+        }
+        if (sz == 2 && offset > 2) {
+            encode_delta_rowmajor_16b((const uint16_t*)inbuf, size / 2,
+                (int16_t*)outbuf, offset, false);
             continue;
         }
 #else
@@ -159,12 +165,22 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
         if (sz == 1 && offset > 2) {
             if (inbuf != outbuf) {
-                decode_delta_rowmajor((int8_t*)inbuf, size, outbuf, offset);
+                decode_delta_rowmajor_8b((int8_t*)inbuf, size, outbuf, offset);
             } else {
-                decode_delta_rowmajor_inplace(inbuf, size, offset);
+                decode_delta_rowmajor_inplace_8b(inbuf, size, offset);
                 // uint8_t* tmp = (uint8_t*)malloc(size);
                 // decode_delta_rowmajor((int8_t*)inbuf, size, tmp, offset);
                 // memcpy(inbuf, tmp, size);
+            }
+            continue;
+        }
+        if (sz == 2 && offset > 2) {
+            if (inbuf != outbuf) {
+                decode_delta_rowmajor_16b((const int16_t*)inbuf, size / 2,
+                    (uint16_t*)outbuf, offset);
+            } else {
+                decode_delta_rowmajor_inplace_16b((uint16_t*)inbuf,
+                    size / 2, offset);
             }
             continue;
         }
