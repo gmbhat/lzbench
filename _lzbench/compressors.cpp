@@ -2439,8 +2439,11 @@ int64_t lzbench_sprintz_row_xff_rle_lowdim_decompress(char *inbuf, size_t insize
     return decompress_rowmajor_xff_rle_lowdim_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
-// ------------------------ top-level sprintz functions
+// ================================ top-level sprintz functions
 
+// ------------------------ 8b
+
+// delta
 int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2452,6 +2455,7 @@ int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbu
     return sprintz_decompress_delta_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
+// xff
 int64_t lzbench_sprintz_xff_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2463,26 +2467,7 @@ int64_t lzbench_sprintz_xff_decompress(char *inbuf, size_t insize, char *outbuf,
     return sprintz_decompress_xff_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
-
-//     char* tmp = (char*)calloc(outsize, 1);
-//     auto len = compress8b_rowmajor_delta_rle((uint8_t*)inbuf, insize, (int8_t*)tmp, ndims);
-//     auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, 0, 0, NULL);
-//     free(tmp);
-//     return ret;
-// }
-// int64_t lzbench_sprintz_row_delta_rle_huf_decompress(char *inbuf, size_t insize, char *outbuf,
-//     size_t outsize, size_t ndims, size_t, char*)
-// {
-
-//     char* tmp = (char*)calloc(outsize, 1);
-//     auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, outsize, 0, 0, NULL);
-//     // auto ret = decompress8b_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
-//     auto ret = decompress8b_rowmajor_delta_rle((int8_t*)tmp, (uint8_t*)outbuf);
-//     free(tmp);
-//     return ret;
-
-
-
+// delta + huffman
 int64_t lzbench_sprintz_delta_huf_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2502,6 +2487,7 @@ int64_t lzbench_sprintz_delta_huf_decompress(char *inbuf, size_t insize, char *o
     return ret;
 }
 
+// xff + huffman
 int64_t lzbench_sprintz_xff_huf_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2520,6 +2506,73 @@ int64_t lzbench_sprintz_xff_huf_decompress(char *inbuf, size_t insize, char *out
     free(tmp);
     return ret;
 }
+
+// ------------------------ 16b
+
+// delta
+int64_t lzbench_sprintz_delta_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    return sprintz_compress_delta_16b((uint16_t*)inbuf, insize/2, (int16_t*)outbuf, ndims) * 2;
+}
+int64_t lzbench_sprintz_delta_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return sprintz_decompress_delta_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
+}
+
+// xff
+int64_t lzbench_sprintz_xff_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    return sprintz_compress_xff_16b((uint16_t*)inbuf, insize/2, (int16_t*)outbuf, ndims) * 2;
+}
+int64_t lzbench_sprintz_xff_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return sprintz_decompress_xff_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
+}
+
+// delta + huffman
+int64_t lzbench_sprintz_delta_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)calloc(outsize, 1);
+    auto len = sprintz_compress_delta_16b((uint16_t*)inbuf, insize/2, (int16_t*)tmp, ndims) * 2;
+    auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, 0, 0, NULL);
+    free(tmp);
+    return ret;
+}
+int64_t lzbench_sprintz_delta_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)calloc(outsize, 1);
+    auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, outsize, 0, 0, NULL);
+    auto ret = sprintz_decompress_delta_16b((int16_t*)tmp, (uint16_t*)outbuf) * 2;
+    free(tmp);
+    return ret;
+}
+
+// xff + huffman
+int64_t lzbench_sprintz_xff_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)calloc(outsize, 1);
+    auto len = sprintz_compress_xff_16b((uint16_t*)inbuf, insize/2, (int16_t*)tmp, ndims) * 2;
+    auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, outsize, 0, 0, NULL);
+    free(tmp);
+    return ret;
+}
+int64_t lzbench_sprintz_xff_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    char* tmp = (char*)calloc(outsize, 1);
+    auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, outsize, 0, 0, NULL);
+    auto ret = sprintz_decompress_xff_16b((int16_t*)tmp, (uint16_t*)outbuf) * 2;
+    free(tmp);
+    return ret;
+}
+
 
 #endif
 

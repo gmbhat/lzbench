@@ -23,6 +23,13 @@
 #   code to generate scatterplots for speed vs ratio
 #   code to read in our stored data and generate real plots via this func
 
+# some queries I like: TODO put these somewhere sensible
+#
+# profile raw bitpacking speed
+#   ./lzbench -r -asprJustBitpack/sprFixedBitpack -t0,0 -i25,25 -j synthetic/100M_randint_0_1.dat
+#
+
+
 import itertools
 import os
 import numpy as np
@@ -74,6 +81,11 @@ class AlgoInfo(object):
         self.allowed_orders = allowed_orders
 
 
+def _sprintz_algo_info(name):
+    return AlgoInfo(names, allow_delta=False, allowed_nbits=[8],
+        allowed_orders=['c'], group='Sprintz'),
+
+
 ALGO_INFO = {
     'Memcpy':           AlgoInfo('memcpy'),
     # general-purpose compressors
@@ -97,6 +109,10 @@ ALGO_INFO = {
                                  allowed_nbits=[8], group='Sprintz'),
     'DynDelta':         AlgoInfo('sprintzDynDelta', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
+    'SprintzDelta':     _sprintz_algo_info('sprintzDelta'),
+    'SprintzXff':       _sprintz_algo_info('sprintzXff'),
+    'SprintzDelta+Huf': _sprintz_algo_info('sprintzDelta_HUF'),
+    'SprintzXff+Huf':   _sprintz_algo_info('sprintzXff_HUF'),
     'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':          AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),

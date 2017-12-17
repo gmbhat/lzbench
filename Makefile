@@ -157,7 +157,7 @@ SPRINTZ_FILES = sprintz/univariate_8b.o sprintz/delta.o sprintz/predict.o
 SPRINTZ_FILES += sprintz/sprintz_delta.o sprintz/sprintz_delta_rle.o
 SPRINTZ_FILES += sprintz/sprintz_xff.o sprintz/sprintz_xff_rle.o
 SPRINTZ_FILES += sprintz/sprintz_delta_lowdim.o sprintz/sprintz_xff_lowdim.o
-SPRINTZ_FILES += sprintz/sprintz_8b.o sprintz/format.o
+SPRINTZ_FILES += sprintz/sprintz.o sprintz/format.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
     DEFINES += -DBENCH_REMOVE_CSC

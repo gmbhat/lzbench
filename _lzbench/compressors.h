@@ -680,7 +680,9 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_sprintz_row_xff_rle_lowdim_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
-    // ------------------------ top-level sprintz functions
+    // ================================ top-level sprintz functions
+
+    // ------------------------ 8b
 
     // delta
     int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
@@ -698,10 +700,34 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
         size_t outsize, size_t ndims, size_t, char*);
     int64_t lzbench_sprintz_delta_huf_decompress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
-    // xff + huffmans
+    // xff + huffman
     int64_t lzbench_sprintz_xff_huf_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
     int64_t lzbench_sprintz_xff_huf_decompress(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+
+    // ------------------------ 16b
+
+    // delta
+    int64_t lzbench_sprintz_delta_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_delta_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    // xff
+    int64_t lzbench_sprintz_xff_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_xff_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+
+    // delta + huffman
+    int64_t lzbench_sprintz_delta_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_delta_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    // xff + huffman
+    int64_t lzbench_sprintz_xff_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, char*);
+    int64_t lzbench_sprintz_xff_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
 #else
