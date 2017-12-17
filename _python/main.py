@@ -45,6 +45,8 @@ else:
 # gflags.DEFINE_
 
 
+DEBUG = False
+
 DATASETS_DIR = '~/Desktop/datasets/compress'  # change this if you aren't me
 FIG_SAVE_DIR = 'figs'
 RESULTS_SAVE_DIR = 'results'
@@ -61,13 +63,15 @@ DEFAULT_LEVELS = [1, 9]  # many compressors have levels 1-9
 class AlgoInfo(object):
 
     def __init__(self, lzbench_name, levels=None, allow_delta=True,
-                 allowed_nbits=[8, 16], needs_32b=False, group=None):
+                 allowed_nbits=[8, 16], needs_32b=False, group=None,
+                 allowed_orders=['f']):
         self.lzbench_name = lzbench_name
         self.levels = levels
         self.allow_delta = allow_delta
         self.allowed_nbits = allowed_nbits
         self.needs_32b = needs_32b
         self.group = group
+        self.allowed_orders = allowed_orders
 
 
 ALGO_INFO = {
@@ -208,7 +212,9 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     algos = pyience.ensure_list_or_tuple(algos)
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
-    cmd = './lzbench -r -o4 -t0,0 -a'  # o4 is csv
+    cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
+    cmd += ' -i{},{}'.format(int(miniters), int(miniters))
+    cmd += ' -a'
     algo_strs = []
     for algo in algos:
         algo = algo.split('-')[0]  # rm possible '-Delta' suffix
@@ -222,7 +228,6 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     cmd += '/'.join(algo_strs)
     if memlimit is not None and int(memlimit) > 0:
         cmd += ' -b{}'.format(int(memlimit))
-    cmd += ' -i{},{}'.format(int(miniters), int(miniters))
     if preprocs is not None:
         preprocs = pyience.ensure_list_or_tuple(preprocs)
         for preproc in preprocs:
@@ -236,12 +241,15 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
 
 def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
-                    deltas=False, create_fig=False, verbose=1):
+                    deltas=False, create_fig=False, verbose=1, dry_run=DEBUG):
     dsets = ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
 
     for dset in dsets:
+        # if verbose > 0:
+        #     print "================================ {}".format(dset)
+
         # don't tell dset_path about delta encoding; we'll use the benchmark's
         # preprocessing abilities for that, so that the time gets taken into
         # account
@@ -253,9 +261,14 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                             preprocs=preprocs, memlimit=memlimit,
                             miniters=miniters, use_u32=use_u32)
 
-        if verbose > 0:
+        if verbose > 0 or dry_run:
             print '------------------------'
             print cmd
+
+            if dry_run:
+                # print "Warning: abandoning early for debugging!"
+                continue
+
         output = os.popen(cmd).read()
         # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
         trimmed = output[:output.find('\ndone...')]
@@ -310,7 +323,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         all_results.to_csv(ALL_RESULTS_PATH, index=False)
         # print "all results ever:\n", all_results
 
-    if create_fig:
+    if create_fig and not dry_run:
         for dset in dsets:
             fig_for_dset(dset, save=True, df=all_results, nbits=nbits)
             # fig_for_dset(dset, algos=algos, save=True, df=all_results)
@@ -470,7 +483,11 @@ def fig_for_dsets(dsets=None, **kwargs):
 # ================================================================ main
 
 def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
-               all_use_deltas=None, miniters=0, memlimit=-1, order='f', **sink):
+               deltas=None, miniters=0, memlimit=-1,
+               all_orders=['c', 'f'], dsets=None, **sink):
+    all_use_deltas = deltas  # 'deltas' was a more intuitive kwarg
+    all_dsets = dsets  # rename kwarg for consistency
+
     if all_nbits is None:
         # all_nbits = [16]
         all_nbits = [8, 16]
@@ -480,19 +497,29 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
     if all_use_deltas is None:
         # all_use_deltas = [True]
         all_use_deltas = [True, False]
+    if all_orders is None:
+        all_orders = ['c', 'f']
+    if all_dsets is None:
+        all_dsets = ALL_DSET_NAMES
+
+    all_nbits = pyience.ensure_list_or_tuple(all_nbits)
+    all_use_u32 = pyience.ensure_list_or_tuple(all_use_u32)
+    all_use_deltas = pyience.ensure_list_or_tuple(all_use_deltas)
+    all_orders = pyience.ensure_list_or_tuple(all_orders)
+    all_dsets = pyience.ensure_list_or_tuple(all_dsets)
 
     all_algorithms = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
                       'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
                       'ByteShuffle8b').split()
     # all_algorithms = ('BitShuffle8b ByteShuffle8b').split()
-    all_dsets = ALL_DSET_NAMES
     # all_dsets = ['PAMAP']
 
     # delta_algos = [algo for algo in algos if ALGO_INFO[algo].allow_delta]
     # delta_u32_algos = [algo for algo in delta_algos if ALGO_INFO[algo].needs_32b]
 
-    all_combos = itertools.product(all_nbits, all_use_u32, all_use_deltas)
-    for (use_nbits, use_u32, use_deltas) in all_combos:
+    all_combos = itertools.product(
+        all_nbits, all_use_u32, all_use_deltas, all_orders)
+    for (use_nbits, use_u32, use_deltas, use_order) in all_combos:
         # filter algorithms with incompatible requirements
         algos = []
         for algo in all_algorithms:
@@ -502,6 +529,8 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
             if use_u32 != info.needs_32b:
                 continue
             if use_deltas and not info.allow_delta:
+                continue
+            if use_order not in info.allowed_orders:
                 continue
             algos.append(algo)
 
@@ -514,7 +543,7 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
                         deltas=use_deltas, memlimit=memlimit, miniters=miniters,
-                        order=order, create_fig=create_fig)
+                        order=use_order, create_fig=create_fig)
 
 
 def main():
