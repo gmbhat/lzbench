@@ -154,8 +154,9 @@ BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
 BBP_FILES += bbp/coding_helpers.o bbp/common.o
 
 SPRINTZ_FILES = sprintz/univariate_8b.o sprintz/delta.o sprintz/predict.o
-SPRINTZ_FILES += sprintz/sprintz_delta.o sprintz/sprintz_delta_lowdim.o
-SPRINTZ_FILES += sprintz/sprintz_xff.o sprintz/sprintz_xff_lowdim.o
+SPRINTZ_FILES += sprintz/sprintz_delta.o sprintz/sprintz_delta_rle.o
+SPRINTZ_FILES += sprintz/sprintz_xff.o sprintz/sprintz_xff_rle.o
+SPRINTZ_FILES += sprintz/sprintz_delta_lowdim.o sprintz/sprintz_xff_lowdim.o
 SPRINTZ_FILES += sprintz/sprintz_8b.o sprintz/format.o
 
 ifeq "$(DONT_BUILD_CSC)" "1"
