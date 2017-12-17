@@ -83,6 +83,8 @@ ALGO_INFO = {
     'FSE':              AlgoInfo('fse'),
     'Huffman':          AlgoInfo('huff0'),
     # integer compressors
+    'DeltaRLE_HUF':     AlgoInfo('sprDeltaRLE_HUF', allow_delta=False,
+                                 allowed_nbits=[8], group='Sprintz'),
     'DeltaRLE':         AlgoInfo('sprDeltaRLE', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
     'Delta':            AlgoInfo('sprintzDelta', allow_delta=False,
@@ -201,7 +203,8 @@ def _dset_path(nbits, dset, algos, order, deltas):
     return join(path, dset)
 
 
-def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, miniters=1):
+def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
+                  miniters=1, use_u32=False):
     algos = pyience.ensure_list_or_tuple(algos)
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
@@ -225,6 +228,9 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None, miniter
         for preproc in preprocs:
             cmd += ' -d{}'.format(PREPROC_TO_INT[preproc.lower()])
 
+        if not use_u32:
+            cmd += ' -e{}'.format(int(nbits / 8))
+
     cmd += ' {}'.format(dset_path)
     return cmd
 
@@ -241,10 +247,11 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         # account
         dset_path = _dset_path(nbits=nbits, dset=dset, algos=algos,
                                order=order, deltas=deltas)
+        use_u32 = 'zigzag' in dset_path  # TODO this is hacky
         preprocs = 'delta' if deltas else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
-                            miniters=miniters)
+                            miniters=miniters, use_u32=use_u32)
 
         if verbose > 0:
             print '------------------------'
@@ -325,7 +332,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
 
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
                  exclude_algos=None, exclude_deltas=False,
-                 avg_across_files=True, **sink):
+                 memlimit=-1, avg_across_files=True, order='f', **sink):
 
     fig, axes = plt.subplots(2, figsize=(9, 9))
     dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
@@ -344,10 +351,14 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     # print df
 
     df = df[df['Dataset'] == dset]
+    df = df[df['Order'] == order]
     df = df[df['Algorithm'] != 'Memcpy']
 
     if exclude_deltas:
         df = df[~df['Deltas']]
+
+    if memlimit is not None:  # can use -1 for runs without a mem limit
+        df = df[df['Memlimit'] == memlimit]
 
     if avg_across_files:
         df = df.groupby(INDEPENDENT_VARS, as_index=False)[DEPENDENT_VARS].mean()
@@ -436,6 +447,12 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     save_dir = FIG_SAVE_DIR
     if nbits is not None:
         save_dir = os.path.join(save_dir, '{}b'.format(nbits))
+    if exclude_deltas:
+        save_dir += '_nodeltas'
+    if memlimit is not None:
+        save_dir += '_{}KB'.format(memlimit)
+    if order != 'f':
+        save_dir += '_{}'.format(order)
     if save:
         files.ensure_dir_exists(save_dir)
         plt.savefig(os.path.join(save_dir, dset))
@@ -453,7 +470,7 @@ def fig_for_dsets(dsets=None, **kwargs):
 # ================================================================ main
 
 def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
-               all_use_deltas=None, **sink):
+               all_use_deltas=None, miniters=0, memlimit=-1, order='f', **sink):
     if all_nbits is None:
         # all_nbits = [16]
         all_nbits = [8, 16]
@@ -465,14 +482,11 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
         all_use_deltas = [True, False]
 
     all_algorithms = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
-                      'DoubleDelta DeltaRLE BitShuffle8b ByteShuffle8b').split()
+                      'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
+                      'ByteShuffle8b').split()
     # all_algorithms = ('BitShuffle8b ByteShuffle8b').split()
     all_dsets = ALL_DSET_NAMES
     # all_dsets = ['PAMAP']
-
-    memlimit = -1
-    miniters = 0  # TODO larger num for real experiments
-    order = 'f'  # might need to iterate over 'c' and 'f' order at some point
 
     # delta_algos = [algo for algo in algos if ALGO_INFO[algo].allow_delta]
     # delta_u32_algos = [algo for algo in delta_algos if ALGO_INFO[algo].needs_32b]
