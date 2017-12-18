@@ -28,6 +28,10 @@
 # profile raw bitpacking speed
 #   ./lzbench -r -asprJustBitpack/sprFixedBitpack -t0,0 -i25,25 -j synthetic/100M_randint_0_1.dat
 #
+# run everything and create figure for one dataset (here, uci_gas):
+#   python -m _python.main --sweep algos=SprintzDelta,SprintzDelta_16b,
+#       SprintzDelta_Huf,SprintzDelta_Huf_16b,Zstd,Brotli,LZ4,Huffman,
+#       FastPFOR,SIMDBP128 --dsets=uci_gas --miniters=10 --create_fig
 
 
 import itertools
@@ -71,7 +75,7 @@ class AlgoInfo(object):
 
     def __init__(self, lzbench_name, levels=None, allow_delta=True,
                  allowed_nbits=[8, 16], needs_32b=False, group=None,
-                 allowed_orders=['f']):
+                 allowed_orders=['f'], needs_ndims=False):
         self.lzbench_name = lzbench_name
         self.levels = levels
         self.allow_delta = allow_delta
@@ -79,11 +83,45 @@ class AlgoInfo(object):
         self.needs_32b = needs_32b
         self.group = group
         self.allowed_orders = allowed_orders
+        self.needs_ndims = needs_ndims
 
 
-def _sprintz_algo_info(name):
-    return AlgoInfo(names, allow_delta=False, allowed_nbits=[8],
-        allowed_orders=['c'], group='Sprintz'),
+class DsetInfo(object):
+
+    def __init__(self, pretty_name, bench_name, ndims):
+        self.pretty_name = pretty_name
+        self.bench_name = bench_name
+        self.ndims = ndims
+
+
+ALL_DSETS = [
+    DsetInfo('AMPD Gas', 'ampd_gas', 3),
+    DsetInfo('AMPD Water', 'ampd_water', 2),
+    DsetInfo('AMPD Power', 'ampd_power', 23),
+    DsetInfo('AMPD Weather', 'ampd_weather', 7),
+    DsetInfo('MSRC-12', 'msrc', 80),
+    DsetInfo('PAMAP', 'pamap', 31),
+    DsetInfo('UCI Gas', 'uci_gas', 18),
+    DsetInfo('UCR', 'ucr', 1)
+]
+NAME_2_DSET = {ds.bench_name: ds for ds in ALL_DSETS}
+PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
+
+
+# PRETTY_DSET_NAMES = {
+#     'ucr':          'UCR',
+#     'ampd_gas':     'AMPD Gas',
+#     'ampd_water':   'AMPD Water',
+#     'ampd_power':   'AMPD Power',
+#     'ampd_weather': 'AMPD Weather',
+#     'uci_gas':      'UCI Gas',
+#     'pamap':        'PAMAP',
+#     'msrc':         'MSRC-12',
+# }
+
+def _sprintz_algo_info(name, nbits=8):
+    return AlgoInfo(name, allow_delta=False, allowed_nbits=[nbits],
+                    allowed_orders=['c'], group='Sprintz', needs_ndims=True)
 
 
 ALGO_INFO = {
@@ -95,6 +133,7 @@ ALGO_INFO = {
     'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
     'Gipfeli':          AlgoInfo('gipfeli'),
     'Snappy':           AlgoInfo('snappy'),
+    'Brotli':            AlgoInfo('brotli', levels=DEFAULT_LEVELS),
     # just entropy coding
     'FSE':              AlgoInfo('fse'),
     'Huffman':          AlgoInfo('huff0'),
@@ -103,16 +142,20 @@ ALGO_INFO = {
                                  allowed_nbits=[8], group='Sprintz'),
     'DeltaRLE':         AlgoInfo('sprDeltaRLE', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
-    'Delta':            AlgoInfo('sprintzDelta', allow_delta=False,
+    'SprDelta':         AlgoInfo('sprintzDelta1d', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
-    'DoubleDelta':      AlgoInfo('sprintzDblDelta', allow_delta=False,
+    'SprDoubleDelta':   AlgoInfo('sprintzDblDelta1d', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
-    'DynDelta':         AlgoInfo('sprintzDynDelta', allow_delta=False,
+    'SprDynDelta':      AlgoInfo('sprintzDynDelta1d', allow_delta=False,
                                  allowed_nbits=[8], group='Sprintz'),
     'SprintzDelta':     _sprintz_algo_info('sprintzDelta'),
     'SprintzXff':       _sprintz_algo_info('sprintzXff'),
-    'SprintzDelta+Huf': _sprintz_algo_info('sprintzDelta_HUF'),
-    'SprintzXff+Huf':   _sprintz_algo_info('sprintzXff_HUF'),
+    'SprintzDelta_Huf': _sprintz_algo_info('sprintzDelta_HUF'),
+    'SprintzXff_Huf':   _sprintz_algo_info('sprintzXff_HUF'),
+    'SprintzDelta_16b':     _sprintz_algo_info('sprintzDelta_16b', nbits=16),
+    'SprintzXff_16b':       _sprintz_algo_info('sprintzXff_16b', nbits=16),
+    'SprintzDelta_Huf_16b': _sprintz_algo_info('sprintzDelta_HUF_16b', nbits=16),
+    'SprintzXff_Huf_16b':   _sprintz_algo_info('sprintzXff_HUF_16b', nbits=16),
     'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':          AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),
@@ -148,16 +191,16 @@ BENCH_NAME_TO_PRETTY_NAME = dict([(info.lzbench_name, key)
                                  for (key, info) in ALGO_INFO.items()])
 
 
-PRETTY_DSET_NAMES = {
-    'ucr':          'UCR',
-    'ampd_gas':     'AMPD Gas',
-    'ampd_water':   'AMPD Water',
-    'ampd_power':   'AMPD Power',
-    'ampd_weather': 'AMPD Weather',
-    'uci_gas':      'UCI Gas',
-    'pamap':        'PAMAP',
-    'msrc':         'MSRC-12',
-}
+# PRETTY_DSET_NAMES = {
+#     'ucr':          'UCR',
+#     'ampd_gas':     'AMPD Gas',
+#     'ampd_water':   'AMPD Water',
+#     'ampd_power':   'AMPD Power',
+#     'ampd_weather': 'AMPD Weather',
+#     'uci_gas':      'UCI Gas',
+#     'pamap':        'PAMAP',
+#     'msrc':         'MSRC-12',
+# }
 ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 
 PREPROC_TO_INT = {
@@ -167,7 +210,10 @@ PREPROC_TO_INT = {
     'delta4': 4,
 }
 
-INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
+# XXX might actually want to vary Order as an independent var, but for
+# now, this is a hack to not have two different memcpy results
+# INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
+INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Deltas'.split()
 DEPENDENT_VARS = ['Ratio', 'Compression speed', 'Decompression speed']
 
 
@@ -180,6 +226,7 @@ def _clean_algorithm_name(algo_name):
     algo_name = BENCH_NAME_TO_PRETTY_NAME[tokens[0]]
     if tokens[-1][0] == '-':  # if compression level given; eg, '-5'
         algo_name += ' ' + tokens[-1]
+    # print "cleaned algo name: '{}'".format(algo_name)
     return algo_name
 
 
@@ -224,12 +271,13 @@ def _dset_path(nbits, dset, algos, order, deltas):
 
 
 def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
-                  miniters=1, use_u32=False):
+                  miniters=1, use_u32=False, ndims=None, dset_name=None):
     algos = pyience.ensure_list_or_tuple(algos)
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
     cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
-    cmd += ' -i{},{}'.format(int(miniters), int(miniters))
+    # cmd += ' -i{},{}'.format(int(miniters), int(miniters))
+    cmd += ' -i{},{}'.format(1, int(miniters))  # XXX compress full number of trials
     cmd += ' -a'
     algo_strs = []
     for algo in algos:
@@ -239,6 +287,9 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
         # s = s.replace(NEEDS_NBITS, str(nbits))
         if info.levels is not None:
             s += ',' + ','.join([str(lvl) for lvl in info.levels])
+        if info.needs_ndims:
+            ndims = NAME_2_DSET[dset_name].ndims
+            s += ',{}'.format(int(ndims))
         algo_strs.append(s)
 
     cmd += '/'.join(algo_strs)
@@ -247,7 +298,12 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     if preprocs is not None:
         preprocs = pyience.ensure_list_or_tuple(preprocs)
         for preproc in preprocs:
-            cmd += ' -d{}'.format(PREPROC_TO_INT[preproc.lower()])
+            preproc_const = PREPROC_TO_INT[preproc.lower()]
+            if preproc_const == 1 and use_u32:
+                # use FastPFOR vectorized delta impl instead of regular
+                # scalar delta for FastPFOR 32b funcs
+                preproc_const = 4
+            cmd += ' -d{}'.format(preproc_const)
 
         if not use_u32:
             cmd += ' -e{}'.format(int(nbits / 8))
@@ -257,7 +313,8 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
 
 def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
-                    deltas=False, create_fig=False, verbose=1, dry_run=DEBUG):
+                    deltas=False, create_fig=False, verbose=1, dry_run=DEBUG,
+                    **sink):
     dsets = ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
@@ -275,7 +332,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         preprocs = 'delta' if deltas else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
-                            miniters=miniters, use_u32=use_u32)
+                            miniters=miniters, use_u32=use_u32, dset_name=dset)
 
         if verbose > 0 or dry_run:
             print '------------------------'
@@ -361,7 +418,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
 
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
                  exclude_algos=None, exclude_deltas=False,
-                 memlimit=-1, avg_across_files=True, order='f', **sink):
+                 memlimit=-1, avg_across_files=True, order=None, **sink):
 
     fig, axes = plt.subplots(2, figsize=(9, 9))
     dset_name = PRETTY_DSET_NAMES[dset] if dset in PRETTY_DSET_NAMES else dset
@@ -380,11 +437,18 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     # print df
 
     df = df[df['Dataset'] == dset]
-    df = df[df['Order'] == order]
-    df = df[df['Algorithm'] != 'Memcpy']
+
+    if order is not None:
+        df = df[df['Order'] == order]
+    # df = df[df['Algorithm'] != 'Memcpy']
+
+    # print "using algos before exlude deltas: ", sorted(list(df['Algorithm']))
+    # return
 
     if exclude_deltas:
         df = df[~df['Deltas']]
+
+    # print "using algos before memlimit: ", sorted(list(df['Algorithm']))
 
     if memlimit is not None:  # can use -1 for runs without a mem limit
         df = df[df['Memlimit'] == memlimit]
@@ -397,6 +461,8 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     if nbits is not None:
         df = df[df['Nbits'] == nbits]
+    else:
+        raise ValueError("must specify nbits!")
 
     # if algos is None:
         # algos = list(df['Algorithm'])
@@ -414,6 +480,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     algos = list(df['Algorithm'])
     used_delta = list(df['Deltas'])
+
+    print "fig_for_dset: using algos: ", sorted(list(df['Algorithm']))
+    # return
 
     # print "pruned df to:"
     # print df; return
@@ -478,9 +547,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
         save_dir = os.path.join(save_dir, '{}b'.format(nbits))
     if exclude_deltas:
         save_dir += '_nodeltas'
-    if memlimit is not None:
+    if memlimit is not None and memlimit > 0:
         save_dir += '_{}KB'.format(memlimit)
-    if order != 'f':
+    if order is not None:
         save_dir += '_{}'.format(order)
     if save:
         files.ensure_dir_exists(save_dir)
@@ -498,11 +567,15 @@ def fig_for_dsets(dsets=None, **kwargs):
 
 # ================================================================ main
 
-def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
-               deltas=None, miniters=0, memlimit=-1,
-               all_orders=['c', 'f'], dsets=None, **sink):
+def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
+              deltas=None, miniters=0, memlimit=-1,
+              orders=['c', 'f'], dsets=None, **kwargs):
+    # TODO I should just rename these vars
+    all_nbits = nbits
     all_use_deltas = deltas  # 'deltas' was a more intuitive kwarg
     all_dsets = dsets  # rename kwarg for consistency
+    all_algos = algos
+    all_orders = orders
 
     if all_nbits is None:
         # all_nbits = [16]
@@ -517,16 +590,18 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
         all_orders = ['c', 'f']
     if all_dsets is None:
         all_dsets = ALL_DSET_NAMES
+    if all_algos is None:
+        all_algos = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
+                     'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
+                     'ByteShuffle8b').split()
 
     all_nbits = pyience.ensure_list_or_tuple(all_nbits)
     all_use_u32 = pyience.ensure_list_or_tuple(all_use_u32)
     all_use_deltas = pyience.ensure_list_or_tuple(all_use_deltas)
     all_orders = pyience.ensure_list_or_tuple(all_orders)
     all_dsets = pyience.ensure_list_or_tuple(all_dsets)
+    all_algos = pyience.ensure_list_or_tuple(all_algos)
 
-    all_algorithms = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
-                      'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
-                      'ByteShuffle8b').split()
     # all_algorithms = ('BitShuffle8b ByteShuffle8b').split()
     # all_dsets = ['PAMAP']
 
@@ -538,7 +613,7 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
     for (use_nbits, use_u32, use_deltas, use_order) in all_combos:
         # filter algorithms with incompatible requirements
         algos = []
-        for algo in all_algorithms:
+        for algo in all_algos:
             info = ALGO_INFO[algo]
             if use_nbits not in info.allowed_nbits:
                 continue
@@ -559,7 +634,7 @@ def run_it_all(create_fig=False, all_nbits=None, all_use_u32=None,
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
                         deltas=use_deltas, memlimit=memlimit, miniters=miniters,
-                        order=use_order, create_fig=create_fig)
+                        order=use_order, create_fig=create_fig, **kwargs)
 
 
 def main():
@@ -569,8 +644,8 @@ def main():
 
     kwargs = pyience.parse_cmd_line()
 
-    if kwargs is not None and kwargs.get('everything', False):
-        run_it_all(**kwargs)
+    if kwargs is not None and kwargs.get('sweep', False):
+        run_sweep(**kwargs)
         return
 
     if kwargs.get('dsets', None) == 'all':
