@@ -4,8 +4,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _FILE_OFFSET_BITS 64  // turn off_t into a 64-bit type for ftello() and fseeko()
 
-#include <vector>
+#include <stdint.h>
 #include <string>
+#include <vector>
+
 #include "compressors.h"
 #include "lizard/lizard_compress.h"    // LIZARD_MAX_CLEVEL
 
@@ -91,10 +93,29 @@ typedef struct string_table
 
 enum textformat_e { MARKDOWN=1, TEXT, TEXT_FULL, CSV, TURBOBENCH, MARKDOWN2 };
 enum timetype_e { FASTEST=1, AVERAGE, MEDIAN };
-
 enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4};
+enum query_type_e { NO_QUERY = 0, MEAN = 1, MIN = 2, MAX = 3, L2 = 4, DOT = 5 };
+enum storage_order_e { ROWMAJOR = 0, COLMAJOR = 1};
 
-// typedef struct {
+typedef struct query_params_t {
+    std::vector<double> window_data_dbl;
+    std::vector<int8_t> window_data_i8;
+    std::vector<uint8_t> window_data_u8;
+    std::vector<int16_t> window_data_i16;
+    std::vector<uint16_t> window_data_u16;
+    int64_t window_nrows;
+    int64_t window_ncols;
+    int64_t window_stride;
+    query_type_e type;
+} query_params_t;
+
+typedef struct data_info_t {
+    size_t element_sz;
+    size_t ndims;
+    bool is_signed;
+    storage_order_e storage_order;
+} data_info_t;
+
 class lzbench_params_t {
 public:
     int show_speed, compress_only;
@@ -107,13 +128,13 @@ public:
     std::vector<string_table_t> results;
     std::vector<int64_t> preprocessors;
     const char* in_filename;
-    int element_sz;
-    // bool time_preproc;
+    // int element_sz;
+    query_params_t query_params;
+    data_info_t data_info;
 
     lzbench_params_t(const lzbench_params_t &) = default;
     lzbench_params_t() = default;
 };
-// } lzbench_params_t;
 
 struct less_using_1st_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col1_algname < struct2.col1_algname); } };
 struct less_using_2nd_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col2_ctime > struct2.col2_ctime); } };

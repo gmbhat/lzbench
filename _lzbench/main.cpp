@@ -65,13 +65,16 @@ int main(int argc, char** argv) {
     params->dmintime = 20*DEFAULT_LOOP_TIME/1000000; // 2 sec
     params->cloop_time = params->dloop_time = DEFAULT_LOOP_TIME;
 
+    // convenient abbreviations
+    auto& qparams = params->query_params;
+    auto& dinfo = params->data_info;
 
     while ((argc>1) && (argv[1][0]=='-')) {
     char* argument = argv[1]+1;
     if (!strcmp(argument, "-compress-only")) params->compress_only = 1;
     else while (argument[0] != 0) {
         char* numPtr = argument + 1;
-        unsigned number = 0;
+        int64_t number = 0;
         while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
 
         // // parse number passed
@@ -117,7 +120,7 @@ int main(int argc, char** argv) {
             // printf("params preprocessors cleared size: %lu\n", params->preprocessors.size());
             break;
         case 'e':
-            params->element_sz = number;
+            dinfo.element_sz = number;
             break;
         // case 'g':
         //     params->time_preproc = true;
@@ -126,6 +129,11 @@ int main(int argc, char** argv) {
         //     encoder_list = strdup(argument + 1);
         //     numPtr += strlen(numPtr);
         //     break;
+        case 'f':
+            // XXX: for sprintz forecasting, pass in negative of the
+            // dimensionality; this is a total hack
+            params->preprocessors.push_back(-number);
+            break;
         case 'i':
             params->c_iters = number;
             if (*numPtr == ',')
@@ -150,6 +158,18 @@ int main(int argc, char** argv) {
         case 'p':
             params->timetype = (timetype_e)number;
             break;
+        case 'q':
+            params->query_params.type = (query_type_e)number;
+            break;
+        case 'Q':
+            qparams.window_data_dbl.push_back(number);
+            while (*numPtr == ',') { // parse whole list of numbers
+                numPtr++;
+                number = 0;
+                while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
+                qparams.window_data_dbl.push_back(number);
+            }
+            break;
         case 'r':
             recursive = 1;
             break;
@@ -160,6 +180,8 @@ int main(int argc, char** argv) {
         case 's':
             params->cspeed = number;
             break;
+        case 'S':
+            dinfo.storage_order = (storage_order_e)number;
         case 't':
             params->cmintime = 1000*number;
             params->cloop_time = (params->cmintime)?DEFAULT_LOOP_TIME:0;
@@ -183,6 +205,26 @@ int main(int argc, char** argv) {
             break;
         case 'v':
             params->verbose = number;
+            break;
+        case 'w':
+            // TODO: duplicate code to advance ptr and parse number is hideous
+            qparams.window_nrows = number;
+            // parse next number after the comma (ncols) or default it
+            if (*numPtr != ',') {
+                qparams.window_ncols = -1;
+                break;
+            }
+            numPtr++;
+            number = 0;
+            while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
+            // parse next number after the comma (stride) or default it
+            if (*numPtr != ',') {
+                qparams.window_stride = -1;
+                break;
+            }
+            numPtr++;
+            number = 0;
+            while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
             break;
         case 'x':
             real_time = 0;
@@ -231,6 +273,50 @@ int main(int argc, char** argv) {
         inFileNames[ifnIdx++] = argv[1];
         argv++;
         argc--;
+    }
+
+    // if we got a query with data, make sure we actually got data and a window
+    // shape, and match this up with the window type
+    if (qparams.window_data_dbl.size() > 0) {
+        auto dinfo = params->data_info;
+
+
+
+
+
+        // SELF: pick up here by checking that the data size and window dimensions
+        // match up (and that it has data iff its supposed to)
+
+
+
+
+
+
+        if (dinfo.element_sz == 1) {
+            if (dinfo.is_signed) {
+                for (auto num : qparams.window_data_dbl) {
+                    qparams.window_data_i8.push_back((int8_t)num);
+                }
+            } else {
+                for (auto num : qparams.window_data_dbl) {
+                    qparams.window_data_u8.push_back((uint8_t)num);
+                }
+            }
+        } else if (dinfo.element_sz == 2) {
+            if (dinfo.is_signed) {
+                for (auto num : qparams.window_data_dbl) {
+                    qparams.window_data_i16.push_back((int16_t)num);
+                }
+            } else {
+                for (auto num : qparams.window_data_dbl) {
+                    qparams.window_data_u16.push_back((uint16_t)num);
+                }
+            }
+        } else {
+            LZBENCH_PRINT(0, "Must specify valid element size (-e) to execute "
+                "queries! Got element size %lld", (int64_t)dinfo.element_sz);
+            return -1;
+        }
     }
 
     LZBENCH_PRINT(2, PROGNAME " " PROGVERSION " (%d-bit " PROGOS ")   Assembled by P.Skibinski\n", (uint32_t)(8 * sizeof(uint8_t*)));

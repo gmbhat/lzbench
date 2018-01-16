@@ -55,7 +55,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
         const uint8_t* inptr = inbuf;
         if (params->preprocessors.size() > 0) {
-            apply_preprocessors(params->preprocessors, inbuf, part, params->element_sz, tmpbuf);
+            apply_preprocessors(params->preprocessors, inbuf, part, params->data_info.element_sz, tmpbuf);
             inptr = (const uint8_t*)tmpbuf;
         }
 
@@ -109,13 +109,26 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // uint8_t* outptr = tmpbuf; // TODO rm
             // dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
             dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
-
-            // if (has_preproc) {
-            //     undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
-            // }
         }
         if (has_preproc) {
-            undo_preprocessors(params->preprocessors, outbuf, dlen, params->element_sz);
+            undo_preprocessors(params->preprocessors, outbuf, dlen, params->data_info.element_sz);
+        }
+
+        // run query if one is specified
+        auto qparams = params->query_params;
+        if (params->query_params.type != NO_QUERY) {
+            printf("got query type: %d, flattened window data: \n", qparams.type);
+            for (auto val : qparams.window_data_dbl) {
+                printf("%g", (double)val);
+            }
+            printf("\nData in window shape:\n");
+            for (int i = 0; i < qparams.window_nrows; i++) {
+                for (int j = 0; i < qparams.window_ncols; j++) {
+                    auto idx = i * qparams.window_ncols + j;
+                    printf("%g", qparams.window_data_dbl[idx]);
+                }
+            }
+            printf("\n");
         }
 
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",
@@ -148,7 +161,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     size_t param2 = desc->additional_param;
     size_t chunk_size = (params->chunk_size > insize) ? insize : params->chunk_size;
 
-    uint8_t* tmpbuf = alloc_data_buffer(insize);
+    uint8_t* tmpbuf = alloc_data_buffer(GET_COMPRESS_BOUND(insize));
 
     LZBENCH_PRINT(5, "*** trying %s insize=%d comprsize=%d chunk_size=%d\n", desc->name, (int)insize, (int)comprsize, (int)chunk_size);
 
