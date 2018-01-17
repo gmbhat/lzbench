@@ -20,6 +20,7 @@
 #include "util.h"
 #include "output.h"
 #include "preprocessing.h"
+#include "query.hpp"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -116,19 +117,24 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
 
         // run query if one is specified
         auto qparams = params->query_params;
-        if (params->query_params.type != NO_QUERY) {
-            printf("got query type: %d, flattened window data: \n", qparams.type);
-            for (auto val : qparams.window_data_dbl) {
-                printf("%g", (double)val);
-            }
-            printf("\nData in window shape:\n");
-            for (int i = 0; i < qparams.window_nrows; i++) {
-                for (int j = 0; i < qparams.window_ncols; j++) {
-                    auto idx = i * qparams.window_ncols + j;
-                    printf("%g", qparams.window_data_dbl[idx]);
-                }
-            }
-            printf("\n");
+        if (params->query_params.type != QUERY_NONE) {
+            params->data_info.nrows = dlen / params->data_info.ncols;
+            // printf("got query type: %d\n", qparams.type);
+
+            run_query(params->query_params, params->data_info, outbuf);
+
+            // printf("got query type: %d, flattened window data: \n", qparams.type);
+            // for (auto val : qparams.window_data_dbl) {
+            //     printf("%g", (double)val);
+            // }
+            // printf("\nData in window shape:\n");
+            // for (int i = 0; i < qparams.window_nrows; i++) {
+            //     for (int j = 0; i < qparams.window_ncols; j++) {
+            //         auto idx = i * qparams.window_ncols + j;
+            //         printf("%g", qparams.window_data_dbl[idx]);
+            //     }
+            // }
+            // printf("\n");
         }
 
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",

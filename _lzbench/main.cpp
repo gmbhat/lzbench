@@ -32,6 +32,13 @@ void usage(lzbench_params_t* params) {
     fprintf(stderr,"  " PROGNAME " -t0u0i3j5 -ezstd fname = the same as above with aggregated parameters\n");
 }
 
+bool query_needs_data_window(QueryParams q) {
+    switch (q.type) {
+        case QUERY_L2: return true;
+        case QUERY_DOT: return true;
+        default: return false;
+    }
+}
 
 int main(int argc, char** argv) {
     FILE *in;
@@ -276,22 +283,24 @@ int main(int argc, char** argv) {
     }
 
     // if we got a query with data, make sure we actually got data and a window
-    // shape, and match this up with the window type
+    // shape (possibly specified to use default values)
+    if (query_needs_data_window(qparams)) {
+        qparams.window_ncols =
+            qparams.window_ncols < 1 ? dinfo.ncols : qparams.window_ncols;
+        qparams.window_stride =
+            qparams.window_stride < 1 ? 1 : qparams.window_stride;
+
+        auto needed_window_sz = qparams.window_nrows * qparams.window_ncols;
+        auto data_sz = qparams.window_data_dbl.size();
+        if (needed_window_sz != data_sz) {
+            LZBENCH_PRINT(1, "Got data window of size %lu, but expected size "
+                "%lld (%lld, x %lld)", data_sz, needed_window_sz,
+                qparams.window_nrows, qparams.window_ncols);
+            return -1;
+        }
+    }
     if (qparams.window_data_dbl.size() > 0) {
         auto dinfo = params->data_info;
-
-
-
-
-
-        // SELF: pick up here by checking that the data size and window dimensions
-        // match up (and that it has data iff its supposed to)
-
-
-
-
-
-
         if (dinfo.element_sz == 1) {
             if (dinfo.is_signed) {
                 for (auto num : qparams.window_data_dbl) {
