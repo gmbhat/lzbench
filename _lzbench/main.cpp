@@ -116,7 +116,18 @@ int main(int argc, char** argv) {
             params->chunk_size = number << 10;
             break;
         case 'c':
-            sort_col = number;
+            // sort_col = number;
+            dinfo.ncols = number;
+            break;
+        case 'C':
+            // qparams
+            qparams.which_cols.push_back(number);
+            while (*numPtr == ',') { // parse whole list of numbers
+                numPtr++;
+                number = 0;
+                while ((*numPtr >='0') && (*numPtr <='9')) { number *= 10;  number += *numPtr - '0'; numPtr++; }
+                qparams.which_cols.push_back(number);
+            }
             break;
         case 'd':
             params->preprocessors.push_back(number);
@@ -166,7 +177,8 @@ int main(int argc, char** argv) {
             params->timetype = (timetype_e)number;
             break;
         case 'q':
-            params->query_params.type = (query_type_e)number;
+            qparams.type = (query_type_e)number;
+            printf("set query type to %d\n", (int)qparams.type);
             break;
         case 'Q':
             qparams.window_data_dbl.push_back(number);

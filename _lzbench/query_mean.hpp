@@ -90,16 +90,21 @@ private:
 };
 
 template<class DataT>
-std::vector<DataT> sliding_mean(const QueryParams& q,
+QueryResult sliding_mean(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
     // -> std::vector<typename DataTypeTraits<DataT>::AccumulatorT>
 {
     // using StatT = typename DataTypeTraits<DataT>::AccumulatorT;
 
+
+    auto window_nrows = q.window_nrows > 0 ? q.window_nrows : di.nrows;
+    // printf("actually running sliding mean! window nrows, ncols, stride "
+    //     " = %lld, %lld, %lld\n", window_nrows, q.window_ncols, q.window_stride);
+
     // figure out how long data is, and how many window positions we have
     auto nrows = di.nrows;
-    int64_t last_window_start_row = nrows - q.window_nrows;
-    int64_t nwindows = nrows - q.window_nrows + 1;
+    int64_t last_window_start_row = nrows - window_nrows;
+    int64_t nwindows = nrows - window_nrows + 1;
 
     // auto ret_size = nrows * di.ncols;
     size_t sparse_ncols = q.which_cols.size();
@@ -107,16 +112,19 @@ std::vector<DataT> sliding_mean(const QueryParams& q,
     auto ret_ncols = sparse ? sparse_ncols : di.ncols;
     auto ret_size = nwindows * ret_ncols;
 
-    std::vector<DataT> ret(ret_size);
+    QueryResult ret;
+    auto& ret_vals = QueryResultValsRef<DataT>{}(ret);
+    ret_vals.resize(ret_size);
+
     if (nwindows < 1) { return ret; }
 
     if (di.storage_order == ROWMAJOR) {
-        OnlineMeanRowmajor<DataT> stat(q.window_nrows, di.ncols, q.which_cols);
+        OnlineMeanRowmajor<DataT> stat(window_nrows, di.ncols, q.which_cols);
         stat.init(buff);
-        auto ret_ptr = ret.data();
+        auto ret_ptr = ret_vals.data();
         stat.write_stats(ret_ptr);
-        for (size_t row = q.window_nrows; row < last_window_start_row; row++) {
-            auto old_row = row - q.window_nrows;
+        for (size_t row = window_nrows; row < last_window_start_row; row++) {
+            auto old_row = row - window_nrows;
             auto old_ptr = buff + di.ncols * old_row;
             auto new_ptr = buff + di.ncols * row;
             auto ret_row_ptr = ret_ptr + (old_row + 1) * ret_ncols;
@@ -129,19 +137,19 @@ std::vector<DataT> sliding_mean(const QueryParams& q,
     // column-major; treat each col as 1D rowmajor, and also write out results
     // in column-major order
     auto which_cols = q.which_cols;
-    if (sparse) {
+    if (!sparse) {
         for (int i = 0; i < di.ncols; i++) {
             which_cols.push_back(i);
         }
     }
     for (int j_idx = 0; j_idx < which_cols.size(); j_idx++) {
-        OnlineMeanRowmajor<DataT> stat(q.window_nrows, 1);
+        OnlineMeanRowmajor<DataT> stat(window_nrows, 1);
         auto buff_ptr = buff + di.nrows;
-        auto ret_ptr = ret.data() + di.nrows; // write to ret in colmajor order
+        auto ret_ptr = ret_vals.data() + di.nrows; // write to ret in colmajor order
         stat.init(buff_ptr);
         stat.write_stats(ret_ptr);
-        for (size_t row = q.window_nrows; row < last_window_start_row; row++) {
-            auto old_row = row - q.window_nrows;
+        for (size_t row = window_nrows; row < last_window_start_row; row++) {
+            auto old_row = row - window_nrows;
             auto ret_row_ptr = ret_ptr + (old_row + 1);
             stat.update(buff_ptr + old_row, buff_ptr + row);
             stat.write_stats(ret_row_ptr);

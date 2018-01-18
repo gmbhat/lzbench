@@ -117,11 +117,18 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
 
         // run query if one is specified
         auto qparams = params->query_params;
-        if (params->query_params.type != QUERY_NONE) {
-            params->data_info.nrows = dlen / params->data_info.ncols;
-            // printf("got query type: %d\n", qparams.type);
+        // printf("got query type: %d; maybe about to run a query...\n", qparams.type);
+        if (qparams.type != QUERY_NONE) {
+            auto& dinfo = params->data_info;
+            if (dinfo.ncols < 1) {
+                printf("ERROR: Must specify number of columns in data to run query!\n");
+                exit(1);
+            }
 
-            run_query(params->query_params, params->data_info, outbuf);
+            // printf("dinfo ncols: %d\n", dinfo.ncols);
+            dinfo.nrows = dlen / dinfo.ncols;
+            auto result = run_query(params->query_params, dinfo, outbuf);
+            // printf("number of idxs in result: %lu\n", result.idxs.size());
 
             // printf("got query type: %d, flattened window data: \n", qparams.type);
             // for (auto val : qparams.window_data_dbl) {

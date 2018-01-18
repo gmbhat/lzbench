@@ -35,6 +35,14 @@ typedef struct QueryParams {
     query_reduction_e reduction;
 } QueryParams;
 
+typedef struct QueryResult {
+    std::vector<int64_t> idxs;
+    std::vector<int8_t> vals_i8;
+    std::vector<uint8_t> vals_u8;
+    std::vector<int16_t> vals_i16;
+    std::vector<uint16_t> vals_u16;
+} QueryResult;
+
 typedef struct DataInfo {
     size_t element_sz;
     size_t nrows; // TODO populate this in decomp func
@@ -46,6 +54,21 @@ typedef struct DataInfo {
 template <class data_t> struct DataTypeTraits {};
 template <> struct DataTypeTraits<uint8_t> { using AccumulatorT = uint16_t; };
 template <> struct DataTypeTraits<uint16_t> { using AccumulatorT = uint32_t; };
+
+// pull out reference to appropriate vector of values
+template<class DataT> struct QueryResultValsRef {};
+template <> struct QueryResultValsRef<int8_t> {
+    std::vector<int8_t>& operator()(QueryResult& qr) { return qr.vals_i8; }
+};
+template <> struct QueryResultValsRef<uint8_t> {
+    std::vector<uint8_t>& operator()(QueryResult& qr) { return qr.vals_u8; }
+};
+template <> struct QueryResultValsRef<int16_t> {
+    std::vector<int16_t>& operator()(QueryResult& qr) { return qr.vals_i16; }
+};
+template <> struct QueryResultValsRef<uint16_t> {
+    std::vector<uint16_t>& operator()(QueryResult& qr) { return qr.vals_u16; }
+};
 
 
 #endif // QUERY_HPP
