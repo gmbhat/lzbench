@@ -1,23 +1,39 @@
-
-#ifndef QUERY_MEAN_HPP
-#define QUERY_MEAN_HPP
+#ifndef QUERY_MAX_HPP
+#define QUERY_MAX_HPP
 
 #include "query_common.h"
 
-// template<class DataT, bool IsDense>
-template<class DataT>
-class OnlineMeanRowmajor {
+#ifndef MIN
+    #define MIN(X, Y) (X) <= (Y) ? (X) : (Y);
+#endif
+#ifndef MAX
+    #define MAX(X, Y) (X) >= (Y) ? (X) : (Y);
+#endif
+
+namespace OpE { enum { MIN = 0, MAX = 1 }; }
+
+template<class DataT, int OpE> class BinaryOp {};
+template<class DataT> class BinaryOp<DataT, OpE::MIN> {
+    DataT operator()(const DataT& x, const DataT& y) { return MIN(x, y); }
+};
+template<class DataT> class BinaryOp<DataT, OpE::MAX> {
+    DataT operator()(const DataT& x, const DataT& y) { return MAX(x, y); }
+};
+
+
+template<class DataT, int OpE>
+class OnlineBinaryOpRowmajor {
 public:
     using dist_t = typename DataTypeTraits<DataT>::AccumulatorT;
-    // static const bool is_dense = IsDense;
+    using Op = BinaryOp<DataT, OpE>;
 
-    OnlineMeanRowmajor(uint32_t nrows, uint32_t ncols):
+    OnlineBinaryOpRowmajor(uint32_t nrows, uint32_t ncols):
         _nrows(nrows), _ncols(ncols), _is_dense(true)
     {
         reset();
     }
 
-    OnlineMeanRowmajor(uint32_t nrows, uint32_t ncols,
+    OnlineBinaryOpRowmajor(uint32_t nrows, uint32_t ncols,
         const std::vector<uint16_t>& which_dims):
         _nrows(nrows), _ncols(ncols), _which_dims(which_dims),
         _is_dense(which_dims.size() == 0)
@@ -33,14 +49,15 @@ public:
         if (_is_dense) {
             for (uint32_t i = 0; i < _nrows; i++) {
                 for (uint32_t j = 0; j < _ncols; j++) {
-                    _sums[j] += window_start[i * _ncols + j];
+                    _stats[j] = Op{}(_stats[j], window_start[i * _ncols + j]);
                 }
             }
         } else {
             for (uint32_t i = 0; i < _nrows; i++) {
                 for (uint32_t j_idx = 0; j_idx < _which_dims.size(); j_idx++) {
                     auto j = _which_dims[j_idx];
-                    _sums[j_idx] += window_start[i * _ncols + j];
+                    _stats[j_idx] =
+                        Op{}(_stats[j_idx], window_start[i * _ncols + j]);
                 }
             }
         }
@@ -49,31 +66,31 @@ public:
     void update(const DataT* old_window_row, const DataT* new_window_row) {
         if (_is_dense) {
             for (uint32_t j = 0; j < _ncols; j++) {
-                _sums[j] += (new_window_row[j] - old_window_row[j]);
+                _stats[j] = Op{}(_stats[j], new_window_row[j]);
             }
         } else {
             for (uint32_t j_idx = 0; j_idx < _which_dims.size(); j_idx++) {
                 auto j = _which_dims[j_idx];
-                _sums[j_idx] += (new_window_row[j] - old_window_row[j]);
+                _stats[j_idx] = Op{}(_stats[j_idx], new_window_row[j]);
             }
         }
     }
 
     void write_stats(DataT* out) const {
-        for (uint32_t j = 0; j < _sums.size(); j++) {
-            out[j] = _sums[j] / _nrows;
+        for (uint32_t j = 0; j < _stats.size(); j++) {
+            out[j] = _stats[j];
         }
     }
 
     void reset() {
-        if (_sums.size() == 0) {
+        if (_stats.size() == 0) {
             auto sums_size = _is_dense ? _ncols : _which_dims.size();
             for (size_t i = 0; i < sums_size; i++) {
-                _sums.push_back(0);
+                _stats.push_back(0);
             }
         } else {
-            for (size_t i = 0; i < _sums.size(); i++) {
-                _sums[i] = 0;
+            for (size_t i = 0; i < _stats.size(); i++) {
+                _stats[i] = 0;
             }
         }
     }
@@ -82,23 +99,20 @@ public:
     uint16_t ncols() const { return _ncols(); }
 
 private:
+
     std::vector<uint16_t> _which_dims;
-    std::vector<dist_t> _sums;
+    std::vector<dist_t> _stats;
     uint32_t _nrows;
     uint16_t _ncols;
     bool _is_dense;
 };
 
-template<class DataT>
-QueryResult sliding_mean(const QueryParams& q,
+template<class DataT, int OpE>
+QueryResult sliding_binary_op(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
-    // -> std::vector<typename DataTypeTraits<DataT>::AccumulatorT>
 {
-    // using StatT = typename DataTypeTraits<DataT>::AccumulatorT;
-
-
     auto window_nrows = q.window_nrows > 0 ? q.window_nrows : di.nrows;
-    // printf("actually running sliding mean! window nrows, ncols, stride "
+    // printf("actually running sliding max! window nrows, ncols, stride "
     //     " = %lld, %lld, %lld\n", window_nrows, q.window_ncols, q.window_stride);
 
     // figure out how long data is, and how many window positions we have
@@ -119,7 +133,7 @@ QueryResult sliding_mean(const QueryParams& q,
     if (nwindows < 1) { return ret; }
 
     if (di.storage_order == ROWMAJOR) {
-        OnlineMeanRowmajor<DataT> stat(window_nrows, di.ncols, q.which_cols);
+        OnlineBinaryOpRowmajor<DataT, OpE> stat(window_nrows, di.ncols, q.which_cols);
         stat.init(buff);
         auto ret_ptr = ret_vals.data();
         stat.write_stats(ret_ptr);
@@ -143,7 +157,7 @@ QueryResult sliding_mean(const QueryParams& q,
         }
     }
     for (int j_idx = 0; j_idx < which_cols.size(); j_idx++) {
-        OnlineMeanRowmajor<DataT> stat(window_nrows, 1);
+        OnlineBinaryOpRowmajor<DataT, OpE> stat(window_nrows, 1);
         auto buff_ptr = buff + di.nrows;
         auto ret_ptr = ret_vals.data() + di.nrows; // write to ret in colmajor order
         stat.init(buff_ptr);
@@ -158,5 +172,17 @@ QueryResult sliding_mean(const QueryParams& q,
     return ret;
 }
 
+template<class DataT, int OpE>
+QueryResult sliding_min(const QueryParams& q,
+    const DataInfo& di, const DataT* buff)
+{
+    return sliding_binary_op<DataT, OpE::MIN>(q, di, buff);
+}
+template<class DataT, int OpE>
+QueryResult sliding_max(const QueryParams& q,
+    const DataInfo& di, const DataT* buff)
+{
+    return sliding_binary_op<DataT, OpE::MAX>(q, di, buff);
+}
 
-#endif // QUERY_MEAN_HPP
+#endif // QUERY_MAX_HPP

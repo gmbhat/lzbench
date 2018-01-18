@@ -4,6 +4,7 @@
 
 #include "query_common.h"
 #include "query_mean.hpp"
+#include "query_minmax.hpp"
 
 // if we weren't just benchmarking, would need to return something in all
 // of these
@@ -13,19 +14,19 @@
 
 // }
 
-template<class DataT>
-QueryResult sliding_min(const QueryParams& q, const DataInfo& di,
-    const DataT* buff)
-{
-    return QueryResult{}; // TODO
-}
+// template<class DataT>
+// QueryResult sliding_min(const QueryParams& q, const DataInfo& di,
+//     const DataT* buff)
+// {
+//     return QueryResult{}; // TODO
+// }
 
-template<class DataT>
-QueryResult sliding_max(const QueryParams& q, const DataInfo& di,
-    const DataT* buff)
-{
-    return QueryResult{}; // TODO
-}
+// template<class DataT>
+// QueryResult sliding_max(const QueryParams& q, const DataInfo& di,
+//     const DataT* buff)
+// {
+//     return QueryResult{}; // TODO
+// }
 
 template<class DataT>
 QueryResult sliding_l2(const QueryParams& q, const DataInfo& di,

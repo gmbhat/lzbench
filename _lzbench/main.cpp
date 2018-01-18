@@ -204,11 +204,7 @@ int main(int argc, char** argv) {
         case 't':
             params->cmintime = 1000*number;
             params->cloop_time = (params->cmintime)?DEFAULT_LOOP_TIME:0;
-            // if (decimal) {
-            //     params->cmintime /= divide_decimal_by;
-            //     params->cloop_time /= divide_decimal_by;
-            //     ignored_decimal = false;
-            // }
+
             if (*numPtr == ',')
             {
                 numPtr++;
