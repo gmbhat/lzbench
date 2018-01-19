@@ -78,6 +78,8 @@ QueryResult run_query(const QueryParams& q, const DataInfo& di, const DataT* buf
     QueryResult ret;
     switch (q.type) {
         case QUERY_MEAN: ret = sliding_mean(q, di, buff); break;
+        // XXX "sliding" min and max actually just write out min/max seen
+        // so far, which is a weird thing to do
         case QUERY_MIN: ret = sliding_min(q, di, buff); break;
         case QUERY_MAX: ret = sliding_max(q, di, buff); break;
         case QUERY_L2: ret = sliding_l2(q, di, buff); break;

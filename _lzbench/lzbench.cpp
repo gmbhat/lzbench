@@ -124,7 +124,6 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
                 printf("ERROR: Must specify number of columns in data to run query!\n");
                 exit(1);
             }
-
             // printf("dinfo ncols: %d\n", dinfo.ncols);
             dinfo.nrows = dlen / dinfo.ncols;
             auto result = run_query(params->query_params, dinfo, outbuf);

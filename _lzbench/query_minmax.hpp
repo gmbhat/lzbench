@@ -1,5 +1,5 @@
-#ifndef QUERY_MAX_HPP
-#define QUERY_MAX_HPP
+#ifndef QUERY_MIN_MAX_HPP
+#define QUERY_MIN_MAX_HPP
 
 #include "query_common.h"
 
@@ -12,11 +12,11 @@
 
 namespace OpE { enum { MIN = 0, MAX = 1 }; }
 
-template<class DataT, int OpE> class BinaryOp {};
-template<class DataT> class BinaryOp<DataT, OpE::MIN> {
+template<class DataT, int OpE> struct BinaryOp {};
+template<class DataT> struct BinaryOp<DataT, OpE::MIN> {
     DataT operator()(const DataT& x, const DataT& y) { return MIN(x, y); }
 };
-template<class DataT> class BinaryOp<DataT, OpE::MAX> {
+template<class DataT> struct BinaryOp<DataT, OpE::MAX> {
     DataT operator()(const DataT& x, const DataT& y) { return MAX(x, y); }
 };
 
@@ -172,17 +172,19 @@ QueryResult sliding_binary_op(const QueryParams& q,
     return ret;
 }
 
-template<class DataT, int OpE>
+template<class DataT>
 QueryResult sliding_min(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
 {
+    // printf("running sliding min query!\n");
     return sliding_binary_op<DataT, OpE::MIN>(q, di, buff);
 }
-template<class DataT, int OpE>
+template<class DataT>
 QueryResult sliding_max(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
 {
+    // printf("running sliding max query!\n");
     return sliding_binary_op<DataT, OpE::MAX>(q, di, buff);
 }
 
-#endif // QUERY_MAX_HPP
+#endif // QUERY_MIN_MAX_HPP
