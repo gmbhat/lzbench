@@ -5,6 +5,7 @@
 #include "query_common.h"
 #include "query_mean.hpp"
 #include "query_minmax.hpp"
+#include "query_reduce_row.hpp"
 
 // if we weren't just benchmarking, would need to return something in all
 // of these
@@ -28,40 +29,40 @@
 //     return QueryResult{}; // TODO
 // }
 
-template<class DataT>
-QueryResult sliding_l2(const QueryParams& q, const DataInfo& di,
-    const DataT* buff)
-{
-    if (q.reduction == REDUCE_NONE) {
+// template<class DataT>
+// QueryResult sliding_l2(const QueryParams& q, const DataInfo& di,
+//     const DataT* buff)
+// {
+//     if (q.reduction == REDUCE_NONE) {
 
-    } else if (q.reduction == REDUCE_THRESH) {
+//     } else if (q.reduction == REDUCE_THRESH) {
 
-    } else if (q.reduction == REDUCE_TOP_K) {
+//     } else if (q.reduction == REDUCE_TOP_K) {
 
-    } else {
-        printf("Invalid reduction %d for L2 query!\n", (int)q.reduction);
-        exit(1);
-    }
-    return QueryResult{}; // TODO
-}
+//     } else {
+//         printf("Invalid reduction %d for L2 query!\n", (int)q.reduction);
+//         exit(1);
+//     }
+//     return QueryResult{}; // TODO
+// }
 
-template<class DataT>
-QueryResult sliding_dot(const QueryParams& q, const DataInfo& di,
-    const DataT* buff)
-{
-    if (q.reduction == REDUCE_NONE) {
+// template<class DataT>
+// QueryResult sliding_dot(const QueryParams& q, const DataInfo& di,
+//     const DataT* buff)
+// {
+//     if (q.reduction == REDUCE_NONE) {
 
-    } else if (q.reduction == REDUCE_THRESH) {
+//     } else if (q.reduction == REDUCE_THRESH) {
 
-    } else if (q.reduction == REDUCE_TOP_K) {
+//     } else if (q.reduction == REDUCE_TOP_K) {
 
-    } else {
-        printf("Invalid reduction %d for dot product query!\n",
-            (int)q.reduction);
-        exit(1);
-    }
-    return QueryResult{}; // TODO
-}
+//     } else {
+//         printf("Invalid reduction %d for dot product query!\n",
+//             (int)q.reduction);
+//         exit(1);
+//     }
+//     return QueryResult{}; // TODO
+// }
 
 template<class DataT>
 QueryResult corr(const QueryParams& q, const DataInfo& di,

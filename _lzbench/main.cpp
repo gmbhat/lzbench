@@ -204,7 +204,6 @@ int main(int argc, char** argv) {
         case 't':
             params->cmintime = 1000*number;
             params->cloop_time = (params->cmintime)?DEFAULT_LOOP_TIME:0;
-
             if (*numPtr == ',')
             {
                 numPtr++;

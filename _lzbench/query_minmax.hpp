@@ -3,29 +3,12 @@
 
 #include "query_common.h"
 
-#ifndef MIN
-    #define MIN(X, Y) (X) <= (Y) ? (X) : (Y);
-#endif
-#ifndef MAX
-    #define MAX(X, Y) (X) >= (Y) ? (X) : (Y);
-#endif
-
-namespace OpE { enum { MIN = 0, MAX = 1 }; }
-
-template<class DataT, int OpE> struct BinaryOp {};
-template<class DataT> struct BinaryOp<DataT, OpE::MIN> {
-    DataT operator()(const DataT& x, const DataT& y) { return MIN(x, y); }
-};
-template<class DataT> struct BinaryOp<DataT, OpE::MAX> {
-    DataT operator()(const DataT& x, const DataT& y) { return MAX(x, y); }
-};
-
 
 template<class DataT, int OpE>
 class OnlineBinaryOpRowmajor {
 public:
     using dist_t = typename DataTypeTraits<DataT>::AccumulatorT;
-    using Op = BinaryOp<DataT, OpE>;
+    using Op = BinaryOp<DataT, OpE, DataT>;
 
     OnlineBinaryOpRowmajor(uint32_t nrows, uint32_t ncols):
         _nrows(nrows), _ncols(ncols), _is_dense(true)
