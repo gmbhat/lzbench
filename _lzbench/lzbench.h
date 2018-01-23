@@ -266,8 +266,8 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprintzXff_HUF",  "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_xff_huf_compress,  lzbench_sprintz_xff_huf_decompress,          NULL,       NULL },
     { "sprintzDelta_16b","0.0", 1, 128, 0,       0, lzbench_sprintz_delta_compress_16b,  lzbench_sprintz_delta_decompress_16b,         NULL,    NULL },
     { "sprintzXff_16b",  "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_compress_16b,  lzbench_sprintz_xff_decompress_16b,             NULL,    NULL },
-    { "sprintzDelta_HUF_16b","0.0", 1,128,0,64<<10, lzbench_sprintz_delta_huf_compress_16b,  lzbench_sprintz_delta_huf_decompress_16b, NULL,    NULL },
-    { "sprintzXff_HUF_16b",  "0.0", 1,128,0,64<<10, lzbench_sprintz_xff_huf_compress_16b,  lzbench_sprintz_xff_huf_decompress_16b,     NULL,    NULL },
+    { "sprintzDelta_HUF_16b","0.0", 1,128,0,80<<10, lzbench_sprintz_delta_huf_compress_16b,  lzbench_sprintz_delta_huf_decompress_16b, NULL,    NULL },
+    { "sprintzXff_HUF_16b",  "0.0", 1,128,0,80<<10, lzbench_sprintz_xff_huf_compress_16b,  lzbench_sprintz_xff_huf_decompress_16b,     NULL,    NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "0.0", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,              NULL,       NULL }, // input bytes must all be <= 1
     { "sprJustBitpack",  "0.0", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,               NULL,       NULL }, // input bytes must all be <= 15

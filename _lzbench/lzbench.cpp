@@ -28,11 +28,15 @@
 #include <string.h>
 
 
-size_t common(const uint8_t *p1, const uint8_t *p2) {
+size_t common(const uint8_t *p1, const uint8_t *p2, size_t limit) {
     size_t size = 0;
-    while (*(p1++) == *(p2++)) {
+    for (size_t i = 0; i < limit; i++) {
+        if (*(p1++) != *(p2++)) { return size; }
         size++;
     }
+    // while (*(p1++) == *(p2++) && ) {
+        // size++;
+    // }
     return size;
 }
 
@@ -109,16 +113,18 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // uint8_t* outptr = outbuf; // TODO rm
             // uint8_t* outptr = tmpbuf; // TODO rm
             // dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
-            dlen = decompress((char*)inbuf, part, (char*)outbuf, chunk_sizes[i], param1, param2, workmem);
+            dlen = decompress((char*)inbuf, part, (char*)outbuf,
+                chunk_sizes[i], param1, param2, workmem);
         }
         if (has_preproc) {
+            printf("undoing preproc...\n");
             undo_preprocessors(params->preprocessors, outbuf, dlen, params->data_info.element_sz);
         }
 
         // run query if one is specified
         auto qparams = params->query_params;
-        // printf("got query type: %d; maybe about to run a query...\n", qparams.type);
         if (qparams.type != QUERY_NONE) {
+            printf("got query type: %d; about to run a query...\n", qparams.type);
             auto& dinfo = params->data_info;
             if (dinfo.ncols < 1) {
                 printf("ERROR: Must specify number of columns in data to run query!\n");
@@ -208,7 +214,15 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         }
     }
 
-    LZBENCH_PRINT(5, "%s using %d chunks\n", desc->name, (int)chunk_sizes.size());
+    LZBENCH_PRINT(5, "%s using %lu chunks; sizes = ",
+        desc->name, chunk_sizes.size());
+    for (auto sz : chunk_sizes) {
+        LZBENCH_PRINT(5, "%lu ", (unsigned long)sz);
+    }
+    LZBENCH_PRINT(5, "%s", "\n"); // can't just print \n since needs VA_ARGS
+    // printf("%s using %d chunks\n", desc->name, (int)chunk_sizes.size());
+    // printf("chunk sizes: "); for (auto sz : chunk_sizes) { printf("%d ", int(sz)); } printf("\n");
+
 
     // compress the data until we hit either the minimum time or the minimum
     // number of iterations
@@ -219,15 +233,6 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         uni_sleep(1); // give processor to other processes
         GetTime(loop_ticks);
         do {
-            // if (!params->time_preproc) {
-            //     apply_preprocessors(params->preprocessors, inbuf, part, params->element_sz);
-            // }
-
-            // TODO rm after debug
-            // memset(inbuf, 0, insize);
-            // memset(compbuf, 0, insize);
-            // memset(tmpbuf, 0, insize);
-
             GetTime(start_ticks);
             complen = lzbench_compress(params, chunk_sizes, desc->compress,
                 compr_sizes, inbuf, compbuf, tmpbuf, comprsize, param1, param2, workmem);
@@ -242,7 +247,11 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         speed = nanosec > 0 ? (float)insize*i*1000/nanosec : -1;
         LZBENCH_PRINT(8, "%s nanosec=%d\n", desc->name, (int)nanosec);
 
-        if ((uint32_t)speed < params->cspeed) { LZBENCH_PRINT(7, "%s slower than %d MB/s\n", desc->name, (uint32_t)speed); return; }
+        if ((uint32_t)speed < params->cspeed) {
+            LZBENCH_PRINT(7, "%s slower than %d MB/s\n",
+                desc->name, (uint32_t)speed);
+            return;
+        }
 
         total_nanosec = GetDiffTime(rate, timer_ticks, end_ticks);
         total_c_iters += i;
@@ -261,12 +270,6 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         uni_sleep(1); // give processor to other processes
         GetTime(loop_ticks);
         do {
-
-            // TODO rm after debug
-            // memset(inbuf, 0, insize);
-            // memset(compbuf, 0, insize);
-            // memset(tmpbuf, 0, insize);
-
             GetTime(start_ticks);
             decomplen = lzbench_decompress(params, chunk_sizes,
                 desc->decompress, compr_sizes, compbuf, decomp, tmpbuf, param1,
@@ -291,8 +294,28 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         if (memcmp(inbuf, decomp, insize) != 0) {
             decomp_error = true;
 
-            size_t cmn = common(inbuf, decomp);
-            LZBENCH_PRINT(3, "ERROR in %s: only first %d / %d decompressed bytes were correct\n",
+            // printf("comparing buffs up to index %d\n", (int)insize);
+            // printf("input data: first few bytes =\t\t");
+            // for (int i = 0; i < 10; i++) {
+            //     printf("%d ", (int)inbuf[i]);
+            // }
+            // printf("\ndecomp data: first few bytes =\t\t");
+            // for (int i = 0; i < 10; i++) {
+            //     printf("%d ", (int)decomp[i]);
+            // }
+            // printf("\n");
+            // printf("input data: last few bytes =\t\t");
+            // for (int i = 0; i < 10; i++) {
+            //     printf("%d ", (int)inbuf[insize - 10 + i]);
+            // }
+            // printf("\ndecomp data: last few bytes =\t\t");
+            // for (int i = 0; i < 10; i++) {
+            //     printf("%d ", (int)decomp[insize - 10 + i]);
+            // }
+            // printf("\n");
+
+            size_t cmn = common(inbuf, decomp, insize);
+            LZBENCH_PRINT(1, "ERROR in %s: only first %d / %d decompressed bytes were correct\n",
                 desc->name, (int32_t)cmn, (int32_t)insize);
 
             if (params->verbose >= 10) {
