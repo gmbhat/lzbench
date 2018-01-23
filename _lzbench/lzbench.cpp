@@ -89,7 +89,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
     uint8_t* tmpbuf, size_t param1, size_t param2, char* workmem)
 {
-    int64_t dlen;
+    int64_t dlen = 0;
     size_t part, sum = 0;
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
@@ -121,7 +121,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             undo_preprocessors(params->preprocessors, outbuf, dlen,
                 params->data_info.element_sz);
         } else {
-            sum += part;
+            dlen = part;
         }
 
         // run query if one is specified
@@ -132,7 +132,6 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
                 printf("ERROR: Must specify number of columns in data to run query!\n");
                 exit(1);
             }
-
             // printf("dinfo ncols: %d\n", dinfo.ncols);
             dinfo.nrows = dlen / dinfo.ncols;
             auto result = run_query(params->query_params, dinfo, outbuf);
@@ -150,6 +149,8 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             //     }
             // }
             // printf("\n");
+            LZBENCH_PRINT(8, "number of result values: %lu (u8) %lu (u16)\n",
+                result.vals_u8.size(), result.vals_u16.size());
         }
 
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",
@@ -314,7 +315,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
 
         if (insize != decomplen) {
             decomp_error = true;
-            LZBENCH_PRINT(3, "ERROR: input length (%d) != decompressed length (%d)\n",
+            LZBENCH_PRINT(1, "ERROR: input length (%d) != decompressed length (%d)\n",
                 (int32_t)insize, (int32_t)decomplen);
         }
 

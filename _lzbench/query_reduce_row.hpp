@@ -230,14 +230,14 @@ template<class DataT>
 QueryResult sliding_l2(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
 {
-    // printf("running sliding min query!\n");
+    // printf("running sliding l2 query!\n");
     return sliding_window_reduction<DataT, OpE::SQUARE_DIFF>(q, di, buff);
 }
 template<class DataT>
 QueryResult sliding_dot(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
 {
-    // printf("running sliding max query!\n");
+    // printf("running sliding dot prod query!\n");
     return sliding_window_reduction<DataT, OpE::PRODUCT>(q, di, buff);
 }
 
