@@ -85,7 +85,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
 
 inline int64_t lzbench_decompress(lzbench_params_t *params,
-    std::vector<size_t>& chunk_sizes, compress_func decompress,
+    std::vector<size_t>& chunk_sizes, const compressor_desc_t* desc,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
     uint8_t* tmpbuf, size_t param1, size_t param2, char* workmem)
 {
@@ -93,8 +93,13 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     size_t part, sum = 0;
     uint8_t *outstart = outbuf;
     int cscount = compr_sizes.size();
+    compress_func decompress = desc->decompress;
 
-    bool has_preproc = params->preprocessors.size() > 0;
+    // bool has_preproc = params->preprocessors.size() > 0;
+
+    auto qparams = params->query_params;
+    bool already_materialized = strings_equal(desc->name, "materialized") &&
+        qparams.type != QUERY_NONE;
 
     LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", (int)chunk_sizes.size());
     for (int i = 0; i < chunk_sizes.size(); i++) {
@@ -103,28 +108,25 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     }
     for (int i = 0; i < cscount; i++) {
         part = compr_sizes[i];
-        if (part == chunk_sizes[i]) { // uncompressed
-            memcpy(outbuf, inbuf, part);
-            dlen = part;
+
+        if (!already_materialized) {
+            if (part == chunk_sizes[i]) { // uncompressed
+                memcpy(outbuf, inbuf, part);
+                dlen = part;
+            } else {
+                LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
+                dlen = decompress((char*)inbuf, part, (char*)outbuf,
+                    chunk_sizes[i], param1, param2, workmem);
+            }
+            undo_preprocessors(params->preprocessors, outbuf, dlen,
+                params->data_info.element_sz);
         } else {
-            // uint8_t* outptr = has_preproc ? tmpbuf : outbuf;
-            LZBENCH_PRINT(9, "chunk %d: about to decompress\n", i);
-            // printf("decompress func: %p, %p, %p\n", decompress, inbuf, outbuf);
-            // uint8_t* outptr = outbuf; // TODO rm
-            // uint8_t* outptr = tmpbuf; // TODO rm
-            // dlen = decompress((char*)inbuf, part, (char*)outptr, chunk_sizes[i], param1, param2, workmem);
-            dlen = decompress((char*)inbuf, part, (char*)outbuf,
-                chunk_sizes[i], param1, param2, workmem);
-        }
-        if (has_preproc) {
-            printf("undoing preproc...\n");
-            undo_preprocessors(params->preprocessors, outbuf, dlen, params->data_info.element_sz);
+            sum += part;
         }
 
         // run query if one is specified
-        auto qparams = params->query_params;
         if (qparams.type != QUERY_NONE) {
-            printf("got query type: %d; about to run a query...\n", qparams.type);
+            // printf("got query type: %d; about to run a query...\n", qparams.type);
             auto& dinfo = params->data_info;
             if (dinfo.ncols < 1) {
                 printf("ERROR: Must specify number of columns in data to run query!\n");
@@ -268,11 +270,36 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     do {
         i = 0;
         uni_sleep(1); // give processor to other processes
+
+        // if running queries on (supposedly) materialized views of the data,
+        // no decompression should be done when timing the query; we therefore
+        // populate the decompressed buffer here so that lzbench_decompress,
+        // which is what gets timed, can skip that part
+        bool do_materialize = strings_equal(desc->name, "materialized") &&
+            params->query_params.type != QUERY_NONE;
+        if (do_materialize) {
+            auto inptr = compbuf;
+            auto outptr = decomp;
+            for (int i = 0; i < compr_sizes.size(); i++) {
+                auto comp_sz = compr_sizes[i];
+                auto orig_sz = chunk_sizes[i];
+                if (comp_sz != orig_sz) {
+                    LZBENCH_PRINT(0, "Compressed size %lu != original size %lu"
+                        " when we supposedly memcopied!", comp_sz, orig_sz);
+                }
+                memcpy(outptr, inptr, orig_sz);
+                undo_preprocessors(params->preprocessors, outptr, orig_sz,
+                    params->data_info.element_sz);
+                inptr += orig_sz;
+                outptr += orig_sz;
+            }
+        }
+
         GetTime(loop_ticks);
         do {
             GetTime(start_ticks);
             decomplen = lzbench_decompress(params, chunk_sizes,
-                desc->decompress, compr_sizes, compbuf, decomp, tmpbuf, param1,
+                desc, compr_sizes, compbuf, decomp, tmpbuf, param1,
                 param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);

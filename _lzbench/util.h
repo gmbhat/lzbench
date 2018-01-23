@@ -551,6 +551,12 @@ UTIL_STATIC void free_data_buffer(void* ptr) {
     }
 }
 
+UTIL_STATIC bool strings_equal(const char* s0, const char* s1) {
+    std::string a(s0);
+    std::string b(s1);
+    return a.compare(b) == 0;
+}
+
 #if defined (__cplusplus)
 }
 #endif

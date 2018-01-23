@@ -152,12 +152,13 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 110
+#define LZBENCH_COMPRESSOR_COUNT 111
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
     // { "memcpy",     "",            0,   0,    0,       0, lzbench_return_0,            lzbench_memcpy,                NULL,                    NULL },
     { "memcpy",     "",            0,   0,    0,       0, lzbench_memcpy,            lzbench_memcpy,                NULL,                    NULL },
+    { "materialized","",           0,   0,    0,       0, lzbench_memcpy,            lzbench_memcpy,                NULL,                    NULL },
     // General-purpose compressors
     { "brieflz",    "1.1.0",       0,   0,    0,       0, lzbench_brieflz_compress,    lzbench_brieflz_decompress,    lzbench_brieflz_init,    lzbench_brieflz_deinit },
     { "brotli",     "2017-03-10",  0,  11,    0,       0, lzbench_brotli_compress,     lzbench_brotli_decompress,     NULL,                    NULL },
