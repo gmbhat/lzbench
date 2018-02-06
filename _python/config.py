@@ -3,12 +3,33 @@
 import os
 import matplotlib.pyplot as plt
 
-DATASETS_DIR = '~/Desktop/datasets/compress'  # change this if you aren't me
+from . import files
+
+# change this if you aren't me
+DATASETS_DIR = os.path.expanduser('~/Desktop/datasets/compress')
+
 FIG_SAVE_DIR = 'figs'
 RESULTS_SAVE_DIR = 'results'
 ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
+NDIMS_SPEED_RESULTS_PATH = os.path.join(
+    RESULTS_SAVE_DIR, 'ndims_speed', 'ndims_speed_results.csv')
 
+files.ensure_dir_exists(os.path.dirname(ALL_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
+
+SYNTH_LOW_COMPRESSION_RATIO = 1
+SYNTH_HIGH_COMPRESSION_RATIO = 4
+SYNTH_DATASETS_DIR = os.path.join(DATASETS_DIR, 'synthetic')
+SYNTH_100M_U8_LOW_PATH = os.path.join(SYNTH_DATASETS_DIR,
+    'synth_100M_u8_ratio={}.dat'.format(SYNTH_LOW_COMPRESSION_RATIO))    # noqa
+SYNTH_100M_U16_LOW_PATH = os.path.join(SYNTH_DATASETS_DIR,
+    'synth_100M_u16_ratio={}.dat'.format(SYNTH_LOW_COMPRESSION_RATIO))   # noqa
+SYNTH_100M_U8_HIGH_PATH = os.path.join(SYNTH_DATASETS_DIR,
+    'synth_100M_u8_ratio={}.dat'.format(SYNTH_HIGH_COMPRESSION_RATIO))   # noqa
+SYNTH_100M_U16_HIGH_PATH = os.path.join(SYNTH_DATASETS_DIR,
+    'synth_100M_u16_ratio={}.dat'.format(SYNTH_HIGH_COMPRESSION_RATIO))  # noqa
 
 # DEFAULT_LEVELS = [1, 5, 9]  # many compressors have levels 1-9
 DEFAULT_LEVELS = [1, 9]  # many compressors have levels 1-9
@@ -52,6 +73,8 @@ ALL_DSETS = [
 NAME_2_DSET = {ds.bench_name: ds for ds in ALL_DSETS}
 PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
 
+# for i in range(81):
+#     NAME_2_DSET
 
 # PRETTY_DSET_NAMES = {
 #     'ucr':          'UCR',
@@ -78,7 +101,7 @@ ALGO_INFO = {
     'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
     'Gipfeli':          AlgoInfo('gipfeli'),
     'Snappy':           AlgoInfo('snappy'),
-    'Brotli':            AlgoInfo('brotli', levels=DEFAULT_LEVELS),
+    'Brotli':           AlgoInfo('brotli', levels=DEFAULT_LEVELS),
     # just entropy coding
     'FSE':              AlgoInfo('fse'),
     'Huffman':          AlgoInfo('huff0'),
@@ -140,6 +163,7 @@ USE_WHICH_ALGOS = 'SprintzDelta SprintzXff SprintzDelta_Huf SprintzXff_Huf ' \
     'SprintzDelta_16b SprintzXff_16b SprintzDelta_Huf_16b SprintzXff_Huf_16b '\
     'SIMDBP128 FastPFOR Simple8B ' \
     'Zstd Snappy LZ4 Zlib Huffman'.split()
+SPRINTZ_ALGOS = [algo for algo in ALGO_INFO if algo.lower().startswith('sprintz')]
 
 # PRETTY_DSET_NAMES = {
 #     'ucr':          'UCR',

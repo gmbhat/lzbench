@@ -21,9 +21,16 @@ DSETS_PLOT_SHAPE = (len(DSETS_POSITIONS) // 2, 2)
 USE_WHICH_DSETS = DSETS_POSITIONS.keys()
 USE_WHICH_DSETS = [cfg.NAME_2_DSET[name] for name in USE_WHICH_DSETS]
 
+FIG_SAVE_DIR = os.path.join(cfg.FIG_SAVE_DIR, 'paper')
 
-def compression_speed_fig(save=True):
-    pass
+
+def save_fig(name, save_dir=FIG_SAVE_DIR):
+    plt.savefig(os.path.join(save_dir, name + '.pdf'), bbox_inches='tight')
+
+
+def save_fig_png(name, save_dir=FIG_SAVE_DIR):
+    plt.savefig(os.path.join(save_dir, name + '.png'), bbox_inches='tight',
+                dpi=300)
 
 
 def _apply_filters(df, nbits=None, order=None, deltas=None,
@@ -192,15 +199,19 @@ def cd_diagram(df, lower_better=True):
     print("\nNemenyi critical difference: ", cd)
 
 
-def cd_diagram_ours_vs_others():
+def cd_diagram_ours_vs_others(others_deltas=False, save=True):
     df = pd.read_csv(cfg.UCR_RESULTS_PATH)
 
     # df = df[df['Order'] == 'c']
     df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
     df = df.sort_values(['Filename', 'Algorithm'])
-    df = df[~df['Deltas']]
+    if others_deltas:
+        df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
+    else:
+        df = df[~df['Deltas']]
     df = df[df['Algorithm'] != 'Memcpy']
     df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
+    df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
     full_df = df
     # for nbits in [8]:
     for nbits in (8, 16):
@@ -220,7 +231,7 @@ def cd_diagram_ours_vs_others():
 
         # # return
 
-        df.to_csv('df_ucr.csv')
+        # df.to_csv('df_ucr.csv')
 
         # print("df8 algos", df8['Algorithm'])
 
@@ -239,22 +250,66 @@ def cd_diagram_ours_vs_others():
                 # print("old df col:")
                 # print(df[col][:10])
 
-                df[col] = df[col] * (32 / nbits)
+                # df[col] = df[col] * (32 / nbits)  # if using % of orig
+                df[col] = df[col] * (nbits / 32)    # if using orig/compressed
 
                 # print("new df col:")
                 # print(df[col][:10])
 
         df.to_csv('ucr_df_{}.csv'.format(nbits))
 
-        cd_diagram(df)
-        plt.show()
+        cd_diagram(df)  # if using % of orig
+        cd_diagram(df, lower_better=False)
+        if save:
+            save_fig_png('cd_diagram_{}b_deltas={}'.format(
+                nbits, int(others_deltas)))
+        else:
+            plt.show()
 
     # print df8.groupby()
 
     # print(df[:2])
 
 
+def cd_diagram_ours_vs_others_no_delta():
+    cd_diagram_ours_vs_others(others_deltas=False)
+
+
 def cd_diagram_ours_vs_others_delta():
+    cd_diagram_ours_vs_others(others_deltas=True)
+
+
+def decomp_vs_ndims_results():
+    # df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
+    df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH.replace('ndims_speed_results', '_ndims_speed_results'))
+
+    # df = df[df['Order'] == 'c']
+    # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
+    # df = df.sort_values(['Filename', 'Algorithm'])
+    df = df[df['Algorithm'] != 'Memcpy']
+    df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+
+    # extract ndims from algo name; eg: "SprintzDelta -9" -> 9
+    df['Ndims'] = df['Algorithm'].apply(lambda algo: -int(algo.split()[1]))
+    df['TrueRatio'] = df['Filename'].apply(
+        lambda path: int(path.split("ratio=")[1].split('.')[0]))
+    df = df[['Nbits', 'Algorithm', 'Ratio', 'TrueRatio']]
+
+    full_df = df
+    # for nbits in (8, 16):
+    for nbits in [8]:
+        df = full_df[full_df['Nbits'] == nbits]
+        df = df.drop('Nbits', axis=1)
+
+        print("df")
+        print(df)
+
+
+def comp_vs_ndims_results():
+    pass
+
+
+def quantize_err_results():
     pass
 
 
@@ -266,7 +321,8 @@ def main():
 
     # decomp_vs_ratio_fig(nbits=8)
 
-    cd_diagram_ours_vs_others()
+    # cd_diagram_ours_vs_others()
+    decomp_vs_ndims_results()
 
 
 if __name__ == '__main__':

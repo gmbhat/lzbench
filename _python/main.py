@@ -58,6 +58,9 @@ else:
 
 DEBUG = False
 
+# hack for specifying path directly, not based on algorithm requirements
+RAW_DSET_PATH_PREFIX = 'RAW_PATH:'
+
 
 # ================================================================ experiments
 
@@ -78,6 +81,9 @@ def _df_from_string(s, **kwargs):
 
 def _dset_path(nbits, dset, algos, order, deltas):
     algos = pyience.ensure_list_or_tuple(algos)
+
+    if dset.startswith(RAW_DSET_PATH_PREFIX):  # hack for specifying path directly
+        return dset[len(RAW_DSET_PATH_PREFIX):]
 
     join = os.path.join
     path = cfg.DATASETS_DIR
@@ -111,7 +117,8 @@ def _dset_path(nbits, dset, algos, order, deltas):
 
 
 def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
-                  miniters=1, use_u32=False, ndims=None, dset_name=None):
+                  miniters=1, use_u32=False, ndims=None, dset_name=None,
+                  custom_levels=None, **sink):
     algos = pyience.ensure_list_or_tuple(algos)
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
@@ -125,11 +132,14 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
         info = cfg.ALGO_INFO[algo]
         s = info.lzbench_name
         # s = s.replace(NEEDS_NBITS, str(nbits))
-        if info.levels is not None:
-            s += ',' + ','.join([str(lvl) for lvl in info.levels])
-        if info.needs_ndims:
-            ndims = cfg.NAME_2_DSET[dset_name].ndims
-            s += ',{}'.format(int(ndims))
+        if custom_levels is None:
+            if info.levels is not None:
+                s += ',' + ','.join([str(lvl) for lvl in info.levels])
+            if info.needs_ndims:
+                ndims = cfg.NAME_2_DSET[dset_name].ndims
+                s += ',{}'.format(int(ndims))
+        else:
+            s += ',' + ','.join([str(lvl) for lvl in custom_levels])
         algo_strs.append(s)
 
     cmd += '/'.join(algo_strs)
@@ -158,9 +168,48 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     return cmd
 
 
+def _run_cmd(cmd, verbose=0):
+    output = os.popen(cmd).read()
+    # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
+    trimmed = output[:output.find('\ndone...')]
+    # trimmed = trimmed[:]
+
+    if not os.path.exists('./lzbench'):
+        os.path.system('make')
+
+    if verbose > 1:
+        print "raw output:\n" + output
+        print "trimmed output:\n", trimmed
+
+    return _df_from_string(trimmed[:])
+
+
+def _clean_results(results, dset, memlimit, miniters, nbits, order, deltas):
+    # print "==== results df:\n", results
+    # print results_dicts
+    results_dicts = results.to_dict('records')
+    for i, d in enumerate(results_dicts):
+        d['Dataset'] = dset
+        d['Memlimit'] = memlimit
+        d['MinIters'] = miniters
+        d['Nbits'] = nbits
+        d['Order'] = order
+        d['Deltas'] = deltas
+        d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
+        # if deltas and algo != 'Memcpy':
+        #     d['Algorithm'] = d['Algorithm'] + '-Delta'
+        d.pop('Compressor name')
+        # d['Filename'] = d['Filename'].replace(os.path.expanduser('~'), '~')
+        d['Filename'] = d['Filename'].replace(
+            os.path.expanduser(cfg.DATASETS_DIR), '')
+        # d.pop('Filename')  # not useful because of -j
+    results = pd.DataFrame.from_records(results_dicts)
+    return results
+
+
 def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
                     deltas=False, create_fig=False, verbose=1, dry_run=DEBUG,
-                    save_path=None, **sink):
+                    save_path=None, **cmd_kwargs):
     dsets = cfg.ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
@@ -178,7 +227,8 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         preprocs = 'delta' if (deltas and not use_u32) else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
-                            miniters=miniters, use_u32=use_u32, dset_name=dset)
+                            miniters=miniters, use_u32=use_u32, dset_name=dset,
+                            **cmd_kwargs)
 
         if verbose > 0 or dry_run:
             print '------------------------'
@@ -188,38 +238,44 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                 # print "Warning: abandoning early for debugging!"
                 continue
 
-        output = os.popen(cmd).read()
-        # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
-        trimmed = output[:output.find('\ndone...')]
-        # trimmed = trimmed[:]
+        results = _run_cmd(cmd, verbose=verbose)
+        results = _clean_results(
+            results, dset=dset, memlimit=memlimit, miniters=miniters,
+            nbits=nbits, order=order, deltas=deltas)
 
-        if not os.path.exists('./lzbench'):
-            os.path.system('make')
+        # output = os.popen(cmd).read()
+        # # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
+        # trimmed = output[:output.find('\ndone...')]
+        # # trimmed = trimmed[:]
 
-        if verbose > 1:
-            print "raw output:\n" + output
-            print "trimmed output:\n", trimmed
+        # if not os.path.exists('./lzbench'):
+        #     os.path.system('make')
 
-        results = _df_from_string(trimmed[:])
-        # print "==== results df:\n", results
-        # print results_dicts
-        results_dicts = results.to_dict('records')
-        for i, d in enumerate(results_dicts):
-            d['Dataset'] = dset
-            d['Memlimit'] = memlimit
-            d['MinIters'] = miniters
-            d['Nbits'] = nbits
-            d['Order'] = order
-            d['Deltas'] = deltas
-            d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
-            # if deltas and algo != 'Memcpy':
-            #     d['Algorithm'] = d['Algorithm'] + '-Delta'
-            d.pop('Compressor name')
-            # d['Filename'] = d['Filename'].replace(os.path.expanduser('~'), '~')
-            d['Filename'] = d['Filename'].replace(
-                os.path.expanduser(cfg.DATASETS_DIR), '')
-            # d.pop('Filename')  # not useful because of -j
-        results = pd.DataFrame.from_records(results_dicts)
+        # if verbose > 1:
+        #     print "raw output:\n" + output
+        #     print "trimmed output:\n", trimmed
+
+        # results = _df_from_string(trimmed[:])
+
+        # # print "==== results df:\n", results
+        # # print results_dicts
+        # results_dicts = results.to_dict('records')
+        # for i, d in enumerate(results_dicts):
+        #     d['Dataset'] = dset
+        #     d['Memlimit'] = memlimit
+        #     d['MinIters'] = miniters
+        #     d['Nbits'] = nbits
+        #     d['Order'] = order
+        #     d['Deltas'] = deltas
+        #     d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
+        #     # if deltas and algo != 'Memcpy':
+        #     #     d['Algorithm'] = d['Algorithm'] + '-Delta'
+        #     d.pop('Compressor name')
+        #     # d['Filename'] = d['Filename'].replace(os.path.expanduser('~'), '~')
+        #     d['Filename'] = d['Filename'].replace(
+        #         os.path.expanduser(cfg.DATASETS_DIR), '')
+        #     # d.pop('Filename')  # not useful because of -j
+        # results = pd.DataFrame.from_records(results_dicts)
 
         if verbose > 0:
             print "==== Results"
@@ -249,7 +305,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
             all_results = results
 
         all_results.to_csv(save_path, index=False)
-        # print "all results ever:\n", all_results
+        print "all results ever:\n", all_results
 
     if create_fig and not dry_run:
         for dset in dsets:
@@ -449,9 +505,10 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
     if all_dsets is None:
         all_dsets = cfg.ALL_DSET_NAMES
     if all_algos is None:
-        all_algos = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
-                     'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
-                     'ByteShuffle8b').split()
+        all_algos = cfg.USE_WHICH_ALGOS
+        # all_algos = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
+        #              'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
+        #              'ByteShuffle8b').split()
 
     all_nbits = pyience.ensure_list_or_tuple(all_nbits)
     all_use_u32 = pyience.ensure_list_or_tuple(all_use_u32)
@@ -492,9 +549,20 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
 
 
 def run_ucr():
-    save_path = UCR_RESULTS_PATH
-    run_sweep(algos=cfg.USE_WHICH_ALGOS, miniters=5, save_path=save_path,
-              dsets='ucr')
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+              save_path=cfg.UCR_RESULTS_PATH)
+
+
+def run_speed_vs_ndims():
+    dsets = [cfg.SYNTH_100M_U8_LOW_PATH, cfg.SYNTH_100M_U16_LOW_PATH,
+             cfg.SYNTH_100M_U8_HIGH_PATH, cfg.SYNTH_100M_U16_HIGH_PATH]
+    dsets = [RAW_DSET_PATH_PREFIX + dset for dset in dsets]
+    # run_sweep(dsets=dsets, algos=['SprintzDelta', 'SprintzXff'],
+    #           miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
+    #           custom_levels=np.arange(8, 10))
+    run_sweep(dsets=dsets, algos=cfg.SPRINTZ_ALGOS,
+              miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
+              custom_levels=np.arange(1, 80 + 1))
 
 
 def main():
@@ -508,6 +576,10 @@ def main():
         run_ucr()
         return
 
+    if kwargs.get('speed_vs_ndims', False):
+        run_speed_vs_ndims()
+        print "ran speed vs ndims..."
+        return
 
     if kwargs is not None and kwargs.get('sweep', False):
         run_sweep(**kwargs)
