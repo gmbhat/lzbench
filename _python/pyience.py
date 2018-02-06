@@ -2,19 +2,17 @@
 
 """utility functions for running experiments"""
 
+from __future__ import print_function
 
 import datetime
 import os
 import itertools
-import warnings
+# import warnings
 import numpy as np
 import pandas as pd
 import sys
 
 import sklearn
-# from sklearn.model_selection import StratifiedKFold
-
-from files import ensure_dir_exists
 
 try:
     from joblib import Memory
@@ -118,6 +116,11 @@ def as_key(x):
 
 def now_as_string():
     return datetime.datetime.now().strftime("%Y-%m-%dT%H_%M_%S")
+
+
+def ensure_dir_exists(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 
 def save_data_frame(df, save_dir, name=None, timestamp=False):
@@ -473,7 +476,7 @@ def main():
 
     # print out a dataframe so we can see that this worked
     import pandas as pd
-    print pd.DataFrame.from_records(combos)  # woot; it worked
+    print(pd.DataFrame.from_records(combos))  # woot; it worked
 
 
 if __name__ == '__main__':
