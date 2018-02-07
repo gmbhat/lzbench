@@ -10,9 +10,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sb  # pip install seaborn
 
+from joblib import Memory  # pip install joblib
+
 from _python import config as cfg
 from _python import pyience
 from _python import files
+
+_memory = Memory('./', verbose=1)
 
 DSETS_POSITIONS = {'uci_gas': (0, 0), 'pamap': (0, 1),
                    'msrc':    (1, 0), 'ampd_power': (1, 1),
@@ -292,9 +296,8 @@ def _clean_algo_name(s):
             'SprintzXff_Huf': 'Sprintz -4'}[name]
 
 
-def decomp_vs_ndims_results():
+def decomp_vs_ndims_results(save=True):
     df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
-    # df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH.replace('ndims_speed_results', '_ndims_speed_results'))
 
     sb.set_context("talk")
     fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
@@ -384,15 +387,102 @@ def decomp_vs_ndims_results():
     plt.tight_layout()
     plt.subplots_adjust(top=.9, bottom=.14)
 
-    plt.show()
+    if save:
+            save_fig_png('ndims_vs_speed')
+    else:
+        plt.show()
 
 
 def comp_vs_ndims_results():
     pass
 
 
-def quantize_err_results():
-    pass
+@_memory.cache
+def _compute_ucr_snrs():
+    from _python.datasets import ucr
+    dsets = ucr.allUCRDatasets()
+
+    snrs = {}
+
+    for dset in dsets:
+        X = dset.X
+        minval, maxval = np.min(X), np.max(X)
+        spread = maxval - minval
+        for nbits in (8, 16):
+            dtype = {8: np.uint8, 16: np.uint16}[nbits]
+            scale = (1 << nbits) / spread
+            X_quant = np.array((X - minval) * scale, dtype=dtype)
+
+            X_hat = (X_quant.astype(np.float64) / scale) + minval
+
+            diffs = X - X_hat
+
+            snr = np.var(X.ravel()) / np.var(diffs.ravel())
+            snrs[(dset.name, nbits)] = snr
+
+    return snrs
+
+
+def quantize_err_results(save=True):
+    # from _python.datasets import ucr
+    # dsets = ucr.allUCRDatasets()
+
+    # snrs = {}
+
+    # for dset in dsets:
+    #     X = dset.X
+    #     minval, maxval = np.min(X), np.max(X)
+    #     spread = maxval - minval
+    #     for nbits in (8, 16):
+    #         dtype = {8: np.uint8, 16: np.uint16}[nbits]
+    #         scale = (1 << nbits) / spread
+    #         X_quant = np.array((X - minval) * scale, dtype=dtype)
+
+    #         X_hat = (X_quant.astype(np.float64) / scale) + minval
+
+    #         diffs = X - X_hat
+
+    #         snr = np.var(X.ravel()) / np.var(diffs.ravel())
+    #         snrs[(dset.name, nbits)] = snr
+
+    snrs = _compute_ucr_snrs()  # note that these aren't log scale
+
+    # convert snrs dict to a dataframe
+    snrs_list = []
+    for k, v in snrs.items():
+        snrs_list.append({'Dataset': k[0], 'Nbits': k[1], 'Ratio': np.log(v)})
+    df = pd.DataFrame.from_records(snrs_list)
+
+    sb.set_context('talk')
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+    axes[0].set_title('8 Bit Quantization')
+    axes[1].set_title('16 Bit Quantization')
+
+    vals8 = df['Ratio'][df['Nbits'] == 8]
+    vals16 = df['Ratio'][df['Nbits'] == 16]
+
+    sb.distplot(vals8, ax=axes[0], norm_hist=False, kde=False, rug=True)
+    sb.distplot(vals16, ax=axes[1], norm_hist=False, kde=False, rug=True)
+
+    # axes[0].semilogx()
+    # axes[1].semilogx()
+
+    for ax in axes:
+        ax.set_xlabel('Log(Variance / \nMean Quantization Error)')
+        ax.set_xlim([0, ax.get_xlim()[1]])
+    # axes[0].set_ylabel('Relative Frequency')
+    axes[0].set_ylabel('Number of Datasets')
+
+    output = ["{}: {}".format(k, v) for k, v in snrs.items()]
+    print("\n".join(output[:10]))
+
+    plt.suptitle("Distribution of Quantization Errors")
+    plt.tight_layout()
+    plt.subplots_adjust(top=.85, bottom=.1)
+    if save:
+        save_fig_png('quantize_errs')
+    else:
+        plt.show()
 
 
 def main():
@@ -404,7 +494,8 @@ def main():
     # decomp_vs_ratio_fig(nbits=8)
 
     # cd_diagram_ours_vs_others()
-    decomp_vs_ndims_results()
+    # decomp_vs_ndims_results()
+    quantize_err_results()
 
 
 if __name__ == '__main__':

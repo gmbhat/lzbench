@@ -560,9 +560,14 @@ def run_speed_vs_ndims():
     # run_sweep(dsets=dsets, algos=['SprintzDelta', 'SprintzXff'],
     #           miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
     #           custom_levels=np.arange(8, 10))
+
+    # split into two sweeps so we get some intermediate results
     run_sweep(dsets=dsets, algos=cfg.SPRINTZ_ALGOS,
               miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
-              custom_levels=np.arange(1, 80 + 1))
+              custom_levels=np.arange(1, 40))
+    run_sweep(dsets=dsets, algos=cfg.SPRINTZ_ALGOS,
+              miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
+              custom_levels=np.arange(40, 80 + 1))
 
 
 def main():
