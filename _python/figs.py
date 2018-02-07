@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sb  # pip install seaborn
 
 from _python import config as cfg
 from _python import pyience
@@ -22,6 +23,8 @@ USE_WHICH_DSETS = DSETS_POSITIONS.keys()
 USE_WHICH_DSETS = [cfg.NAME_2_DSET[name] for name in USE_WHICH_DSETS]
 
 FIG_SAVE_DIR = os.path.join(cfg.FIG_SAVE_DIR, 'paper')
+
+CAMERA_READY_FONT = 'DejaVu Sans'
 
 
 def save_fig(name, save_dir=FIG_SAVE_DIR):
@@ -279,9 +282,22 @@ def cd_diagram_ours_vs_others_delta():
     cd_diagram_ours_vs_others(others_deltas=True)
 
 
+def _clean_algo_name(s):
+    name = s.split()[0]
+    if name.endswith('_16b'):
+        name = name[:-4]
+    return {'SprintzDelta': 'Sprintz -1',
+            'SprintzXff':   'Sprintz -2',
+            'SprintzDelta_Huf': 'Sprintz -3',
+            'SprintzXff_Huf': 'Sprintz -4'}[name]
+
+
 def decomp_vs_ndims_results():
-    # df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
-    df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH.replace('ndims_speed_results', '_ndims_speed_results'))
+    df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
+    # df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH.replace('ndims_speed_results', '_ndims_speed_results'))
+
+    sb.set_context("talk")
+    fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
 
     # df = df[df['Order'] == 'c']
     # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
@@ -289,20 +305,86 @@ def decomp_vs_ndims_results():
     df = df[df['Algorithm'] != 'Memcpy']
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
 
+    Y_VAR_COL = 'Decompression speed'
+
     # extract ndims from algo name; eg: "SprintzDelta -9" -> 9
     df['Ndims'] = df['Algorithm'].apply(lambda algo: -int(algo.split()[1]))
+    # df['Algorithm'] = df['Algorithm'].apply(lambda algo: algo.split()[0])
+    df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
     df['TrueRatio'] = df['Filename'].apply(
         lambda path: int(path.split("ratio=")[1].split('.')[0]))
-    df = df[['Nbits', 'Algorithm', 'Ratio', 'TrueRatio']]
+    df = df[['Ndims', 'Nbits', 'Algorithm', Y_VAR_COL, 'TrueRatio']]
 
     full_df = df
-    # for nbits in (8, 16):
-    for nbits in [8]:
-        df = full_df[full_df['Nbits'] == nbits]
-        df = df.drop('Nbits', axis=1)
+    # for nbits in [8]:
+    uniq_ratios = df['TrueRatio'].unique()
+    uniq_algos = df['Algorithm'].unique()
 
-        print("df")
-        print(df)
+    print("found uniq ratios: ", uniq_ratios)
+
+    for i, rat in enumerate(uniq_ratios):
+        axes_row = axes[i]
+        df_for_ratio = full_df[full_df['TrueRatio'] == rat]
+
+        for ax, nbits in zip(axes_row, (8, 16)):
+            df = df_for_ratio[df_for_ratio['Nbits'] == nbits]
+            df = df.drop('Nbits', axis=1)
+
+            df = df.sort_values(['Algorithm', 'Ndims'])
+
+            # df = df.pivot()
+            # df = df.pivot(index='Ndims', columns='Algorithm', values=Y_VAR_COL)
+            # df.plot()
+
+            # for algo in uniq_algos:
+            for algo in uniq_algos:
+                subdf = df[df['Algorithm'] == algo]
+                x = subdf['Ndims']
+                y = subdf[Y_VAR_COL]
+
+                print("plotting algo: ", algo)
+
+                ax.plot(x, y, label=algo, lw=1)
+
+            # print("df")
+            # print(df)
+
+            # ax.set_title("{}-bit Values".format(nbits))
+            # ax.set_xlabel("Number of columns")
+
+    # axes[0].set_title("8-bit values")
+    # axes[1].set_title("16-bit values")
+
+    for ax in axes[0, :]:
+        ax.set_title("{}-bit Values".format(nbits), fontsize=16)
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Decompression Speed\n(MB/s)", fontsize=14)
+    for ax in axes[-1, :]:
+        ax.set_xlabel("Number of columns", fontsize=14)
+
+    # add byte counts on the right
+    # fmt_str = "{}B Encodings"
+    sb.set_style("white")  # adds border (spines) we have to remove
+    for i, ax in enumerate(axes[:, -1]):
+        ax2 = ax.twinx()
+        sb.despine(ax=ax2, top=True, left=True, bottom=True, right=True)
+        ax2.get_xaxis().set_visible(False)
+        # ax2.get_yaxis().set_visible(False)  # nope, removes ylabel
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.setp(ax2.get_yticklabels(), visible=False)
+        ax2.yaxis.set_label_position('right')
+        lbl = "Uncompressible Data" if i == 0 else "Highly Compressible Data"
+        ax2.set_ylabel(lbl, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
+
+    leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
+    plt.figlegend(leg_lines, leg_labels, loc='lower center',
+                  ncol=len(uniq_algos), labelspacing=0)
+
+    plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
+    plt.tight_layout()
+    plt.subplots_adjust(top=.9, bottom=.14)
+
+    plt.show()
 
 
 def comp_vs_ndims_results():
