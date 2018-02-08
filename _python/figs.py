@@ -40,6 +40,16 @@ def save_fig_png(name, save_dir=FIG_SAVE_DIR):
                 dpi=300)
 
 
+def add_ylabel_on_right(ax, label, **ylabel_kwargs):
+    ax2 = ax.twinx()
+    sb.despine(ax=ax2, top=True, left=True, bottom=True, right=True)
+    ax2.get_xaxis().set_visible(False)
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    plt.setp(ax2.get_yticklabels(), visible=False)
+    ax2.yaxis.set_label_position('right')
+    ax2.set_ylabel(label, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
+
+
 def _apply_filters(df, nbits=None, order=None, deltas=None,
                    memlimit=None, avg_across_files=True, algos=None,
                    exclude_algos=None):
@@ -206,7 +216,7 @@ def cd_diagram(df, lower_better=True):
     print("\nNemenyi critical difference: ", cd)
 
 
-def cd_diagram_ours_vs_others(others_deltas=False, save=True):
+def _read_and_clean_ucr_results(others_deltas=False):
     df = pd.read_csv(cfg.UCR_RESULTS_PATH)
 
     # df = df[df['Order'] == 'c']
@@ -219,6 +229,102 @@ def cd_diagram_ours_vs_others(others_deltas=False, save=True):
     df = df[df['Algorithm'] != 'Memcpy']
     df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+    return df
+    # full_df = df
+
+
+def boxplot_ucr(others_deltas=False, save=True):
+    # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
+
+    # # df = df[df['Order'] == 'c']
+    # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
+    # df = df.sort_values(['Filename', 'Algorithm'])
+    # if others_deltas:
+    #     df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
+    # else:
+    #     df = df[~df['Deltas']]
+    # df = df[df['Algorithm'] != 'Memcpy']
+    # df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
+    # df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+    df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+
+    # sb.set_context("talk")
+    _, axes = plt.subplots(2, 1, figsize=(5, 9), sharex=True, sharey=True)
+
+    full_df = df
+    # for nbits in [8]:
+    for i, nbits in enumerate((8, 16)):
+        ax = axes[i]
+        if i != len(axes) - 1:
+            plt.setp(ax.get_xticklabels(), visible=False)
+            ax.get_xaxis().set_visible(False)
+
+        df = full_df[full_df['Nbits'] == nbits]
+        df = df.drop('Nbits', axis=1)
+
+        # if it complains about duplicate entries here, might because
+        # memcpy ran on some stuff (but not everything for some reason)
+        df = df.pivot(index='Filename', columns='Algorithm', values='Ratio')
+
+        for col in df:
+            info = cfg.ALGO_INFO.get(col)
+            if info is not None and info.needs_32b:
+                print("scaling comp ratio for col: {}".format(col))
+                # print("old df col:")
+                # print(df[col][:10])
+
+                # df[col] = df[col] * (32 / nbits)  # if using % of orig
+                df[col] = df[col] * (nbits / 32)    # if using orig/compressed
+
+        # ax = sb.violinplot(data=df, figsize=(8, 8))
+        # ax = sb.boxplot(data=df)
+        # ax = sb.boxplot(data=df.apply(np.log))
+        sb.boxplot(data=df, ax=ax)
+        ax.semilogy()
+
+        # print("xticklabels: ", ax.get_xticklabels())
+        # xticklabels = ax.get_xticklabels()
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=70)  # rotate labels
+        # plt.tight_layout()
+
+        # if save:
+        # plt.show()
+        # continue
+
+        # ax = plt.gca()
+
+        add_ylabel_on_right(ax, "{}-bit Data".format(nbits))
+
+    for ax in axes:
+        ax.set_ylabel("Compression Ratio", fontsize=14)
+
+    # axes[0].set_title("Compression Ratios on UCR Archive, {}-bit".format(nbits),
+    axes[0].set_title("Compression Ratios on UCR Datasets", fontsize=16)
+
+    plt.tight_layout()
+    if save:
+        save_fig_png('boxplot_ucr_deltas={}'.format(int(others_deltas)))
+        # save_fig_png('boxplot_ucr_{}b_deltas={}'.format(
+        #     nbits, int(others_deltas)))
+    else:
+        plt.show()
+
+
+def cd_diagram_ours_vs_others(others_deltas=False, save=True):
+    # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
+
+    # # df = df[df['Order'] == 'c']
+    # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
+    # df = df.sort_values(['Filename', 'Algorithm'])
+    # if others_deltas:
+    #     df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
+    # else:
+    #     df = df[~df['Deltas']]
+    # df = df[df['Algorithm'] != 'Memcpy']
+    # df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
+    # df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+    df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+
     full_df = df
     # for nbits in [8]:
     for nbits in (8, 16):
@@ -263,19 +369,18 @@ def cd_diagram_ours_vs_others(others_deltas=False, save=True):
                 # print("new df col:")
                 # print(df[col][:10])
 
-        df.to_csv('ucr_df_{}.csv'.format(nbits))
-
         cd_diagram(df)  # if using % of orig
         cd_diagram(df, lower_better=False)
+
+        ax = plt.gca()
+        ax.set_title("Mean Ranks on UCR Archive, {}-bit".format(nbits), fontsize=16)
+        plt.tight_layout()
+
         if save:
             save_fig_png('cd_diagram_{}b_deltas={}'.format(
                 nbits, int(others_deltas)))
         else:
             plt.show()
-
-    # print df8.groupby()
-
-    # print(df[:2])
 
 
 def cd_diagram_ours_vs_others_no_delta():
@@ -388,7 +493,7 @@ def decomp_vs_ndims_results(save=True):
     plt.subplots_adjust(top=.9, bottom=.14)
 
     if save:
-            save_fig_png('ndims_vs_speed')
+        save_fig_png('ndims_vs_speed')
     else:
         plt.show()
 
@@ -494,8 +599,9 @@ def main():
     # decomp_vs_ratio_fig(nbits=8)
 
     # cd_diagram_ours_vs_others()
-    # decomp_vs_ndims_results()
-    quantize_err_results()
+    # boxplot_ucr()
+    decomp_vs_ndims_results()
+    # quantize_err_results()
 
 
 if __name__ == '__main__':
