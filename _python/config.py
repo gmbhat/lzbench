@@ -87,6 +87,7 @@ PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
 #     'msrc':         'MSRC-12',
 # }
 
+
 def _sprintz_algo_info(name, nbits=8):
     return AlgoInfo(name, allow_delta=False, allowed_nbits=[nbits],
                     allowed_orders=['c'], group='Sprintz', needs_ndims=True)

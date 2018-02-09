@@ -481,7 +481,7 @@ def decomp_vs_ndims_results(save=True):
         plt.setp(ax2.get_xticklabels(), visible=False)
         plt.setp(ax2.get_yticklabels(), visible=False)
         ax2.yaxis.set_label_position('right')
-        lbl = "Uncompressible Data" if i == 0 else "Highly Compressible Data"
+        lbl = "Incompressible Data" if i == 0 else "Highly Compressible Data"
         ax2.set_ylabel(lbl, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
 
     leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
@@ -517,6 +517,7 @@ def _compute_ucr_snrs():
             dtype = {8: np.uint8, 16: np.uint16}[nbits]
             scale = (1 << nbits) / spread
             X_quant = np.array((X - minval) * scale, dtype=dtype)
+            # X_quant = np.array((X - minval) * scale + .5, dtype=dtype)
 
             X_hat = (X_quant.astype(np.float64) / scale) + minval
 
@@ -555,11 +556,12 @@ def quantize_err_results(save=True):
     # convert snrs dict to a dataframe
     snrs_list = []
     for k, v in snrs.items():
-        snrs_list.append({'Dataset': k[0], 'Nbits': k[1], 'Ratio': np.log(v)})
+        snrs_list.append({'Dataset': k[0], 'Nbits': k[1],
+                          'Ratio': 10 * np.log10(v)})
     df = pd.DataFrame.from_records(snrs_list)
 
     sb.set_context('talk')
-    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharey=True)
     axes[0].set_title('8 Bit Quantization')
     axes[1].set_title('16 Bit Quantization')
 
@@ -573,17 +575,31 @@ def quantize_err_results(save=True):
     # axes[1].semilogx()
 
     for ax in axes:
-        ax.set_xlabel('Log(Variance / \nMean Quantization Error)')
+        # ax.set_xlabel('Log(Variance / \nMean Quantization Error)')
+        # ax.set_xlabel('Variance / \nMean Quantization Error')
+        ax.set_xlabel('Signal-to-Noise Ratio (dB)')
         ax.set_xlim([0, ax.get_xlim()[1]])
+        # cur_labels = ax.get_xticklabels()
+        # new_labels = []
+        # for lbl in cur_labels:
+        #     try:
+        #         # print("got text: ", lbl.get_text())
+        #         print("got text: ", str(lbl))
+        #         new_labels.append(10**float(lbl.get_text()))
+        #     except ValueError:
+        #         new_labels.append('')
+        # ax.set_xticklabels(new_labels)
+
+        # ax.set_xticklabels([10**float(lbl.get_text()) for lbl in ax.get_xticklabels()])
     # axes[0].set_ylabel('Relative Frequency')
     axes[0].set_ylabel('Number of Datasets')
 
     output = ["{}: {}".format(k, v) for k, v in snrs.items()]
     print("\n".join(output[:10]))
 
-    plt.suptitle("Distribution of Quantization Errors")
+    plt.suptitle("Distribution of Quantization Errors\nOn UCR Datasets")
     plt.tight_layout()
-    plt.subplots_adjust(top=.85, bottom=.1)
+    plt.subplots_adjust(top=.75, bottom=.1)
     if save:
         save_fig_png('quantize_errs')
     else:
@@ -600,8 +616,8 @@ def main():
 
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
-    decomp_vs_ndims_results()
-    # quantize_err_results()
+    # decomp_vs_ndims_results()
+    quantize_err_results()
 
 
 if __name__ == '__main__':
