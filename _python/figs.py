@@ -425,7 +425,8 @@ def decomp_vs_ndims_results(save=True):
 
     full_df = df
     # for nbits in [8]:
-    uniq_ratios = df['TrueRatio'].unique()
+    # uniq_ratios = df['TrueRatio'].unique()
+    uniq_ratios = [1, 8]
     uniq_algos = df['Algorithm'].unique()
 
     print("found uniq ratios: ", uniq_ratios)
@@ -616,8 +617,8 @@ def main():
 
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
-    # decomp_vs_ndims_results()
-    quantize_err_results()
+    decomp_vs_ndims_results()
+    # quantize_err_results()
 
 
 if __name__ == '__main__':

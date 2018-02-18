@@ -37,8 +37,8 @@ def _create_synth_100M(nbits, ratio, size=int(100e6), save_path=None):
 
 
 def create_synth_dense():
-    _create_synth_100M(nbits=8, ratio='low')
-    _create_synth_100M(nbits=16, ratio='low')
+    # _create_synth_100M(nbits=8, ratio='low')
+    # _create_synth_100M(nbits=16, ratio='low')
     _create_synth_100M(nbits=8, ratio='high')
     _create_synth_100M(nbits=16, ratio='high')
 

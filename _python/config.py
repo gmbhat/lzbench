@@ -20,7 +20,7 @@ files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 
 SYNTH_LOW_COMPRESSION_RATIO = 1
-SYNTH_HIGH_COMPRESSION_RATIO = 4
+SYNTH_HIGH_COMPRESSION_RATIO = 8
 SYNTH_DATASETS_DIR = os.path.join(DATASETS_DIR, 'synthetic')
 SYNTH_100M_U8_LOW_PATH = os.path.join(SYNTH_DATASETS_DIR,
     'synth_100M_u8_ratio={}.dat'.format(SYNTH_LOW_COMPRESSION_RATIO))    # noqa

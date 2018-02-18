@@ -554,7 +554,10 @@ def run_ucr():
 
 
 def run_speed_vs_ndims():
-    dsets = [cfg.SYNTH_100M_U8_LOW_PATH, cfg.SYNTH_100M_U16_LOW_PATH,
+
+    # TODO uncomment to run on all dsets
+    # dsets = [cfg.SYNTH_100M_U8_LOW_PATH, cfg.SYNTH_100M_U16_LOW_PATH,
+    dsets = [
              cfg.SYNTH_100M_U8_HIGH_PATH, cfg.SYNTH_100M_U16_HIGH_PATH]
     dsets = [RAW_DSET_PATH_PREFIX + dset for dset in dsets]
     # run_sweep(dsets=dsets, algos=['SprintzDelta', 'SprintzXff'],
