@@ -2661,6 +2661,34 @@ int64_t lzbench_sprintz_xff_huf_decompress_16b(char *inbuf, size_t insize, char 
 }
 
 
+// ================================ queries
+
+int64_t lzbench_sprintz_delta_query0_8b(char *inbuf, size_t insize,
+        char *outbuf, size_t outsize, size_t ndims, size_t, char*)
+{
+    // // works (but doesn't run the query)
+    // return lzbench_sprintz_delta_decompress(inbuf, insize, outbuf, outsize, ndims, 0, NULL);
+
+    // // memcpy(outbuf, inbuf, insize);
+    // // return insize;
+    // // qp.op = REDUCE_MAX;
+    QueryParams qp;
+    qp.op = REDUCE_MAX;
+    return query_rowmajor_delta_rle_8b((int8_t*)inbuf, (uint8_t*)outbuf, qp);
+}
+
+int64_t lzbench_sprintz_xff_query1_16b(char *inbuf, size_t insize,
+        char *outbuf, size_t outsize, size_t ndims, size_t, char*)
+{
+    // memcpy(outbuf, inbuf, insize);
+    // return insize;
+    // return -1;
+
+    QueryParams qp;
+    qp.op = REDUCE_SUM;
+    return query_rowmajor_xff_rle_16b((int16_t*)inbuf, (uint16_t*)outbuf, qp);
+}
+
 #endif
 
 

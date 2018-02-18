@@ -217,12 +217,12 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         }
     }
 
-    LZBENCH_PRINT(5, "%s using %lu chunks; sizes = ",
+    LZBENCH_PRINT(11, "%s using %lu chunks; sizes = ",
         desc->name, chunk_sizes.size());
     for (auto sz : chunk_sizes) {
-        LZBENCH_PRINT(5, "%lu ", (unsigned long)sz);
+        LZBENCH_PRINT(11, "%lu ", (unsigned long)sz);
     }
-    LZBENCH_PRINT(5, "%s", "\n"); // can't just print \n since needs VA_ARGS
+    LZBENCH_PRINT(11, "%s", "\n"); // can't just print \n since needs VA_ARGS
     // printf("%s using %d chunks\n", desc->name, (int)chunk_sizes.size());
     // printf("chunk sizes: "); for (auto sz : chunk_sizes) { printf("%d ", int(sz)); } printf("\n");
 
@@ -276,6 +276,8 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         // no decompression should be done when timing the query; we therefore
         // populate the decompressed buffer here so that lzbench_decompress,
         // which is what gets timed, can skip that part
+        //
+        // TODO string comparison is an ugly way of checking this
         bool do_materialize = strings_equal(desc->name, "materialized") &&
             params->query_params.type != QUERY_NONE;
         if (do_materialize) {
@@ -309,17 +311,19 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         }
         while (GetDiffTime(rate, loop_ticks, end_ticks) < params->dloop_time);
 
+        // LZBENCH_PRINT(2, "=====A had decomp error? %d\n", (int)decomp_error);
+
         nanosec = GetDiffTime(rate, loop_ticks, end_ticks);
         dtime.push_back(nanosec/i);
         LZBENCH_PRINT(9, "%s dnanosec=%d\n", desc->name, (int)nanosec);
 
-        if (insize != decomplen) {
+        if (insize != decomplen && !params->unverified) {
             decomp_error = true;
             LZBENCH_PRINT(1, "ERROR: input length (%d) != decompressed length (%d)\n",
                 (int32_t)insize, (int32_t)decomplen);
         }
 
-        if (memcmp(inbuf, decomp, insize) != 0) {
+        if (!params->unverified && memcmp(inbuf, decomp, insize) != 0) {
             decomp_error = true;
 
             // printf("comparing buffs up to index %d\n", (int)insize);
@@ -365,19 +369,23 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
 
         memset(decomp, 0, insize); // clear output buffer
 
+        // LZBENCH_PRINT(2, "===== had decomp error? %d\n", (int)decomp_error);
         if (decomp_error) { break; }
+        // LZBENCH_PRINT(2, "===== did we get here? %d\n", 1);
 
         total_nanosec = GetDiffTime(rate, timer_ticks, end_ticks);
         total_d_iters += i;
+
+        double time_secs = total_nanosec/1e9;
+        double thruput = nanosec ? (float)insize * i * 1000 / nanosec : -1;
+        // LZBENCH_PRINT(5, "%s decompr iter=%d time=%.2fs speed=%.2f MB/s     \r",
+        LZBENCH_PRINT(7, "%s decompr rawsize=%lu iter=%d time=%.5fs speed=%.2f MB/s     \n",
+            desc->name, insize, total_d_iters, time_secs, thruput);
 
         bool done = total_d_iters >= params->d_iters;
         done = done && (total_nanosec > ((uint64_t)params->dmintime*1000*1000));
         if (done) { break; }
 
-        double time_secs = total_nanosec/1e9;
-        double thruput = nanosec ? (float)insize * i * 1000 / nanosec : -1;
-        LZBENCH_PRINT(2, "%s decompr iter=%d time=%.2fs speed=%.2f MB/s     \r",
-            desc->name, total_d_iters, time_secs, thruput);
     } while (true);
 
     print_stats(params, desc, level, ctime, dtime, insize,

@@ -116,11 +116,9 @@ int main(int argc, char** argv) {
             params->chunk_size = number << 10;
             break;
         case 'c':
-            // sort_col = number;
             dinfo.ncols = number;
             break;
         case 'C':
-            // qparams
             qparams.which_cols.push_back(number);
             while (*numPtr == ',') { // parse whole list of numbers
                 numPtr++;
@@ -217,6 +215,8 @@ int main(int argc, char** argv) {
             params->dmintime = 1000*number;
             params->dloop_time = (params->dmintime)?DEFAULT_LOOP_TIME:0;
             break;
+        case 'U':
+            params->unverified = true;
         case 'v':
             params->verbose = number;
             break;

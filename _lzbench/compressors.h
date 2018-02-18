@@ -730,6 +730,17 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
     int64_t lzbench_sprintz_xff_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*);
 
+    // ================================ sprintz query functions
+
+    // ------------------------ 8b
+    int64_t lzbench_sprintz_delta_query0_8b(char *inbuf, size_t insize,
+        char *outbuf, size_t outsize, size_t ndims, size_t, char*);
+
+    // ------------------------ 16b
+    int64_t lzbench_sprintz_xff_query1_16b(char *inbuf, size_t insize,
+        char *outbuf, size_t outsize, size_t ndims, size_t, char*);
+
+
 #else
     #define lzbench_sprintz_delta_1d_compress
     #define lzbench_sprintz_delta_1d_decompress

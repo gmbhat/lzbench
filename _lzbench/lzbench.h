@@ -112,6 +112,7 @@ public:
     // int element_sz;
     QueryParams query_params;
     DataInfo data_info;
+    bool unverified;
 
     lzbench_params_t(const lzbench_params_t &) = default;
     lzbench_params_t() = default;
@@ -152,7 +153,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 111
+#define LZBENCH_COMPRESSOR_COUNT 113
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -269,6 +270,9 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprintzXff_16b",  "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_compress_16b,  lzbench_sprintz_xff_decompress_16b,             NULL,    NULL },
     { "sprintzDelta_HUF_16b","0.0", 1,128,0,80<<10, lzbench_sprintz_delta_huf_compress_16b,  lzbench_sprintz_delta_huf_decompress_16b, NULL,    NULL },
     { "sprintzXff_HUF_16b",  "0.0", 1,128,0,80<<10, lzbench_sprintz_xff_huf_compress_16b,  lzbench_sprintz_xff_huf_decompress_16b,     NULL,    NULL },
+    // pushed-down query functions; must be run with -U since they don't write out decompressed data
+    { "sprintzDeltaQuery0_8b", "0.0", 1,128,0,80<<10, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_query0_8b,      NULL,       NULL },
+    { "sprintzXffQuery0_16b",  "0.0", 1,128,0,80<<10, lzbench_sprintz_xff_compress_16b,  lzbench_sprintz_xff_query1_16b,    NULL,       NULL },
     // NOTE: the following 2 codecs are unsafe and should only be used for speed profiling
     { "sprFixedBitpack", "0.0", 1, 8,   0,       0, lzbench_fixed_bitpack_compress,  lzbench_fixed_bitpack_decompress,              NULL,       NULL }, // input bytes must all be <= 1
     { "sprJustBitpack",  "0.0", 0, 0,   0,       0, lzbench_just_bitpack_compress,   lzbench_just_bitpack_decompress,               NULL,       NULL }, // input bytes must all be <= 15
