@@ -135,6 +135,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // printf("dinfo ncols: %d\n", dinfo.ncols);
             dinfo.nrows = dlen / dinfo.ncols;
             auto result = run_query(params->query_params, dinfo, outbuf);
+            // printf("ran query type: %d\n", qparams.type);
             // printf("number of idxs in result: %lu\n", result.idxs.size());
 
             // printf("got query type: %d, flattened window data: \n", qparams.type);

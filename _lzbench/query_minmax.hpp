@@ -1,6 +1,8 @@
 #ifndef QUERY_MIN_MAX_HPP
 #define QUERY_MIN_MAX_HPP
 
+#include "eigen/Core"
+
 #include "query_common.h"
 
 
@@ -155,6 +157,9 @@ QueryResult sliding_binary_op(const QueryParams& q,
     return ret;
 }
 
+// XXX these don't actually do a sliding window---just a (slow) reduction; also,
+// they cause segfaults sometimes...
+
 template<class DataT>
 QueryResult sliding_min(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
@@ -169,5 +174,82 @@ QueryResult sliding_max(const QueryParams& q,
     // printf("running sliding max query!\n");
     return sliding_binary_op<DataT, OpE::MAX>(q, di, buff);
 }
+
+
+
+// TODO eigen to impl these
+
+
+template<class DataT>
+static inline QueryResult reduce_contiguous(const QueryParams& q,
+    const DataInfo& di, const DataT* buff)
+{
+    using RowmajorMat = Eigen::Map<const Eigen::Matrix<
+        DataT, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >;
+    using ColmajorMat = Eigen::Map<const Eigen::Matrix<
+        DataT, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> >;
+    // using MutRowmajorMat = Eigen::Map<Eigen::Matrix<
+    using MutVector = Eigen::Map<Eigen::Matrix<
+        DataT, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >;
+    // using MutVector = Eigen::Map<Eigen::Vector<DataT, Eigen::Dynamic> >;
+    // printf("running sliding min query!\n");
+    // return sliding_binary_op<DataT, OpE::MIN>(q, di, buff);
+
+    QueryResult ret;
+    auto& ret_vals = QueryResultValsRef<DataT>{}(ret);
+    ret_vals.resize(di.ncols);
+
+    // MutRowmajorMat ret_buff(ret_vals.data(), 1, di.ncols);
+    MutVector ret_buff(ret_vals.data(), 1, di.ncols);
+
+    if (di.storage_order == ROWMAJOR) {
+        RowmajorMat mat(buff, di.nrows, di.ncols);
+        switch (q.type) {
+        case QUERY_MEAN:
+            ret_buff = mat.rowwise().mean(); break;
+        case QUERY_SUM:
+            /// XXX this will overflow for small int types
+            ret_buff = mat.rowwise().sum(); break;
+        case QUERY_MIN:
+            ret_buff = mat.rowwise().minCoeff(); break;
+        case QUERY_MAX:
+            ret_buff = mat.rowwise().maxCoeff(); break;
+        case QUERY_NORM:
+            ret_buff = mat.rowwise().squaredNorm(); break;
+        default:
+            printf("Unsupported query type for contiguous data: %d!\n",
+                (int)q.type); exit(1);
+        }
+    } else {
+        ColmajorMat mat(buff, di.nrows, di.ncols);
+        switch (q.type) {
+        case QUERY_MEAN:
+            ret_buff = mat.rowwise().mean(); break;
+        case QUERY_SUM:
+            /// XXX this will overflow for small int types
+            ret_buff = mat.rowwise().sum(); break;
+        case QUERY_MIN:
+            ret_buff = mat.rowwise().minCoeff(); break;
+        case QUERY_MAX:
+            ret_buff = mat.rowwise().maxCoeff(); break;
+        case QUERY_NORM:
+            ret_buff = mat.rowwise().squaredNorm(); break;
+        default:
+            printf("Unsupported query type for contiguous data: %d!\n",
+                (int)q.type); exit(1);
+        }
+    }
+    return ret;
+
+    // auto view =
+}
+// template<class DataT>
+// QueryResult reduce_max(const QueryParams& q,
+//     const DataInfo& di, const DataT* buff)
+// {
+//     // printf("running sliding max query!\n");
+//     return sliding_binary_op<DataT, OpE::MAX>(q, di, buff);
+// }
+
 
 #endif // QUERY_MIN_MAX_HPP

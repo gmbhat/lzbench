@@ -47,7 +47,8 @@ else
 endif
 
 
-DEFINES     += -I. -Izstd/lib -Izstd/lib/common -Ixpack/common -Ilibcsc
+INCLUDES    = -I. -Izstd/lib -Izstd/lib/common -Ixpack/common -Ilibcsc
+INCLUDES    += -Ieigen
 DEFINES     += -DHAVE_CONFIG_H
 CODE_FLAGS  += -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion
 # OPT_FLAGS   ?= -fomit-frame-pointer -fstrict-aliasing -ffast-math
@@ -62,8 +63,8 @@ else
 	OPT_FLAGS_O3 = $(OPT_FLAGS) -O3 -DNDEBUG -march=native
 endif
 
-CFLAGS = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O3) $(DEFINES)
-CFLAGS_O2 = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O2) $(DEFINES)
+CFLAGS = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O3) $(INCLUDES) $(DEFINES)
+CFLAGS_O2 = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O2) $(INCLUDES) $(DEFINES)
 LDFLAGS += $(MOREFLAGS)
 # enable cpp11, but disable this warning as a hacky workaround for Tornado
 CXX_ONLY_FLAGS = -std=c++0x -Wno-c++11-narrowing
