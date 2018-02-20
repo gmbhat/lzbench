@@ -86,6 +86,10 @@ template <class data_t> struct DataTypeTraits {};
 template <> struct DataTypeTraits<uint8_t> { using AccumulatorT = uint16_t; };
 template <> struct DataTypeTraits<uint16_t> { using AccumulatorT = uint32_t; };
 
+template <int ElemSz> struct ElemSizeTraits {};
+template <> struct ElemSizeTraits<1> { using DataT = uint8_t; };
+template <> struct ElemSizeTraits<2> { using DataT = uint16_t; };
+
 // pull out reference to appropriate vector of values
 template<class DataT> struct QueryResultValsRef {};
 template <> struct QueryResultValsRef<int8_t> {

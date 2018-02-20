@@ -74,21 +74,28 @@ QueryResult corr(const QueryParams& q, const DataInfo& di,
 template<class DataT>
 QueryResult run_query(const QueryParams& q, const DataInfo& di, const DataT* buff) {
 
-    // printf("actually running run_query!\n");
+    // printf("actually running run_query; query_type=%d!\n", (int)q.type);
 
     QueryResult ret;
-    switch (q.type) {
-        // case QUERY_MEAN: ret = sliding_mean(q, di, buff); break;
-        case QUERY_MEAN: ret = reduce_contiguous(q, di, buff); break;
-        // XXX "sliding" min and max actually just write out min/max seen
-        // so far, which is a weird thing to do
-        case QUERY_MIN: ret = reduce_contiguous(q, di, buff); break;
-        case QUERY_MAX: ret = reduce_contiguous(q, di, buff); break;
-        case QUERY_L2: ret = sliding_l2(q, di, buff); break;
-        case QUERY_DOT: ret = sliding_dot(q, di, buff); break;
-        default:
-            printf("Invalid query type %d!\n", (int)q.type); exit(1);
+    switch (di.element_sz) {
+    case 1: ret = reduce_contiguous<1>(q, di, buff); break;
+    case 2: ret = reduce_contiguous<2>(q, di, buff); break;
+    default:
+        printf("Invalid element size %d!\n", (int)di.element_sz); exit(1);
     }
+    // switch (q.type) {
+    //     // case QUERY_MEAN: ret = sliding_mean(q, di, buff); break;
+    //     case QUERY_MEAN: ret = reduce_contiguous(q, di, buff); break;
+    //     // XXX "sliding" min and max actually just write out min/max seen
+    //     // so far, which is a weird thing to do
+    //     case QUERY_MIN: ret = reduce_contiguous(q, di, buff); break;
+    //     case QUERY_MAX: ret = reduce_contiguous(q, di, buff); break;
+    //     // case QUERY_L2: ret = sliding_l2(q, di, buff); break;
+    //     // case QUERY_DOT: ret = sliding_dot(q, di, buff); break;
+    //     case QUERY_SUM: ret = reduce_contiguous(q, di, buff); break;
+    //     default:
+    //         printf("Invalid query type %d!\n", (int)q.type); exit(1);
+    // }
 
     // TODO check if query has a reduction here and do it in this one place
     // if so
@@ -100,8 +107,7 @@ QueryResult run_query(const QueryParams& q, const DataInfo& di, const DataT* buf
     } else if (q.reduction == REDUCE_TOP_K) {
 
     } else {
-        printf("Unsuppored reduction %d!\n",
-            (int)q.reduction);
+        printf("Unsupported reduction %d!\n", (int)q.reduction);
         exit(1);
     }
     return ret;

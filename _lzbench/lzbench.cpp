@@ -98,14 +98,18 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
     // bool has_preproc = params->preprocessors.size() > 0;
 
     auto qparams = params->query_params;
-    bool already_materialized = strings_equal(desc->name, "materialized") &&
-        qparams.type != QUERY_NONE;
+    // bool already_materialized = strings_equal(desc->name, "materialized") &&
+    //     qparams.type != QUERY_NONE;
+    bool already_materialized = strings_equal(desc->name, "materialized");
 
     LZBENCH_PRINT(9, "---- Decompressing %d chunks\n", (int)chunk_sizes.size());
     for (int i = 0; i < chunk_sizes.size(); i++) {
         LZBENCH_PRINT(9, "Chunk %d: orig size, compressed size = %d, %d\n",
             (int)i, (int)chunk_sizes[i], (int)compr_sizes[i]);
     }
+
+    // printf("already_materialized? %d\n", (int)already_materialized);
+
     for (int i = 0; i < cscount; i++) {
         part = compr_sizes[i];
 
@@ -121,20 +125,24 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             undo_preprocessors(params->preprocessors, outbuf, dlen,
                 params->data_info.element_sz);
         } else {
+            // printf("already_materialized; skipping decomp, etc\n");
             dlen = part;
         }
 
         // run query if one is specified
         if (qparams.type != QUERY_NONE) {
             // printf("got query type: %d; about to run a query...\n", qparams.type);
-            auto& dinfo = params->data_info;
+            // auto& dinfo = params->data_info;
+            DataInfo dinfo = params->data_info;
             if (dinfo.ncols < 1) {
                 printf("ERROR: Must specify number of columns in data to run query!\n");
                 exit(1);
             }
-            // printf("dinfo ncols: %d\n", dinfo.ncols);
-            dinfo.nrows = dlen / dinfo.ncols;
-            auto result = run_query(params->query_params, dinfo, outbuf);
+            dinfo.nrows = dlen / (dinfo.ncols * dinfo.element_sz);
+            // printf("dinfo nrows, ncols, size: %lu, %lu, %lu\n",
+            //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
+            QueryResult result = run_query(
+                params->query_params, dinfo, outbuf);
             // printf("ran query type: %d\n", qparams.type);
             // printf("number of idxs in result: %lu\n", result.idxs.size());
 
@@ -150,7 +158,32 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             //     }
             // }
             // printf("\n");
-            LZBENCH_PRINT(8, "number of result values: %lu (u8) %lu (u16)\n",
+            // volatile QueryResult res;
+            // volatile vector<uint8_t> vals_u8;
+            // volatile vector<uint16_t> vals_u16;
+            // for (auto val : result.vals_u8) { vals_u8.push_back(val); }
+            // for (auto val : result.vals_u16) { vals_u16.push_back(val); }
+
+            // for (auto val : result.vals_u8) {
+            //     // volatile uint8_t x = val;
+            //     LZBENCH_PRINT(0, "%d ", (int)val);
+            // }
+
+            // prevent compiler from optiming away query
+            if (params->verbose > 999) {
+                printf("query u8 result: ");
+                for (auto val : result.vals_u8) { printf("%d ", (int)val); }
+                printf("\n");
+                printf("query u16 result: ");
+                for (auto val : result.vals_u16) { printf("%d ", (int)val); }
+                printf("\n");
+            }
+            // for (auto val : result.vals_u8) { LZBENCH_PRINT(99, "%d ", (int)val); }
+            // for (auto val : result.vals_u16) { LZBENCH_PRINT(99, "%d ", (int)val); }
+
+            // res.vals_u8 = result.vals_u8;
+            // res.vals_u16 = result.vals_u16;
+            LZBENCH_PRINT(4, "number of result values: %lu (u8) %lu (u16)\n",
                 result.vals_u8.size(), result.vals_u16.size());
         }
 
@@ -218,15 +251,14 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         }
     }
 
-    LZBENCH_PRINT(11, "%s using %lu chunks; sizes = ",
+    LZBENCH_PRINT(5, "%s using %lu chunks; sizes = ",
         desc->name, chunk_sizes.size());
     for (auto sz : chunk_sizes) {
-        LZBENCH_PRINT(11, "%lu ", (unsigned long)sz);
+        LZBENCH_PRINT(5, "%lu ", (unsigned long)sz);
     }
-    LZBENCH_PRINT(11, "%s", "\n"); // can't just print \n since needs VA_ARGS
+    LZBENCH_PRINT(5, "%s", "\n"); // can't just print \n since needs VA_ARGS
     // printf("%s using %d chunks\n", desc->name, (int)chunk_sizes.size());
     // printf("chunk sizes: "); for (auto sz : chunk_sizes) { printf("%d ", int(sz)); } printf("\n");
-
 
     // compress the data until we hit either the minimum time or the minimum
     // number of iterations
@@ -279,8 +311,12 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         // which is what gets timed, can skip that part
         //
         // TODO string comparison is an ugly way of checking this
-        bool do_materialize = strings_equal(desc->name, "materialized") &&
-            params->query_params.type != QUERY_NONE;
+        // bool do_materialize = strings_equal(desc->name, "materialized") &&
+        //     params->query_params.type != QUERY_NONE;
+        bool do_materialize = strings_equal(desc->name, "materialized");
+        // printf("do_materialize? %d\n", (int)do_materialize);
+        // printf("query type: %d\n", (int)params->query_params.type);
+        // printf("query type != query_none? %d\n", (int)(params->query_params.type != QUERY_NONE));
         if (do_materialize) {
             auto inptr = compbuf;
             auto outptr = decomp;
@@ -380,7 +416,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         double time_secs = total_nanosec/1e9;
         double thruput = nanosec ? (float)insize * i * 1000 / nanosec : -1;
         // LZBENCH_PRINT(5, "%s decompr iter=%d time=%.2fs speed=%.2f MB/s     \r",
-        LZBENCH_PRINT(7, "%s decompr rawsize=%lu iter=%d time=%.5fs speed=%.2f MB/s     \n",
+        LZBENCH_PRINT(5, "%s decompr rawsize=%lu iter=%d time=%.5fs speed=%.2f MB/s     \n",
             desc->name, insize, total_d_iters, time_secs, thruput);
 
         bool done = total_d_iters >= params->d_iters;
