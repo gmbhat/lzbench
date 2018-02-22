@@ -9,8 +9,11 @@
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ
     #include "sprintz/delta.h"  // for simd delta preproc
-    #include "sprintz/format.h"  // for simd delta preproc
+    #include "sprintz/predict.h"  // for simd xff preproc
+    #include "sprintz/format.h"  // for simd delta preproc?
 #endif
+
+static const uint64_t kDoubleDeltaThreshold = 1 << 16;
 
 void apply_preprocessors(const std::vector<int64_t>& preprocessors,
     const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
@@ -32,10 +35,17 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors,
         // continue;
 
         // if ((preproc < 1) || (preproc > 4)) {
+
+        if (preproc == 0) {
+            printf("WARNING: ignoring unrecognized preprocessor number '0'\n");
+            continue;
+        }
+#ifdef BENCH_REMOVE_SPRINTZ
         if (preproc < 1) {
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
+#endif
 
         int offset = preproc;  // simplifying hack based on enum values
 
@@ -48,12 +58,34 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors,
         }
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
-        if (sz == 1 && offset > 2) {
+        // ------------------------ delta
+        if (sz == 1 && offset > 2 && offset < kDoubleDeltaThreshold) {
             encode_delta_rowmajor_8b(inbuf, size, (int8_t*)outbuf, offset, false);
             continue;
         }
-        if (sz == 2 && offset > 2) {
+        if (sz == 2 && offset > 2 && offset < kDoubleDeltaThreshold) {
             encode_delta_rowmajor_16b((const uint16_t*)inbuf, size / 2,
+                (int16_t*)outbuf, offset, false);
+            continue;
+        }
+        // ------------------------ double delta
+        if (sz == 1 && offset >= kDoubleDeltaThreshold) {
+            offset = offset % kDoubleDeltaThreshold;
+            encode_doubledelta_rowmajor_8b(inbuf, size, (int8_t*)outbuf, offset, false);
+            continue;
+        }
+        if (sz == 2 && offset >= kDoubleDeltaThreshold) {
+            offset = offset % kDoubleDeltaThreshold;
+            encode_doubledelta_rowmajor_16b((const uint16_t*)inbuf, size / 2,
+                (int16_t*)outbuf, offset, false);
+            continue;
+        }
+        // ------------------------ xff
+        if (sz == 1 && offset < 0) {
+            encode_xff_rowmajor_8b(inbuf, size, (int8_t*)outbuf, offset, false);
+        }
+        if (sz == 2 && offset < 0) {
+            encode_xff_rowmajor_16b((const uint16_t*)inbuf, size / 2,
                 (int16_t*)outbuf, offset, false);
             continue;
         }
@@ -63,7 +95,6 @@ void apply_preprocessors(const std::vector<int64_t>& preprocessors,
             continue;
         }
 #endif
-
 
         memcpy(outbuf, inbuf, offset * sz);
 
@@ -147,10 +178,16 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
         // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
         // continue;
 
+        if (preproc == 0) {
+            printf("WARNING: ignoring unrecognized preprocessor number '0'\n");
+            continue;
+        }
+#ifdef BENCH_REMOVE_SPRINTZ
         if (preproc < 1) {
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
+#endif
 
         // memcpy(outbuf, inbuf, size); continue;  // TODO rm
 
@@ -163,7 +200,8 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
         }
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
-        if (sz == 1 && offset > 2) {
+        // ------------------------ delta
+        if (sz == 1 && offset > 2 && offset < kDoubleDeltaThreshold) {
             if (inbuf != outbuf) {
                 decode_delta_rowmajor_8b((int8_t*)inbuf, size, outbuf, offset);
             } else {
@@ -174,12 +212,55 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
             }
             continue;
         }
-        if (sz == 2 && offset > 2) {
+        if (sz == 2 && offset > 2 && offset < kDoubleDeltaThreshold) {
             if (inbuf != outbuf) {
                 decode_delta_rowmajor_16b((const int16_t*)inbuf, size / 2,
                     (uint16_t*)outbuf, offset);
             } else {
                 decode_delta_rowmajor_inplace_16b((uint16_t*)inbuf,
+                    size / 2, offset);
+            }
+            continue;
+        }
+        // ------------------------ double delta
+        if (sz == 1 && offset >= kDoubleDeltaThreshold) {
+            offset = offset % kDoubleDeltaThreshold;
+            if (inbuf != outbuf) {
+                decode_doubledelta_rowmajor_8b((int8_t*)inbuf, size, outbuf, offset);
+            } else {
+                decode_doubledelta_rowmajor_inplace_8b(inbuf, size, offset);
+            }
+            continue;
+        }
+        if (sz == 2 && offset >= kDoubleDeltaThreshold) {
+            offset = offset % kDoubleDeltaThreshold;
+            if (inbuf != outbuf) {
+                decode_doubledelta_rowmajor_16b((const int16_t*)inbuf, size / 2,
+                    (uint16_t*)outbuf, offset);
+            } else {
+                decode_doubledelta_rowmajor_inplace_16b((uint16_t*)inbuf,
+                    size / 2, offset);
+            }
+            continue;
+        }
+        // ------------------------ xff
+        if (sz == 1 && offset < 0) {
+            if (inbuf != outbuf) {
+                decode_xff_rowmajor_8b((int8_t*)inbuf, size, outbuf, offset);
+            } else {
+                decode_xff_rowmajor_inplace_8b(inbuf, size, offset);
+                // uint8_t* tmp = (uint8_t*)malloc(size);
+                // decode_delta_rowmajor((int8_t*)inbuf, size, tmp, offset);
+                // memcpy(inbuf, tmp, size);
+            }
+            continue;
+        }
+        if (sz == 2 && offset < 0) {
+            if (inbuf != outbuf) {
+                decode_xff_rowmajor_16b((const int16_t*)inbuf, size / 2,
+                    (uint16_t*)outbuf, offset);
+            } else {
+                decode_xff_rowmajor_inplace_16b((uint16_t*)inbuf,
                     size / 2, offset);
             }
             continue;

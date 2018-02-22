@@ -135,6 +135,9 @@ int main(int argc, char** argv) {
             // params->preprocessors.clear();
             // printf("params preprocessors cleared size: %lu\n", params->preprocessors.size());
             break;
+        case 'D':
+            params->preprocessors.push_back(number << 16); // XXX total hack
+            break;
         case 'e':
             dinfo.element_sz = number;
             break;
