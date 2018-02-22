@@ -2427,6 +2427,9 @@ int64_t lzbench_sprintz_row_delta_fse_decompress(char *inbuf, size_t insize, cha
     return decompress_rowmajor_delta_8b((int8_t*)tmp, (uint8_t*)outbuf);
 }
 
+// ================================ transforms
+
+// ------------------------ delta
 int64_t lzbench_sprintz_delta_encode(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2437,7 +2440,19 @@ int64_t lzbench_sprintz_delta_decode(char *inbuf, size_t insize, char *outbuf,
 {
     return decode_delta_rowmajor_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
+// 16b
+int64_t lzbench_sprintz_delta_encode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return encode_delta_rowmajor_16b((uint16_t*)inbuf, insize / 2, (int16_t*)outbuf, ndims) * 2;
+}
+int64_t lzbench_sprintz_delta_decode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decode_delta_rowmajor_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
+}
 
+// ------------------------ double delta
 int64_t lzbench_sprintz_doubledelta_encode(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2448,7 +2463,19 @@ int64_t lzbench_sprintz_doubledelta_decode(char *inbuf, size_t insize, char *out
 {
     return decode_doubledelta_rowmajor_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
+// 16b
+int64_t lzbench_sprintz_doubledelta_encode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return encode_doubledelta_rowmajor_16b((uint16_t*)inbuf, insize / 2, (int16_t*)outbuf, ndims) * 2;
+}
+int64_t lzbench_sprintz_doubledelta_decode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decode_doubledelta_rowmajor_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
+}
 
+// ------------------------ xff
 int64_t lzbench_sprintz_xff_encode(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, char*)
 {
@@ -2459,6 +2486,19 @@ int64_t lzbench_sprintz_xff_decode(char *inbuf, size_t insize, char *outbuf,
 {
     return decode_xff_rowmajor_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
+// 16b
+int64_t lzbench_sprintz_xff_encode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return encode_xff_rowmajor_16b((uint16_t*)inbuf, insize / 2, (int16_t*)outbuf, ndims) * 2;
+}
+int64_t lzbench_sprintz_xff_decode_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, char*)
+{
+    return decode_xff_rowmajor_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
+}
+
+// ================================ sprintz xff funcs
 
 int64_t lzbench_sprintz_row_xff_rle_compress(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, char*)

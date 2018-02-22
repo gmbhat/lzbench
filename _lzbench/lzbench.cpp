@@ -327,9 +327,14 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
                     LZBENCH_PRINT(0, "Compressed size %lu != original size %lu"
                         " when we supposedly memcopied!", comp_sz, orig_sz);
                 }
-                memcpy(outptr, inptr, orig_sz);
-                undo_preprocessors(params->preprocessors, outptr, orig_sz,
-                    params->data_info.element_sz);
+                // if (params->preprocessors.size() > 0) {
+                //     undo_preprocessors(params->preprocessors, outptr, orig_sz,
+                //         params->data_info.element_sz, outptr);
+                // } else {
+                    memcpy(outptr, inptr, orig_sz);
+                    undo_preprocessors(params->preprocessors, outptr, orig_sz,
+                        params->data_info.element_sz);
+                // }
                 inptr += orig_sz;
                 outptr += orig_sz;
             }

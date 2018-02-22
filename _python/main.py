@@ -575,6 +575,35 @@ def run_speed_vs_ndims():
               custom_levels=np.arange(40, 80 + 1))
 
 
+def run_speed_vs_ndims_preprocs():
+    # dsets = [cfg.SYNTH_100M_U8_LOW_PATH, cfg.SYNTH_100M_U16_LOW_PATH]
+    # dsets = [RAW_DSET_PATH_PREFIX + dset for dset in dsets]
+
+    # algos = 'Delta DoubleDelta FIRE Delta_16b DoubleDelta_16b FIRE_16b'.split()
+    algos = 'Delta DoubleDelta FIRE'.split()
+
+    # split into multiple sweeps so we get some intermediate results
+    dset = RAW_DSET_PATH_PREFIX + cfg.SYNTH_100M_U8_LOW_PATH
+    for interval in ([1, 20], [20, 40], [40, 60], [60, 81]):
+        run_sweep(dsets=[dset], algos=algos,
+                  miniters=10, save_path=cfg.PREPROC_SPEED_RESULTS_PATH,
+                  custom_levels=np.arange(interval[0], interval[1]))
+
+    algos = [algo + '_16b' for algo in algos]
+    dset = RAW_DSET_PATH_PREFIX + cfg.SYNTH_100M_U16_LOW_PATH
+    for interval in ([1, 20], [20, 40], [40, 60], [60, 81]):
+        run_sweep(dsets=[dset], algos=algos,
+                  miniters=10, save_path=cfg.PREPROC_SPEED_RESULTS_PATH,
+                  custom_levels=np.arange(interval[0], interval[1]))
+
+    # run_sweep(dsets=dsets, algos=algos,
+    #           miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
+    #           custom_levels=np.arange(1, 40))
+    # run_sweep(dsets=dsets, algos=algos,
+    #           miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
+    #           custom_levels=np.arange(40, 80 + 1))
+
+
 def run_queries():
     pass
     # a couple examples:
@@ -596,6 +625,11 @@ def main():
     if kwargs.get('speed_vs_ndims', False):
         run_speed_vs_ndims()
         print "ran speed vs ndims..."
+        return
+
+    if kwargs.get('preproc_speeds', False):
+        run_speed_vs_ndims_preprocs()
+        print "ran preproc speed vs ndims..."
         return
 
     if kwargs is not None and kwargs.get('sweep', False):

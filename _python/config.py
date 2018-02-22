@@ -14,6 +14,11 @@ ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
 NDIMS_SPEED_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'ndims_speed', 'ndims_speed_results.csv')
+PREPROC_SPEED_RESULTS_PATH = os.path.join(
+    RESULTS_SAVE_DIR, 'preproc_speed', 'preproc_speed_results.csv')
+
+files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
 
 files.ensure_dir_exists(os.path.dirname(ALL_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
@@ -88,9 +93,12 @@ PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
 # }
 
 
+# def _sprintz_algo_info(name, nbits=8, **kwargs):
 def _sprintz_algo_info(name, nbits=8):
+    # kwargs.set_default('allowed_orders', 'c')
     return AlgoInfo(name, allow_delta=False, allowed_nbits=[nbits],
                     allowed_orders=['c'], group='Sprintz', needs_ndims=True)
+                    # group='Sprintz', needs_ndims=True, **kwargs)
 
 
 ALGO_INFO = {
@@ -125,6 +133,12 @@ ALGO_INFO = {
     'SprintzXff_16b':       _sprintz_algo_info('sprintzXff_16b', nbits=16),
     'SprintzDelta_Huf_16b': _sprintz_algo_info('sprintzDelta_HUF_16b', nbits=16),
     'SprintzXff_Huf_16b':   _sprintz_algo_info('sprintzXff_HUF_16b', nbits=16),
+    'Delta':            _sprintz_algo_info('sprJustDelta', nbits=8),
+    'DoubleDelta':      _sprintz_algo_info('sprJustDblDelta', nbits=8),
+    'FIRE':             _sprintz_algo_info('sprJustXff', nbits=8),
+    'Delta_16b':        _sprintz_algo_info('sprJustDelta_16b', nbits=16),
+    'DoubleDelta_16b':  _sprintz_algo_info('sprJustDblDelta_16b', nbits=16),
+    'FIRE_16b':         _sprintz_algo_info('sprJustXff_16b', nbits=16),
     'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':          AlgoInfo('optpfor', needs_32b=True),
     'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),

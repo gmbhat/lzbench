@@ -398,16 +398,17 @@ def _clean_algo_name(s):
     return {'SprintzDelta': 'Sprintz -1',
             'SprintzXff':   'Sprintz -2',
             'SprintzDelta_Huf': 'Sprintz -3',
-            'SprintzXff_Huf': 'Sprintz -4'}[name]
+            'SprintzXff_Huf': 'Sprintz -4',
+            'Delta': 'Delta',
+            'DoubleDelta': 'DoubleDelta',
+            'FIRE': 'FIRE'}[name]
 
 
-def _speed_vs_ndims_fig(ycol, ylabel, suptitle, savepath=None):
-
-    # def decomp_vs_ndims_results(save=True):
+def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None):
     df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
-
     sb.set_context("talk")
-    fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
+
+    fig, axes = plt.subplots(len(use_ratios), 2, figsize=(8, 8), sharey=True)
 
     # df = df[df['Order'] == 'c']
     # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
@@ -428,28 +429,21 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, savepath=None):
 
     full_df = df
     # for nbits in [8]:
-    # uniq_ratios = df['TrueRatio'].unique()
-    uniq_ratios = [1, 8]
+    # use_ratios = df['TrueRatio'].unique()
     uniq_algos = df['Algorithm'].unique()
     all_nbits = (8, 16)
 
-    print("found uniq ratios: ", uniq_ratios)
+    print("using ratios: ", use_ratios)
 
-    for i, rat in enumerate(uniq_ratios):
+    for i, rat in enumerate(use_ratios):
         axes_row = axes[i]
         df_for_ratio = full_df[full_df['TrueRatio'] == rat]
 
         for ax, nbits in zip(axes_row, all_nbits):
             df = df_for_ratio[df_for_ratio['Nbits'] == nbits]
             df = df.drop('Nbits', axis=1)
-
             df = df.sort_values(['Algorithm', 'Ndims'])
 
-            # df = df.pivot()
-            # df = df.pivot(index='Ndims', columns='Algorithm', values=Y_VAR_COL)
-            # df.plot()
-
-            # for algo in uniq_algos:
             for algo in uniq_algos:
                 subdf = df[df['Algorithm'] == algo]
                 x = subdf['Ndims']
@@ -459,15 +453,6 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, savepath=None):
 
                 ax.plot(x, y, label=algo, lw=1)
 
-            # print("df")
-            # print(df)
-
-            # ax.set_title("{}-bit Values".format(nbits))
-            # ax.set_xlabel("Number of columns")
-
-    # axes[0].set_title("8-bit values")
-    # axes[1].set_title("16-bit values")
-
     for ax, nbits in zip(axes[0, :], all_nbits):
         ax.set_title("{}-bit Values".format(nbits), fontsize=16)
     for ax in axes[:, 0]:
@@ -475,20 +460,104 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, savepath=None):
         ax.set_ylabel(ylabel, fontsize=14)
     for ax in axes[-1, :]:
         ax.set_xlabel("Number of columns", fontsize=14)
+    for ax in axes.ravel():
+        ax.set_ylim([0, ax.get_ylim()[1]])
 
     # add byte counts on the right
     # fmt_str = "{}B Encodings"
     sb.set_style("white")  # adds border (spines) we have to remove
-    for i, ax in enumerate(axes[:, -1]):
-        ax2 = ax.twinx()
-        sb.despine(ax=ax2, top=True, left=True, bottom=True, right=True)
-        ax2.get_xaxis().set_visible(False)
-        # ax2.get_yaxis().set_visible(False)  # nope, removes ylabel
-        plt.setp(ax2.get_xticklabels(), visible=False)
-        plt.setp(ax2.get_yticklabels(), visible=False)
-        ax2.yaxis.set_label_position('right')
-        lbl = "Incompressible Data" if i == 0 else "Highly Compressible Data"
-        ax2.set_ylabel(lbl, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
+    if len(use_ratios) > 1:
+        for i, ax in enumerate(axes[:, -1]):
+            ax2 = ax.twinx()
+            sb.despine(ax=ax2, top=True, left=True, bottom=True, right=True)
+            ax2.get_xaxis().set_visible(False)
+            # ax2.get_yaxis().set_visible(False)  # nope, removes ylabel
+            plt.setp(ax2.get_xticklabels(), visible=False)
+            plt.setp(ax2.get_yticklabels(), visible=False)
+            ax2.yaxis.set_label_position('right')
+            if len(use_ratios) == 2:
+                lbl = "Incompressible Data" if i == 0 else "Highly Compressible Data"
+            else:
+                lbl = "Compression Ratio = %d".format(int(use_ratios[i]))
+            ax2.set_ylabel(lbl, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
+
+    leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
+    plt.figlegend(leg_lines, leg_labels, loc='lower center',
+                  ncol=len(uniq_algos), labelspacing=0)
+
+    # plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
+    plt.suptitle(suptitle, fontweight='bold')
+    plt.tight_layout()
+    plt.subplots_adjust(top=.9, bottom=.14)
+
+    if savepath is not None:
+        save_fig_png(savepath)
+    else:
+        plt.show()
+
+
+# this version plots compression and decompression in one fig
+def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
+                           suptitle, savepath=None):
+    df = pd.read_csv(results_path)
+    sb.set_context("talk")
+
+    fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
+
+    df = df[df['Algorithm'] != 'Memcpy']
+    df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+
+    ycols = ['Compression speed', 'Decompression speed']
+
+    # extract ndims from algo name; eg: "SprintzDelta -9" -> 9
+    df['Ndims'] = df['Algorithm'].apply(lambda algo: -int(algo.split()[1]))
+    # df['Algorithm'] = df['Algorithm'].apply(lambda algo: algo.split()[0])
+    df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
+    df['TrueRatio'] = df['Filename'].apply(
+        lambda path: int(path.split("ratio=")[1].split('.')[0]))
+    df = df[['Ndims', 'Nbits', 'Algorithm', 'TrueRatio'] + ycols]
+
+    full_df = df
+    # for nbits in [8]:
+    # use_ratios = df['TrueRatio'].unique()
+    uniq_algos = df['Algorithm'].unique()
+    all_nbits = (8, 16)
+
+    for i, ycol in enumerate(ycols):
+        axes_row = axes[i]
+        # df_for_ratio = full_df[full_df['TrueRatio'] == rat]
+
+        for ax, nbits in zip(axes_row, all_nbits):
+            df = full_df[full_df['Nbits'] == nbits]
+            df = df.drop('Nbits', axis=1)
+            df = df.sort_values(['Algorithm', 'Ndims'])
+
+            for algo in uniq_algos:
+                subdf = df[df['Algorithm'] == algo]
+                x = subdf['Ndims']
+                y = subdf[ycol]
+
+                print("plotting algo: ", algo)
+
+                ax.plot(x, y, label=algo, lw=1)
+
+    # for ax, nbits in zip(axes[0, :], all_nbits):
+        # ax.set_title("{}-bit Values".format(nbits), fontsize=16)
+    # for ax in axes[:, 0]:
+        # ax.set_ylabel("Decompression Speed\n(MB/s)", fontsize=14)
+        # ax.set_ylabel(ylabel, fontsize=14)
+
+    # SELF: pick up here
+
+    axes[0, 0].set_title("8-bit {}".format(top_quantity))
+    axes[0, 1].set_title("16-bit {}".format(top_quantity))
+    axes[1, 0].set_title("8-bit {}".format(bottom_quantity))
+    axes[1, 1].set_title("16-bit {}".format(bottom_quantity))
+
+    for ax in axes[-1, :]:
+        ax.set_xlabel("Number of columns", fontsize=14)
+    for ax in axes.ravel():
+        ax.set_ylim([0, ax.get_ylim()[1]])
 
     leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
     plt.figlegend(leg_lines, leg_labels, loc='lower center',
@@ -517,6 +586,16 @@ def comp_vs_ndims_results(save=True):
                         ylabel='Compression Speed\n(MB/s)',
                         suptitle='Compression Speed vs Number of Columns',
                         savepath=('ndims_vs_comp_speed' if save else None))
+
+
+def preproc_vs_ndims_results(save=True):
+    _speed_vs_ndims_fig_v2(
+        results_path=cfg.PREPROC_SPEED_RESULTS_PATH,
+        ylabel='Throughput (MB/s)',
+        top_quantity='Encoding',
+        bottom_quantity='Decoding',
+        suptitle='Preprocessing Speed vs Number of Columns',
+        savepath=('ndims_vs_preproc_speed' if save else None))
 
 
 @_memory.cache
@@ -669,7 +748,8 @@ def main():
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
     # decomp_vs_ndims_results()
-    comp_vs_ndims_results()
+    # comp_vs_ndims_results()
+    preproc_vs_ndims_results()
     # quantize_err_results()
     # theoretical_thruput()
 

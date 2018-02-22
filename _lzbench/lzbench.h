@@ -153,7 +153,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 113
+#define LZBENCH_COMPRESSOR_COUNT 116
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -256,9 +256,14 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprRowDeltaRLE",  "0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_rle_compress,lzbench_sprintz_row_delta_rle_decompress,NULL,       NULL },
     { "sprRowDeltaRLE_lowdim","0.0",1,4,0,       0, lzbench_sprintz_row_delta_rle_lowdim_compress,lzbench_sprintz_row_delta_rle_lowdim_decompress, NULL,       NULL },
     { "sprRowDeltaRLE_HUF","0.0",1,128, 0,  64<<10, lzbench_sprintz_row_delta_rle_huf_compress,lzbench_sprintz_row_delta_rle_huf_decompress,NULL,       NULL },
+    // transforms/preproc
     { "sprJustDelta",    "0.0", 1, 128, 0,       0, lzbench_sprintz_delta_encode,          lzbench_sprintz_delta_decode,            NULL,       NULL },
     { "sprJustDblDelta", "0.0", 1, 128, 0,       0, lzbench_sprintz_doubledelta_encode,    lzbench_sprintz_doubledelta_decode,      NULL,       NULL },
-    { "sprJustXFF",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_encode,            lzbench_sprintz_xff_decode,              NULL,       NULL },
+    { "sprJustXff",      "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_encode,            lzbench_sprintz_xff_decode,              NULL,       NULL },
+    { "sprJustDelta_16b",    "0.0", 1, 128, 0,   0, lzbench_sprintz_delta_encode_16b,      lzbench_sprintz_delta_decode_16b,        NULL,       NULL },
+    { "sprJustDblDelta_16b", "0.0", 1, 128, 0,   0, lzbench_sprintz_doubledelta_encode_16b,lzbench_sprintz_doubledelta_decode_16b,  NULL,       NULL },
+    { "sprJustXff_16b",      "0.0", 1, 128, 0,   0, lzbench_sprintz_xff_encode_16b,        lzbench_sprintz_xff_decode_16b,          NULL,       NULL },
+    // xff funcs
     { "sprXffRLE",       "0.0", 1, 128, 0,       0, lzbench_sprintz_row_xff_rle_compress,  lzbench_sprintz_row_xff_rle_decompress,  NULL,       NULL },
     { "sprXffRLE_lowdim","0.0", 1, 4,   0,       0, lzbench_sprintz_row_xff_rle_lowdim_compress,  lzbench_sprintz_row_xff_rle_lowdim_decompress,  NULL,       NULL },
     // sprintz top-level functions
