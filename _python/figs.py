@@ -401,7 +401,9 @@ def _clean_algo_name(s):
             'SprintzXff_Huf': 'Sprintz -4'}[name]
 
 
-def decomp_vs_ndims_results(save=True):
+def _speed_vs_ndims_fig(ycol, ylabel, suptitle, savepath=None):
+
+    # def decomp_vs_ndims_results(save=True):
     df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
 
     sb.set_context("talk")
@@ -413,7 +415,8 @@ def decomp_vs_ndims_results(save=True):
     df = df[df['Algorithm'] != 'Memcpy']
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
 
-    Y_VAR_COL = 'Decompression speed'
+    # Y_VAR_COL = 'Decompression speed'
+    Y_VAR_COL = ycol
 
     # extract ndims from algo name; eg: "SprintzDelta -9" -> 9
     df['Ndims'] = df['Algorithm'].apply(lambda algo: -int(algo.split()[1]))
@@ -428,6 +431,7 @@ def decomp_vs_ndims_results(save=True):
     # uniq_ratios = df['TrueRatio'].unique()
     uniq_ratios = [1, 8]
     uniq_algos = df['Algorithm'].unique()
+    all_nbits = (8, 16)
 
     print("found uniq ratios: ", uniq_ratios)
 
@@ -435,7 +439,7 @@ def decomp_vs_ndims_results(save=True):
         axes_row = axes[i]
         df_for_ratio = full_df[full_df['TrueRatio'] == rat]
 
-        for ax, nbits in zip(axes_row, (8, 16)):
+        for ax, nbits in zip(axes_row, all_nbits):
             df = df_for_ratio[df_for_ratio['Nbits'] == nbits]
             df = df.drop('Nbits', axis=1)
 
@@ -464,10 +468,11 @@ def decomp_vs_ndims_results(save=True):
     # axes[0].set_title("8-bit values")
     # axes[1].set_title("16-bit values")
 
-    for ax in axes[0, :]:
+    for ax, nbits in zip(axes[0, :], all_nbits):
         ax.set_title("{}-bit Values".format(nbits), fontsize=16)
     for ax in axes[:, 0]:
-        ax.set_ylabel("Decompression Speed\n(MB/s)", fontsize=14)
+        # ax.set_ylabel("Decompression Speed\n(MB/s)", fontsize=14)
+        ax.set_ylabel(ylabel, fontsize=14)
     for ax in axes[-1, :]:
         ax.set_xlabel("Number of columns", fontsize=14)
 
@@ -489,18 +494,29 @@ def decomp_vs_ndims_results(save=True):
     plt.figlegend(leg_lines, leg_labels, loc='lower center',
                   ncol=len(uniq_algos), labelspacing=0)
 
-    plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
+    # plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
+    plt.suptitle(suptitle, fontweight='bold')
     plt.tight_layout()
     plt.subplots_adjust(top=.9, bottom=.14)
 
-    if save:
-        save_fig_png('ndims_vs_speed')
+    if savepath is not None:
+        save_fig_png(savepath)
     else:
         plt.show()
 
 
-def comp_vs_ndims_results():
-    pass
+def decomp_vs_ndims_results(save=True):
+    _speed_vs_ndims_fig(ycol='Decompression speed',
+                        ylabel='Decompression Speed\n(MB/s)',
+                        suptitle='Decompression Speed vs Number of Columns',
+                        savepath=('ndims_vs_decomp_speed' if save else None))
+
+
+def comp_vs_ndims_results(save=True):
+    _speed_vs_ndims_fig(ycol='Compression speed',
+                        ylabel='Compression Speed\n(MB/s)',
+                        suptitle='Compression Speed vs Number of Columns',
+                        savepath=('ndims_vs_comp_speed' if save else None))
 
 
 @_memory.cache
@@ -607,6 +623,41 @@ def quantize_err_results(save=True):
         plt.show()
 
 
+def theoretical_thruput(save=True):
+    # relevant variables:
+    #   -number of cores
+    #   -thruput of each core
+    #   -memory bw
+    #   -compression ratio
+    #
+    # suppose 20MB/s DDR4 RAM
+    # then limiting thruput is 20MB/s * ratio
+    # and until this point, thruput is ncores * thruput/core
+
+    ratios = [1.5, 2, 4]
+    thruputs = [1200, 800, 3000]
+    algos = ['Snappy', 'Zstd', 'Sprintz']
+
+    MEM_BANDWIDTH_MBPS = 20*1000
+    ncores = np.arange(1, 64 + 1)
+
+    fig, ax = plt.subplots(1)
+    plt.title("Expected Read Throughput vs Number of Cores")
+    for ratio, thruput, name in zip(ratios, thruputs, algos):
+        total_thruputs = ncores * thruput
+        limit_thruput = MEM_BANDWIDTH_MBPS * ratio
+        total_thruputs = np.minimum(total_thruputs, limit_thruput)
+        ax.plot(ncores, total_thruputs, label=name)
+
+    plt.legend()
+    ax.set_xlabel("Number of Cores")
+    ax.set_xlabel("Total Read Throughput")
+    if save:
+        save_fig_png('expected_thruput')
+    else:
+        plt.show()
+
+
 def main():
     # camera-ready can't have Type 3 fonts, which are what matplotlib
     # uses by default; 42 is apparently TrueType fonts
@@ -617,8 +668,10 @@ def main():
 
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
-    decomp_vs_ndims_results()
+    # decomp_vs_ndims_results()
+    comp_vs_ndims_results()
     # quantize_err_results()
+    # theoretical_thruput()
 
 
 if __name__ == '__main__':

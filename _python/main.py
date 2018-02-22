@@ -118,11 +118,13 @@ def _dset_path(nbits, dset, algos, order, deltas):
 
 def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
                   miniters=1, use_u32=False, ndims=None, dset_name=None,
-                  custom_levels=None, **sink):
+                  custom_levels=None, inject_str=None, **sink):
     algos = pyience.ensure_list_or_tuple(algos)
+    inject_str = inject_str if inject_str is not None else ''
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
     cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
+    cmd += inject_str
     # cmd += ' -i{},{}'.format(int(miniters), int(miniters))
     cmd += ' -i{},{}'.format(2, int(miniters))  # XXX compress full number of trials
     cmd += ' -a'
@@ -571,6 +573,13 @@ def run_speed_vs_ndims():
     run_sweep(dsets=dsets, algos=cfg.SPRINTZ_ALGOS,
               miniters=10, save_path=cfg.NDIMS_SPEED_RESULTS_PATH,
               custom_levels=np.arange(40, 80 + 1))
+
+
+def run_queries():
+    pass
+    # a couple examples:
+    # export D=18; make && ./lzbench -r -S1 -c$D -e2 -q1 -asnappy/zstd,1,7 -t0,0 -i0,0 -j ~/Desktop/datasets/compress/colmajor/uint16/uci_gas # noqa
+    # export D=80; make && ./lzbench -r -S0 -c$D -e2 -q0 -amaterialized/snappy/zstd,1,7 -t0,0 -i0,0 -j ~/Desktop/datasets/compress/rowmajor/uint16/msrc # noqa
 
 
 def main():
