@@ -10,6 +10,7 @@ DATASETS_DIR = os.path.expanduser('~/Desktop/datasets/compress')
 
 FIG_SAVE_DIR = 'figs'
 RESULTS_SAVE_DIR = 'results'
+RESULTS_BACKUP_DIR = os.path.join(RESULTS_SAVE_DIR, 'backups')
 ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
 NDIMS_SPEED_RESULTS_PATH = os.path.join(
@@ -18,8 +19,10 @@ PREPROC_SPEED_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'preproc_speed', 'preproc_speed_results.csv')
 PREPROC_UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'preproc_ucr', 'preproc_ucr_results.csv')
 
+files.ensure_dir_exists(RESULTS_BACKUP_DIR)
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(PREPROC_UCR_RESULTS_PATH))
 
 files.ensure_dir_exists(os.path.dirname(ALL_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
@@ -133,7 +136,7 @@ ALGO_INFO = {
     'Zstd':             AlgoInfo('zstd', levels=DEFAULT_LEVELS),
     'LZ4':              AlgoInfo('lz4'),
     'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
-    'LZO':              AlgoInfo('lzo'),
+    'LZO':              AlgoInfo('lzo1x', levels=DEFAULT_LEVELS),
     'Gipfeli':          AlgoInfo('gipfeli'),
     'Snappy':           AlgoInfo('snappy'),
     'Brotli':           AlgoInfo('brotli', levels=DEFAULT_LEVELS),
@@ -214,5 +217,6 @@ ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 # XXX might actually want to vary Order as an independent var, but for
 # now, this is a hack to not have two different memcpy results
 # INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
-INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Deltas'.split()
+# INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Deltas'.split()
+INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Preprocs'.split()
 DEPENDENT_VARS = ['Ratio', 'Compression speed', 'Decompression speed']

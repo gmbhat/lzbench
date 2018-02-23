@@ -76,6 +76,8 @@ def _clean_algorithm_name(algo_name):
 
 
 def _df_from_string(s, **kwargs):
+    # print '>>>>>>>>>>>> got df string:\n', s
+    # print '<<<<<<<<<<<<'
     return pd.read_csv(StringIO(s), **kwargs)
 
 
@@ -174,8 +176,13 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
 
 def _run_cmd(cmd, verbose=0):
+    # print "------------------------"
+    # print "actually about to run it..."
     output = os.popen(cmd).read()
     # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
+    # print "here's the start of the raw output: \n"
+    # print output[:1000]
+    # print "about to trim output..."
     trimmed = output[:output.find('\ndone...')]
     # trimmed = trimmed[:]
 
@@ -183,9 +190,11 @@ def _run_cmd(cmd, verbose=0):
         os.path.system('make')
 
     if verbose > 1:
+        # print "------------------------"
         print "raw output:\n" + output
         print "trimmed output:\n", trimmed
 
+    # print "about to turn string into df"
     return _df_from_string(trimmed[:])
 
 
@@ -200,7 +209,7 @@ def _clean_results(results, dset, memlimit, miniters, nbits, order, preprocs):
         d['Nbits'] = nbits
         d['Order'] = order
         # d['Deltas'] = deltas
-        d['Preprocs'] = ','.join(preprocs) if preprocs else cfg.Preproc.NONE
+        d['Preprocs'] = preprocs
         d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
         # if deltas and algo != 'Memcpy':
         #     d['Algorithm'] = d['Algorithm'] + '-Delta'
@@ -245,17 +254,19 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                 print "Warning: abandoning early for debugging!"
                 continue
 
+        # print "about to run command:"
         results = _run_cmd(cmd, verbose=verbose)
+        # print "...command successful"
         results = _clean_results(
             results, dset=dset, memlimit=memlimit, miniters=miniters,
             nbits=nbits, order=order, preprocs=preprocs)
 
-        if verbose > 0:
+        if verbose > 1:
             print "==== Results"
             print results
 
         # dump raw results with a timestamp for archival purposes
-        pyience.save_data_frame(results, cfg.RESULTS_SAVE_DIR,
+        pyience.save_data_frame(results, cfg.RESULTS_BACKUP_DIR,
                                 name='results', timestamp=True)
 
         # add these results to master set of results, overwriting previous
@@ -272,7 +283,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
             all_results = results
 
         all_results.to_csv(save_path, index=False)
-        print "all results ever:\n", all_results
+        # print "all results ever:\n", all_results
 
     if create_fig and not dry_run:
         for dset in dsets:
@@ -496,7 +507,7 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
         all_nbits, all_use_u32, all_preprocs, all_orders)
     for (use_nbits, use_u32, use_preproc, use_order) in all_combos:
 
-        print "considering preproc: '{}'".format(use_preproc)
+        # print "considering preproc: '{}'".format(use_preproc)
 
         # filter algorithms with incompatible requirements
         algos = []
@@ -517,7 +528,7 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
                 continue
             algos.append(algo)
 
-        print "eligible algos: ", algos
+        # print "eligible algos: ", algos
 
         if len(algos) == 0:
             continue
@@ -534,7 +545,9 @@ def run_ucr():
 
 def run_preprocs_ucr():
     # TODO higher miniters once working
-    run_sweep(dsets='ucr', algos=cfg.PREPROC_EFFECTS_ALGOS, miniters=0,
+    # run_sweep(dsets='ucr', algos=cfg.PREPROC_EFFECTS_ALGOS, miniters=10,
+    # run_sweep(dsets='ucr', algos=['Huffman', 'Snappy', 'LZ4'], miniters=0,
+    run_sweep(dsets='ucr', algos=['Zstd', 'Zlib'], miniters=0,
               preprocs=cfg.ALL_PREPROCS,
               save_path=cfg.PREPROC_UCR_RESULTS_PATH)
 

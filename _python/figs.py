@@ -216,25 +216,36 @@ def cd_diagram(df, lower_better=True):
     print("\nNemenyi critical difference: ", cd)
 
 
-def _read_and_clean_ucr_results(others_deltas=False):
-    df = pd.read_csv(cfg.UCR_RESULTS_PATH)
+# def _read_and_clean_ucr_results(others_deltas=False):
+
+# @_memory.cache
+def _read_and_clean_ucr_results(no_preprocs, results_path=cfg.UCR_RESULTS_PATH):
+    df = pd.read_csv(results_path)
 
     # df = df[df['Order'] == 'c']
     df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
     df = df.sort_values(['Filename', 'Algorithm'])
-    if others_deltas:
-        df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
+    # if others_deltas:
+    #     df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
+    # else:
+    #     df = df[~df['Deltas']]
+    if no_preprocs:
+        df = df[df['Preprocs'] == cfg.Preproc.NONE]
+        df = df[['Nbits', 'Algorithm', 'Filename', 'Order', 'Ratio']]
     else:
-        df = df[~df['Deltas']]
+        df = df[['Nbits', 'Algorithm', 'Filename', 'Order', 'Preprocs', 'Ratio']]
     df = df[df['Algorithm'] != 'Memcpy']
-    df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
     return df
     # full_df = df
 
 
-def boxplot_ucr(others_deltas=False, save=True):
+# def boxplot_ucr(others_deltas=False, save=True):
+def boxplot_ucr(save=True, preproc_plot=False):
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
+
+    # if preproc_plot:
+        # assert not no_preprocs  # preproc plot can't filter out all the preprocs
 
     # # df = df[df['Order'] == 'c']
     # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
@@ -246,10 +257,15 @@ def boxplot_ucr(others_deltas=False, save=True):
     # df = df[df['Algorithm'] != 'Memcpy']
     # df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
     # df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
-    df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+    # df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+    results_path = cfg.PREPROC_UCR_RESULTS_PATH \
+        if preproc_plot else cfg.UCR_RESULTS_PATH
+    df = _read_and_clean_ucr_results(
+        no_preprocs=not preproc_plot, results_path=results_path)
 
     # sb.set_context("talk")
-    _, axes = plt.subplots(2, 1, figsize=(5, 9), sharex=True, sharey=True)
+    figsize = (10, 6) if preproc_plot else (5, 9)
+    _, axes = plt.subplots(2, 1, figsize=figsize, sharex=True, sharey=True)
 
     full_df = df
     # for nbits in [8]:
@@ -262,26 +278,42 @@ def boxplot_ucr(others_deltas=False, save=True):
         df = full_df[full_df['Nbits'] == nbits]
         df = df.drop('Nbits', axis=1)
 
-        # if it complains about duplicate entries here, might because
+        if len(df) == 0:
+            print("WARNING: No results for nbits = {}".format(nbits))
+            continue
+
+        # if it complains about duplicate entries here, might be because
         # memcpy ran on some stuff (but not everything for some reason)
-        df = df.pivot(index='Filename', columns='Algorithm', values='Ratio')
+        if preproc_plot:
+            # XXX this case just assumes we didn't run with any u32 codecs,
+            # since we don't carry out the u32 correction below
 
-        for col in df:
-            info = cfg.ALGO_INFO.get(col)
-            if info is not None and info.needs_32b:
-                print("scaling comp ratio for col: {}".format(col))
-                # print("old df col:")
-                # print(df[col][:10])
+            # print("df we're plotting: ")
+            # print(df[:20])
 
-                # df[col] = df[col] * (32 / nbits)  # if using % of orig
-                df[col] = df[col] * (nbits / 32)    # if using orig/compressed
+            # df[df['Algorithm'] == 'Huffman'].sort_values(['Filename', 'Preprocs']).to_csv('~/Desktop/tmp_{}bit.csv'.format(nbits))
 
-        # ax = sb.violinplot(data=df, figsize=(8, 8))
-        # ax = sb.boxplot(data=df)
-        # ax = sb.boxplot(data=df.apply(np.log))
-        sb.boxplot(data=df, ax=ax)
+            sb.boxplot(ax=ax, data=df, x='Algorithm', y='Ratio', hue='Preprocs')
+            # sb.violinplot(ax=ax, data=df, x='Algorithm', y='Ratio', hue='Preprocs')
+        else:
+            df = df.pivot(index='Filename', columns='Algorithm', values='Ratio')
+
+            for col in df:
+                info = cfg.ALGO_INFO.get(col)
+                if info is not None and info.needs_32b:
+                    print("scaling comp ratio for col: {}".format(col))
+                    # print("old df col:")
+                    # print(df[col][:10])
+
+                    # df[col] = df[col] * (32 / nbits)  # if using % of orig
+                    df[col] = df[col] * (nbits / 32)    # if using orig/compressed
+
+            # ax = sb.violinplot(data=df, figsize=(8, 8))
+            # ax = sb.boxplot(data=df)
+            # ax = sb.boxplot(data=df.apply(np.log))
+            sb.boxplot(data=df, ax=ax)
+
         ax.semilogy()
-
         # print("xticklabels: ", ax.get_xticklabels())
         # xticklabels = ax.get_xticklabels()
         ax.set_xticklabels(ax.get_xticklabels(), rotation=70)  # rotate labels
@@ -303,14 +335,16 @@ def boxplot_ucr(others_deltas=False, save=True):
 
     plt.tight_layout()
     if save:
-        save_fig_png('boxplot_ucr_deltas={}'.format(int(others_deltas)))
-        # save_fig_png('boxplot_ucr_{}b_deltas={}'.format(
-        #     nbits, int(others_deltas)))
+        save_fig_png('boxplot_preproc_ucr' if preproc_plot else 'boxplot_ucr')
     else:
         plt.show()
 
 
-def cd_diagram_ours_vs_others(others_deltas=False, save=True):
+def preproc_boxplot_ucr():
+    boxplot_ucr(preproc_plot=True)
+
+
+def cd_diagram_ours_vs_others(save=True, preproc_plot=False):
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
 
     # # df = df[df['Order'] == 'c']
@@ -323,7 +357,11 @@ def cd_diagram_ours_vs_others(others_deltas=False, save=True):
     # df = df[df['Algorithm'] != 'Memcpy']
     # df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
     # df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
-    df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+    # df = _read_and_clean_ucr_results(others_deltas=others_deltas)
+    results_path = cfg.PREPROC_UCR_RESULTS_PATH \
+        if preproc_plot else cfg.UCR_RESULTS_PATH
+    df = _read_and_clean_ucr_results(
+        no_preprocs=not preproc_plot, results_path=results_path)
 
     full_df = df
     # for nbits in [8]:
@@ -377,8 +415,10 @@ def cd_diagram_ours_vs_others(others_deltas=False, save=True):
         plt.tight_layout()
 
         if save:
-            save_fig_png('cd_diagram_{}b_deltas={}'.format(
-                nbits, int(others_deltas)))
+            fmt_str = 'preproc_cd_diagram_{}b' if preproc_plot else 'cd_diagram_{}b'
+            save_fig_png(fmt_str.format(nbits))
+            # save_fig_png('cd_diagram_{}b_deltas={}'.format(
+            #     nbits, int(others_deltas)))
         else:
             plt.show()
 
@@ -736,7 +776,6 @@ def theoretical_thruput(save=True):
     else:
         plt.show()
 
-
 def main():
     # camera-ready can't have Type 3 fonts, which are what matplotlib
     # uses by default; 42 is apparently TrueType fonts
@@ -747,9 +786,10 @@ def main():
 
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
+    preproc_boxplot_ucr()
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
-    preproc_vs_ndims_results()
+    # preproc_vs_ndims_results()
     # quantize_err_results()
     # theoretical_thruput()
 

@@ -68,8 +68,10 @@ int main(int argc, char** argv) {
     params->chunk_size = (1ULL << 31) - (1ULL << 31)/6;
     params->cspeed = 0;
     params->c_iters = params->d_iters = 1;
-    params->cmintime = 10*DEFAULT_LOOP_TIME/1000000; // 1 sec
-    params->dmintime = 20*DEFAULT_LOOP_TIME/1000000; // 2 sec
+    // params->cmintime = 10*DEFAULT_LOOP_TIME/1000000; // 1 sec
+    // params->dmintime = 20*DEFAULT_LOOP_TIME/1000000; // 2 sec
+    params->cmintime = 0;
+    params->dmintime = 0;
     params->cloop_time = params->dloop_time = DEFAULT_LOOP_TIME;
 
     // convenient abbreviations
@@ -136,7 +138,7 @@ int main(int argc, char** argv) {
             // printf("params preprocessors cleared size: %lu\n", params->preprocessors.size());
             break;
         case 'D':
-            params->preprocessors.push_back(number << 16); // XXX total hack
+            params->preprocessors.push_back(number + (1 << 16)); // XXX total hack
             break;
         case 'e':
             dinfo.element_sz = number;

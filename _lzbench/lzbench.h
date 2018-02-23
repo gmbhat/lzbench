@@ -17,7 +17,8 @@
 #define PAD_SIZE (16*1024)
 #define ALIGN_BYTES 32  // input and output buffs aligned to this many bytes
 #define MIN_PAGE_SIZE 4096  // smallest page size we expect, if it's wrong the first algorithm might be a bit slower
-#define DEFAULT_LOOP_TIME (100*1000000)  // 1/10 of a second
+// #define DEFAULT_LOOP_TIME (100*1000000)  // 1/10 of a second
+#define DEFAULT_LOOP_TIME 0  // 1/10 of a second
 #define GET_COMPRESS_BOUND(insize) (insize + 6*insize/15 + PAD_SIZE)
 #define LZBENCH_PRINT(level, fmt, ...) if (params->verbose >= level) printf(fmt, __VA_ARGS__)
 

@@ -69,6 +69,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
         // if (clen <= 0 || clen == part)
         if (clen <= 0) {
+            LZBENCH_PRINT(3, "WARNING: got compressed data length of %lld!\n", (int64_t)clen);
             if (part > outsize) return 0;
             memcpy(outbuf, inbuf, part);
             clen = part;
@@ -128,6 +129,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // printf("already_materialized; skipping decomp, etc\n");
             dlen = part;
         }
+        // printf("lzbench_decompress: undid preprocs!\n");
 
         // run query if one is specified
         if (qparams.type != QUERY_NONE) {
@@ -218,6 +220,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     size_t chunk_size = (params->chunk_size > insize) ? insize : params->chunk_size;
 
     uint8_t* tmpbuf = alloc_data_buffer(GET_COMPRESS_BOUND(insize));
+    // printf("allocated tmpbuf of size: %d\n", (int)GET_COMPRESS_BOUND(insize));
 
     LZBENCH_PRINT(5, "*** trying %s insize=%d comprsize=%d chunk_size=%d\n", desc->name, (int)insize, (int)comprsize, (int)chunk_size);
 
