@@ -16,6 +16,7 @@ NDIMS_SPEED_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'ndims_speed', 'ndims_speed_results.csv')
 PREPROC_SPEED_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'preproc_speed', 'preproc_speed_results.csv')
+PREPROC_UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'preproc_ucr', 'preproc_ucr_results.csv')
 
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
@@ -42,19 +43,43 @@ DEFAULT_LEVELS = [1, 9]  # many compressors have levels 1-9
 CAMERA_READY_FONT = 'DejaVu Sans'
 
 
+class Preproc:
+    NONE = 'None'
+    DELTA = 'Delta'
+    DBL_DELTA = 'DoubleDelta'
+    FIRE = 'FIRE'
+    ALL = 'ALL_PREPROCS'
+
+
+ALL_PREPROCS = (Preproc.NONE, Preproc.DELTA, Preproc.DBL_DELTA, Preproc.FIRE)
+
+
+def cmd_line_arg_for_preproc(preproc, ndims=1):
+    return {Preproc.DELTA: '-d{}'.format(ndims),
+            Preproc.DBL_DELTA: '-D{}'.format(ndims),
+            Preproc.FIRE: '-f{}'.format(ndims),
+            Preproc.NONE: ''}[preproc]
+
+
 class AlgoInfo(object):
 
-    def __init__(self, lzbench_name, levels=None, allow_delta=True,
+    def __init__(self, lzbench_name, levels=None, allowed_preprocs=Preproc.ALL,
                  allowed_nbits=[8, 16], needs_32b=False, group=None,
                  allowed_orders=['f'], needs_ndims=False):
         self.lzbench_name = lzbench_name
         self.levels = levels
-        self.allow_delta = allow_delta
         self.allowed_nbits = allowed_nbits
         self.needs_32b = needs_32b
         self.group = group
         self.allowed_orders = allowed_orders
         self.needs_ndims = needs_ndims
+
+        if allowed_preprocs == Preproc.ALL:
+            self.allowed_preprocs = ALL_PREPROCS[:]
+        elif allowed_preprocs:
+            self.allowed_preprocs = allowed_preprocs
+        else:
+            self.allowed_preprocs = Preproc.NONE
 
 
 class DsetInfo(object):
@@ -96,7 +121,7 @@ PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
 # def _sprintz_algo_info(name, nbits=8, **kwargs):
 def _sprintz_algo_info(name, nbits=8):
     # kwargs.set_default('allowed_orders', 'c')
-    return AlgoInfo(name, allow_delta=False, allowed_nbits=[nbits],
+    return AlgoInfo(name, allowed_preprocs=None, allowed_nbits=[nbits],
                     allowed_orders=['c'], group='Sprintz', needs_ndims=True)
                     # group='Sprintz', needs_ndims=True, **kwargs)
 
@@ -108,6 +133,7 @@ ALGO_INFO = {
     'Zstd':             AlgoInfo('zstd', levels=DEFAULT_LEVELS),
     'LZ4':              AlgoInfo('lz4'),
     'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
+    'LZO':              AlgoInfo('lzo'),
     'Gipfeli':          AlgoInfo('gipfeli'),
     'Snappy':           AlgoInfo('snappy'),
     'Brotli':           AlgoInfo('brotli', levels=DEFAULT_LEVELS),
@@ -145,13 +171,13 @@ ALGO_INFO = {
     'SIMDGroupSimple':  AlgoInfo('simdgroupsimple', needs_32b=True),
     'Simple8B':         AlgoInfo('simple8b', needs_32b=True),
     'BitShuffle8b':     AlgoInfo('blosc_bitshuf8b', allowed_nbits=[8],
-                                 allow_delta=False, levels=DEFAULT_LEVELS),
+                                 levels=DEFAULT_LEVELS),
     'ByteShuffle8b':    AlgoInfo('blosc_byteshuf8b', allowed_nbits=[8],
-                                 allow_delta=False, levels=DEFAULT_LEVELS),
+                                 levels=DEFAULT_LEVELS),
     'BitShuffle16b':    AlgoInfo('blosc_bitshuf16b', allowed_nbits=[16],
-                                 allow_delta=False, levels=DEFAULT_LEVELS),
+                                 levels=DEFAULT_LEVELS),
     'ByteShuffle16b':   AlgoInfo('blosc_byteshuf16b', allowed_nbits=[16],
-                                 allow_delta=False, levels=DEFAULT_LEVELS),
+                                 levels=DEFAULT_LEVELS),
 }
 
 # associate each algorithm with a color
@@ -177,27 +203,13 @@ BENCH_NAME_TO_PRETTY_NAME = dict([(info.lzbench_name, key)
 USE_WHICH_ALGOS = 'SprintzDelta SprintzXff SprintzDelta_Huf SprintzXff_Huf ' \
     'SprintzDelta_16b SprintzXff_16b SprintzDelta_Huf_16b SprintzXff_Huf_16b '\
     'SIMDBP128 FastPFOR Simple8B ' \
-    'Zstd Snappy LZ4 Zlib Huffman'.split()
+    'Zstd Snappy LZO LZ4 Zlib Huffman'.split()
 SPRINTZ_ALGOS = [algo for algo in ALGO_INFO if algo.lower().startswith('sprintz')]
 
-# PRETTY_DSET_NAMES = {
-#     'ucr':          'UCR',
-#     'ampd_gas':     'AMPD Gas',
-#     'ampd_water':   'AMPD Water',
-#     'ampd_power':   'AMPD Power',
-#     'ampd_weather': 'AMPD Weather',
-#     'uci_gas':      'UCI Gas',
-#     'pamap':        'PAMAP',
-#     'msrc':         'MSRC-12',
-# }
-ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
+PREPROC_EFFECTS_ALGOS = 'Zstd Snappy LZO LZ4 Zlib Huffman'.split()
 
-PREPROC_TO_INT = {
-    'delta':  1,
-    'delta2': 2,
-    'delta3': 3,
-    'delta4': 4,
-}
+
+ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 
 # XXX might actually want to vary Order as an independent var, but for
 # now, this is a hack to not have two different memcpy results

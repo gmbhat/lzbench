@@ -118,15 +118,16 @@ def _dset_path(nbits, dset, algos, order, deltas):
 
 def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
                   miniters=1, use_u32=False, ndims=None, dset_name=None,
-                  custom_levels=None, inject_str=None, **sink):
+                  custom_levels=None, inject_str=None, min_comp_iters=0,
+                  **sink):
     algos = pyience.ensure_list_or_tuple(algos)
     inject_str = inject_str if inject_str is not None else ''
 
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
     cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
     cmd += inject_str
-    # cmd += ' -i{},{}'.format(int(miniters), int(miniters))
-    cmd += ' -i{},{}'.format(2, int(miniters))  # XXX compress full number of trials
+    cmd += ' -i{},{}'.format(int(min_comp_iters), int(miniters))
+    # cmd += ' -i{},{}'.format(2, int(miniters))  # XXX compress full number of trials
     cmd += ' -a'
     algo_strs = []
     for algo in algos:
@@ -161,10 +162,12 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
             #     # scalar delta for FastPFOR 32b funcs
             #     preproc_const = 4
             # cmd += ' -d{}'.format(preproc_const)
-            cmd += ' -d{}'.format(cfg.PREPROC_TO_INT[preproc.lower()])
+            # cmd += ' -d{}'.format(cfg.PREPROC_TO_INT[preproc.lower()])
 
-        if not use_u32:
-            cmd += ' -e{}'.format(int(nbits / 8))
+            cmd += ' ' + cfg.cmd_line_arg_for_preproc(preproc)
+
+    if not use_u32:
+        cmd += ' -e{}'.format(int(nbits / 8))
 
     cmd += ' {}'.format(dset_path)
     return cmd
@@ -186,7 +189,7 @@ def _run_cmd(cmd, verbose=0):
     return _df_from_string(trimmed[:])
 
 
-def _clean_results(results, dset, memlimit, miniters, nbits, order, deltas):
+def _clean_results(results, dset, memlimit, miniters, nbits, order, preprocs):
     # print "==== results df:\n", results
     # print results_dicts
     results_dicts = results.to_dict('records')
@@ -196,7 +199,8 @@ def _clean_results(results, dset, memlimit, miniters, nbits, order, deltas):
         d['MinIters'] = miniters
         d['Nbits'] = nbits
         d['Order'] = order
-        d['Deltas'] = deltas
+        # d['Deltas'] = deltas
+        d['Preprocs'] = ','.join(preprocs) if preprocs else cfg.Preproc.NONE
         d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
         # if deltas and algo != 'Memcpy':
         #     d['Algorithm'] = d['Algorithm'] + '-Delta'
@@ -210,7 +214,7 @@ def _clean_results(results, dset, memlimit, miniters, nbits, order, deltas):
 
 
 def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
-                    deltas=False, create_fig=False, verbose=1, dry_run=DEBUG,
+                    preprocs=None, create_fig=False, verbose=1, dry_run=DEBUG,
                     save_path=None, **cmd_kwargs):
     dsets = cfg.ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
@@ -224,9 +228,10 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         # preprocessing abilities for that, so that the time gets taken into
         # account
         dset_path = _dset_path(nbits=nbits, dset=dset, algos=algos,
-                               order=order, deltas=deltas)
-        use_u32 = 'zigzag' in dset_path  # TODO this is hacky
-        preprocs = 'delta' if (deltas and not use_u32) else None
+                               order=order, deltas=False)
+        # use_u32 = 'zigzag' in dset_path  # TODO this is hacky
+        use_u32 = 'uint32' in dset_path  # TODO this is hacky
+        # preprocs = 'delta' if (deltas and not use_u32) else None
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
                             miniters=miniters, use_u32=use_u32, dset_name=dset,
@@ -237,61 +242,21 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
             print cmd
 
             if dry_run:
-                # print "Warning: abandoning early for debugging!"
+                print "Warning: abandoning early for debugging!"
                 continue
 
         results = _run_cmd(cmd, verbose=verbose)
         results = _clean_results(
             results, dset=dset, memlimit=memlimit, miniters=miniters,
-            nbits=nbits, order=order, deltas=deltas)
-
-        # output = os.popen(cmd).read()
-        # # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
-        # trimmed = output[:output.find('\ndone...')]
-        # # trimmed = trimmed[:]
-
-        # if not os.path.exists('./lzbench'):
-        #     os.path.system('make')
-
-        # if verbose > 1:
-        #     print "raw output:\n" + output
-        #     print "trimmed output:\n", trimmed
-
-        # results = _df_from_string(trimmed[:])
-
-        # # print "==== results df:\n", results
-        # # print results_dicts
-        # results_dicts = results.to_dict('records')
-        # for i, d in enumerate(results_dicts):
-        #     d['Dataset'] = dset
-        #     d['Memlimit'] = memlimit
-        #     d['MinIters'] = miniters
-        #     d['Nbits'] = nbits
-        #     d['Order'] = order
-        #     d['Deltas'] = deltas
-        #     d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
-        #     # if deltas and algo != 'Memcpy':
-        #     #     d['Algorithm'] = d['Algorithm'] + '-Delta'
-        #     d.pop('Compressor name')
-        #     # d['Filename'] = d['Filename'].replace(os.path.expanduser('~'), '~')
-        #     d['Filename'] = d['Filename'].replace(
-        #         os.path.expanduser(cfg.DATASETS_DIR), '')
-        #     # d.pop('Filename')  # not useful because of -j
-        # results = pd.DataFrame.from_records(results_dicts)
+            nbits=nbits, order=order, preprocs=preprocs)
 
         if verbose > 0:
             print "==== Results"
             print results
 
-        # print "returning prematurely"; return  # TODO rm
-
         # dump raw results with a timestamp for archival purposes
         pyience.save_data_frame(results, cfg.RESULTS_SAVE_DIR,
                                 name='results', timestamp=True)
-
-        # pyience.save_data_frame(results, save_dir,
-        #                         name='results', timestamp=True)
-        # if save_dir != cfg.RESULTS_SAVE_DIR:
 
         # add these results to master set of results, overwriting previous
         # results where relevant
@@ -332,7 +297,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
 
 
 def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
-                 exclude_algos=None, exclude_deltas=False,
+                 exclude_algos=None, exclude_preprocs=False,
                  memlimit=-1, avg_across_files=True, order=None, **sink):
 
     fig, axes = plt.subplots(2, figsize=(9, 9))
@@ -360,8 +325,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     # print "using algos before exlude deltas: ", sorted(list(df['Algorithm']))
     # return
 
-    if exclude_deltas:
-        df = df[~df['Deltas']]
+    if exclude_preprocs:
+        # df = df[~df['Deltas']]
+        df = df[df['Preprocs'].isin([cfg.Preproc.NONE])]
 
     # print "using algos before memlimit: ", sorted(list(df['Algorithm']))
 
@@ -395,7 +361,7 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
         df = df[mask]
 
     algos = list(df['Algorithm'])
-    used_delta = list(df['Deltas'])
+    used_preprocs = list(df['Preprocs'])
 
     print "fig_for_dset: using algos: ", sorted(list(df['Algorithm']))
     # return
@@ -445,7 +411,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
         perturb_x = .01 * xscale
         perturb_y = .01 * yscale
         for i, algo in enumerate(algos):
-            algo = algo + '-Delta' if used_delta[i] else algo
+            # algo = algo + '-Delta' if used_delta[i] else algo
+            if used_preprocs[i] != cfg.Preproc.NONE:
+                algo += '-'.join(used_preprocs[i].split(','))
             ax.annotate(algo, (x[i] + perturb_x, y[i] + perturb_y))
         ax.margins(0.2)
 
@@ -461,8 +429,8 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     save_dir = cfg.FIG_SAVE_DIR
     if nbits is not None:
         save_dir = os.path.join(save_dir, '{}b'.format(nbits))
-    if exclude_deltas:
-        save_dir += '_nodeltas'
+    if exclude_preprocs:
+        save_dir += '_nopreprocs'
     if memlimit is not None and memlimit > 0:
         save_dir += '_{}KB'.format(memlimit)
     if order is not None:
@@ -484,11 +452,11 @@ def fig_for_dsets(dsets=None, **kwargs):
 # ================================================================ main
 
 def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
-              deltas=None, miniters=0, memlimit=-1,
+              preprocs=None, miniters=0, memlimit=-1,
               orders=['c', 'f'], dsets=None, **kwargs):
     # TODO I should just rename these vars
     all_nbits = nbits
-    all_use_deltas = deltas  # 'deltas' was a more intuitive kwarg
+    all_preprocs = preprocs  # 'deltas' was a more intuitive kwarg
     all_dsets = dsets  # rename kwarg for consistency
     all_algos = algos
     all_orders = orders
@@ -499,9 +467,8 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
     if all_use_u32 is None:
         # all_use_u32 = [True]
         all_use_u32 = [True, False]
-    if all_use_deltas is None:
-        # all_use_deltas = [True]
-        all_use_deltas = [True, False]
+    if all_preprocs is None:
+        all_preprocs = [cfg.Preproc.NONE]
     if all_orders is None:
         all_orders = ['c', 'f']
     if all_dsets is None:
@@ -514,7 +481,7 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
 
     all_nbits = pyience.ensure_list_or_tuple(all_nbits)
     all_use_u32 = pyience.ensure_list_or_tuple(all_use_u32)
-    all_use_deltas = pyience.ensure_list_or_tuple(all_use_deltas)
+    all_preprocs = pyience.ensure_list_or_tuple(all_preprocs)
     all_orders = pyience.ensure_list_or_tuple(all_orders)
     all_dsets = pyience.ensure_list_or_tuple(all_dsets)
     all_algos = pyience.ensure_list_or_tuple(all_algos)
@@ -526,33 +493,50 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
     # delta_u32_algos = [algo for algo in delta_algos if ALGO_INFO[algo].needs_32b]
 
     all_combos = itertools.product(
-        all_nbits, all_use_u32, all_use_deltas, all_orders)
-    for (use_nbits, use_u32, use_deltas, use_order) in all_combos:
+        all_nbits, all_use_u32, all_preprocs, all_orders)
+    for (use_nbits, use_u32, use_preproc, use_order) in all_combos:
+
+        print "considering preproc: '{}'".format(use_preproc)
+
         # filter algorithms with incompatible requirements
         algos = []
         for algo in all_algos:
             info = cfg.ALGO_INFO[algo]
+
+            # print "algo {} allows preprocs: {}".format(info.lzbench_name, info.allowed_preprocs)
+
             if use_nbits not in info.allowed_nbits:
                 continue
             if use_u32 != info.needs_32b:
                 continue
-            if use_deltas and not info.allow_delta:
+            # print "{} passed all non-preproc checks".format(info.lzbench_name)
+            if use_preproc not in info.allowed_preprocs:
                 continue
+            # print "{} passed preproc check".format(info.lzbench_name)
             if use_order not in info.allowed_orders:
                 continue
             algos.append(algo)
+
+        print "eligible algos: ", algos
 
         if len(algos) == 0:
             continue
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
-                        deltas=use_deltas, memlimit=memlimit, miniters=miniters,
+                        preprocs=use_preproc, memlimit=memlimit, miniters=miniters,
                         order=use_order, create_fig=create_fig, **kwargs)
 
 
 def run_ucr():
-    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=10,
               save_path=cfg.UCR_RESULTS_PATH)
+
+
+def run_preprocs_ucr():
+    # TODO higher miniters once working
+    run_sweep(dsets='ucr', algos=cfg.PREPROC_EFFECTS_ALGOS, miniters=0,
+              preprocs=cfg.ALL_PREPROCS,
+              save_path=cfg.PREPROC_UCR_RESULTS_PATH)
 
 
 def run_speed_vs_ndims():
@@ -593,7 +577,8 @@ def run_speed_vs_ndims_preprocs():
     dset = RAW_DSET_PATH_PREFIX + cfg.SYNTH_100M_U16_LOW_PATH
     for interval in ([1, 20], [20, 40], [40, 60], [60, 81]):
         run_sweep(dsets=[dset], algos=algos,
-                  miniters=10, save_path=cfg.PREPROC_SPEED_RESULTS_PATH,
+                  miniters=10, min_comp_iters=10,
+                  save_path=cfg.PREPROC_SPEED_RESULTS_PATH,
                   custom_levels=np.arange(interval[0], interval[1]))
 
     # run_sweep(dsets=dsets, algos=algos,
@@ -630,6 +615,11 @@ def main():
     if kwargs.get('preproc_speeds', False):
         run_speed_vs_ndims_preprocs()
         print "ran preproc speed vs ndims..."
+        return
+
+    if kwargs.get('preproc_ucr', False):
+        run_preprocs_ucr()
+        print "ran preproc + ucr"
         return
 
     if kwargs is not None and kwargs.get('sweep', False):
