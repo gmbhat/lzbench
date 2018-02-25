@@ -117,7 +117,7 @@ def _scatter_plot(ax, x, y, algos, labels, annotate=False,
         z = 99 if labels[i].startswith('Sprintz') else None
         ax.scatter(x[i], y[i], s=s, c=c, label=labels[i], marker=m, zorder=z)
 
-    ax.margins(x=.05, y=0.18)
+    ax.margins(x=.05, y=0.19)
     ax.set_ylim([.75, ax.get_ylim()[1]])
 
     # annotations
@@ -209,7 +209,9 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     # dsets_plot_shape = (len(dsets) // 2, 2)
     dsets_plot_shape = (len(dsets), 2)
 
-    fig, axes = plt.subplots(*dsets_plot_shape, figsize=(6, 7), sharex=True)
+    figsize = (6, 7) if len(dsets) == 3 else (6, 5.5)
+
+    fig, axes = plt.subplots(*dsets_plot_shape, figsize=figsize, sharex=True)
     axes = axes.reshape(dsets_plot_shape)
 
     for ax in axes[-1, :]:
@@ -222,6 +224,14 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     # dsets = USE_WHICH_DSETS
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
     df = pd.read_csv(cfg.MULTIDIM_RESULTS_PATH)
+    df = df[df['Algorithm'] != 'Memcpy']   # TODO only 1 memcpy instead?
+
+    df['__sort_key__'] = \
+        df['Algorithm'].apply(lambda name_and_level: 'AAA' + name_and_level
+                              if name_and_level.lower().startswith('sprintz')
+                              else name_and_level)
+    df = df.sort_values(['__sort_key__']).drop('__sort_key__', 1)
+
     # all_nbits = (8, 16)
     # dfs_for_nbits = []
     # for nbits in all_nbits:
@@ -252,7 +262,10 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     # plt.suptitle('Decompression Speed vs Compression Ratio', fontweight='bold')
     plt.suptitle(suptitle, fontweight='bold')
     plt.tight_layout()
-    plt.subplots_adjust(top=.91, bottom=.2)
+    if len(dsets) == 3:
+        plt.subplots_adjust(top=.91, bottom=.2)
+    elif len(dsets) == 2:
+        plt.subplots_adjust(top=.89, bottom=.28)
 
     # if save and not isinstance(save, str):
     #     save_dir = cfg.FIG_SAVE_DIR
@@ -285,7 +298,8 @@ def decomp_vs_ratio_fig_success(save=True):
 def decomp_vs_ratio_fig_failure(save=True):
     _decomp_vs_ratio_fig(
         suptitle='Decompression Speed vs Compression Ratio, Failure Cases',
-        dsets=cfg.FAILURE_DSETS, save_as='tradeoff_fail')
+        dsets=['ampd_gas', 'ampd_water'], save_as='tradeoff_fail')
+        # dsets=cfg.FAILURE_DSETS, save_as='tradeoff_fail')
 
 
 def _compute_ranks(df, lower_better=True):

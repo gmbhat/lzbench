@@ -612,7 +612,8 @@ def run_queries():
 
 def run_multidim():
     run_sweep(dsets=cfg.USE_WHICH_MULTIDIM_DSETS, algos=cfg.USE_WHICH_ALGOS,
-              miniters=0, save_path=cfg.MULTIDIM_RESULTS_PATH)
+              miniters=20, min_comp_iters=10,
+              save_path=cfg.MULTIDIM_RESULTS_PATH)
 
 
 def main():
