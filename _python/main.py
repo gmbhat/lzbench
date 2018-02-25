@@ -276,7 +276,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
 
         if os.path.exists(save_path):
             existing_results = pd.read_csv(save_path)
-            all_results = pd.concat([results, existing_results], axis=0)
+            all_results = pd.concat([existing_results, results], axis=0)
             all_results.drop_duplicates(  # add filename since not doing '-j'
                 subset=(cfg.INDEPENDENT_VARS + ['Filename']), inplace=True)
         else:
@@ -577,7 +577,8 @@ def run_speed_vs_ndims_preprocs():
     # dsets = [RAW_DSET_PATH_PREFIX + dset for dset in dsets]
 
     # algos = 'Delta DoubleDelta FIRE Delta_16b DoubleDelta_16b FIRE_16b'.split()
-    algos = 'Delta DoubleDelta FIRE'.split()
+    # algos = 'Delta DoubleDelta FIRE'.split()
+    algos = ['FIRE']
 
     # split into multiple sweeps so we get some intermediate results
     dset = RAW_DSET_PATH_PREFIX + cfg.SYNTH_100M_U8_LOW_PATH
@@ -609,6 +610,11 @@ def run_queries():
     # export D=80; make && ./lzbench -r -S0 -c$D -e2 -q0 -amaterialized/snappy/zstd,1,7 -t0,0 -i0,0 -j ~/Desktop/datasets/compress/rowmajor/uint16/msrc # noqa
 
 
+def run_multidim():
+    run_sweep(dsets=cfg.USE_WHICH_MULTIDIM_DSETS, algos=cfg.USE_WHICH_ALGOS,
+              miniters=0, save_path=cfg.MULTIDIM_RESULTS_PATH)
+
+
 def main():
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Zstd', 'FSE'])
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['FSE'])
@@ -633,6 +639,11 @@ def main():
     if kwargs.get('preproc_ucr', False):
         run_preprocs_ucr()
         print "ran preproc + ucr"
+        return
+
+    if kwargs.get('multidim', False):
+        run_multidim()
+        print "ran multidim"
         return
 
     if kwargs is not None and kwargs.get('sweep', False):

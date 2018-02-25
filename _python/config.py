@@ -2,6 +2,7 @@
 
 import os
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from . import files
 
@@ -13,6 +14,8 @@ RESULTS_SAVE_DIR = 'results'
 RESULTS_BACKUP_DIR = os.path.join(RESULTS_SAVE_DIR, 'backups')
 ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
+MULTIDIM_RESULTS_PATH = os.path.join(
+    RESULTS_SAVE_DIR, 'multidim_results', 'multidim_results.csv')
 NDIMS_SPEED_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'ndims_speed', 'ndims_speed_results.csv')
 PREPROC_SPEED_RESULTS_PATH = os.path.join(
@@ -20,6 +23,7 @@ PREPROC_SPEED_RESULTS_PATH = os.path.join(
 PREPROC_UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'preproc_ucr', 'preproc_ucr_results.csv')
 
 files.ensure_dir_exists(RESULTS_BACKUP_DIR)
+files.ensure_dir_exists(os.path.dirname(MULTIDIM_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_UCR_RESULTS_PATH))
@@ -85,6 +89,7 @@ class AlgoInfo(object):
             self.allowed_preprocs = Preproc.NONE
 
 
+
 class DsetInfo(object):
 
     def __init__(self, pretty_name, bench_name, ndims):
@@ -105,6 +110,10 @@ ALL_DSETS = [
 ]
 NAME_2_DSET = {ds.bench_name: ds for ds in ALL_DSETS}
 PRETTY_DSET_NAMES = {ds.bench_name: ds.pretty_name for ds in ALL_DSETS}
+
+SUCCESS_DSETS = 'msrc pamap uci_gas'.split()
+FAILURE_DSETS = ['ampd_gas', 'ampd_water', 'ampd_power']
+USE_WHICH_MULTIDIM_DSETS = SUCCESS_DSETS + FAILURE_DSETS
 
 # for i in range(81):
 #     NAME_2_DSET
@@ -135,25 +144,13 @@ ALGO_INFO = {
     'Zlib':             AlgoInfo('zlib', levels=DEFAULT_LEVELS),
     'Zstd':             AlgoInfo('zstd', levels=DEFAULT_LEVELS),
     'LZ4':              AlgoInfo('lz4'),
-    'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
     'LZO':              AlgoInfo('lzo1x', levels=DEFAULT_LEVELS),
-    'Gipfeli':          AlgoInfo('gipfeli'),
     'Snappy':           AlgoInfo('snappy'),
-    'Brotli':           AlgoInfo('brotli', levels=DEFAULT_LEVELS),
-    # just entropy coding
-    'FSE':              AlgoInfo('fse'),
+    'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
     'Huffman':          AlgoInfo('huff0'),
-    # integer compressors
-    # 'DeltaRLE_HUF':     AlgoInfo('sprDeltaRLE_HUF', allow_delta=False,
-    #                              allowed_nbits=[8], group='Sprintz'),
-    # 'DeltaRLE':         AlgoInfo('sprDeltaRLE', allow_delta=False,
-    #                              allowed_nbits=[8], group='Sprintz'),
-    # 'SprDelta':         AlgoInfo('sprintzDelta1d', allow_delta=False,
-    #                              allowed_nbits=[8], group='Sprintz'),
-    # 'SprDoubleDelta':   AlgoInfo('sprintzDblDelta1d', allow_delta=False,
-    #                              allowed_nbits=[8], group='Sprintz'),
-    # 'SprDynDelta':      AlgoInfo('sprintzDynDelta1d', allow_delta=False,
-    #                              allowed_nbits=[8], group='Sprintz'),
+    'Simple8B':         AlgoInfo('simple8b', needs_32b=True),
+    'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),
+    'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'SprintzDelta':     _sprintz_algo_info('sprintzDelta'),
     'SprintzXff':       _sprintz_algo_info('sprintzXff'),
     'SprintzDelta_Huf': _sprintz_algo_info('sprintzDelta_HUF'),
@@ -162,17 +159,17 @@ ALGO_INFO = {
     'SprintzXff_16b':       _sprintz_algo_info('sprintzXff_16b', nbits=16),
     'SprintzDelta_Huf_16b': _sprintz_algo_info('sprintzDelta_HUF_16b', nbits=16),
     'SprintzXff_Huf_16b':   _sprintz_algo_info('sprintzXff_HUF_16b', nbits=16),
+    'Gipfeli':          AlgoInfo('gipfeli'),
+    'Brotli':           AlgoInfo('brotli', levels=DEFAULT_LEVELS),
+    'FSE':              AlgoInfo('fse'),
     'Delta':            _sprintz_algo_info('sprJustDelta', nbits=8),
     'DoubleDelta':      _sprintz_algo_info('sprJustDblDelta', nbits=8),
     'FIRE':             _sprintz_algo_info('sprJustXff', nbits=8),
     'Delta_16b':        _sprintz_algo_info('sprJustDelta_16b', nbits=16),
     'DoubleDelta_16b':  _sprintz_algo_info('sprJustDblDelta_16b', nbits=16),
     'FIRE_16b':         _sprintz_algo_info('sprJustXff_16b', nbits=16),
-    'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
     'OptPFOR':          AlgoInfo('optpfor', needs_32b=True),
-    'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),
     'SIMDGroupSimple':  AlgoInfo('simdgroupsimple', needs_32b=True),
-    'Simple8B':         AlgoInfo('simple8b', needs_32b=True),
     'BitShuffle8b':     AlgoInfo('blosc_bitshuf8b', allowed_nbits=[8],
                                  levels=DEFAULT_LEVELS),
     'ByteShuffle8b':    AlgoInfo('blosc_byteshuf8b', allowed_nbits=[8],
@@ -183,21 +180,95 @@ ALGO_INFO = {
                                  levels=DEFAULT_LEVELS),
 }
 
+import matplotlib.lines as lines
+ALL_SCATTER_MARKERS = [".", ",", "v", "^", "<", ">", "1", "2", "3", "4", "8",
+                       "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d",
+                       "|", "_", "o", lines.TICKLEFT, lines.TICKRIGHT,
+                       lines.TICKUP, lines.TICKDOWN, lines.CARETLEFT,
+                       lines.CARETRIGHT, lines.CARETUP, lines.CARETDOWN,
+                       lines.CARETLEFTBASE, lines.CARETRIGHTBASE,
+                       lines.CARETUPBASE]
+# ALL_NOT_HIDEOUS_MARKERS = ALL_SCATTER_MARKERS
+ALL_NOT_HIDEOUS_MARKERS = [".", ",", "v", "^", "<", ">", "1", "2", "3", "4",
+                           "h", "s", "p", "*", "+", "x", "X", "D", "o"]
+
 # associate each algorithm with a color
 # cmap = plt.get_cmap('tab20')
+# SPRINTZ_MARKER = '*'
+SPRINTZ_MARKER = '*'
 cmap = plt.get_cmap('tab10')
 for i, (name, info) in enumerate(sorted(ALGO_INFO.items())):
     if info.group == 'Sprintz':
         # info.color = 'r'
         info.color = plt.get_cmap('tab20')(4 * 20. / 256)  # red
+        info.marker = SPRINTZ_MARKER
         continue
         # print "set info color to red for algorithm {} (group {})".format(name, info.group)
 
     if i >= 6:
         i += 1  # don't let anything be red (which is color6 in tab20)
-    frac = i * (13 / 256.)
+    frac = (i * (13 / 256.)) % 1.
     # frac = float(i) / len(ALGO_INFO)
+
     info.color = cmap(frac)
+    eligible_markers = ALL_NOT_HIDEOUS_MARKERS[:]
+    eligible_markers.remove(SPRINTZ_MARKER)
+    info.marker = eligible_markers[i % len(eligible_markers)]
+
+    # print("{}) frac={}; setting color {} for algo {}".format(
+    #     i, frac, info.color, info.lzbench_name))
+
+
+def get_algo_info(name_and_level, nbits=8):
+    name = name_and_level.split()[0]
+
+    if name.lower().startswith('sprintz'):
+        if name == 'Sprintz':
+            level = -int(name_and_level.split()[1])
+            name = {(1, 8): 'SprintzDelta',
+                    (2, 8): 'SprintzXff',
+                    (3, 8): 'SprintzXff_Huf',
+                    (1, 16): 'SprintzDelta_16b',
+                    (2, 16): 'SprintzXff_16b',
+                    (3, 16): 'SprintzXff_Huf_16b'}[level, nbits]
+
+            print("mapped old name and level '{}' to new name: '{}'".format(name_and_level, name))
+
+        info = ALGO_INFO[name]
+
+        if name in ('SprintzXff', 'SprintzXff_16b'):
+            print "using new marker!"
+            new_marker = mpl.markers.MarkerStyle(SPRINTZ_MARKER, fillstyle='none')
+            # new_marker = mpl.markers.MarkerStyle(SPRINTZ_MARKER, fillstyle='left')
+            info.marker = new_marker
+            # info.marker = '+'
+
+        return info
+
+    return ALGO_INFO[name]
+
+    # return info
+    # if name.lower().startswith('sprintz'):
+    #     new_marker = mpl.markers.MarkerStyle(SPRINTZ_MARKER, fillstyle='none')
+    #     if name == 'Sprintz':  # name already cleaned
+    #         level = -int(name_and_level.split()[1])
+    #         if level == 1:
+    #             info = ALGO_INFO['Sprintz']
+    #     try:  # name already cleaned
+
+    #         if level == 2:
+    #             info.marker = new_marker
+    #         # if level == 1:
+    #             # info.marker = '*'
+    #         # elif level == 2:
+    #             # info.marker
+    #     except IndexError:
+    #         if name in ('SprintzXff', 'SprintzXff_16b'):
+    #             info.marker = new_marker
+
+    #     return info
+
+    # return ALGO_INFO[name]
 
 
 BENCH_NAME_TO_PRETTY_NAME = dict([(info.lzbench_name, key)

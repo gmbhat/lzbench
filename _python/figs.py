@@ -18,13 +18,13 @@ from _python import files
 
 _memory = Memory('./', verbose=1)
 
-DSETS_POSITIONS = {'uci_gas': (0, 0), 'pamap': (0, 1),
+DSETS_POSITIONS = {'uci_gas': (0, 0), 'ampd_gas': (0, 1),
                    'msrc':    (1, 0), 'ampd_power': (1, 1),
-                   'ampd_gas': (2, 0), 'ampd_weather': (2, 1)}
-DSETS_PLOT_SHAPE = (len(DSETS_POSITIONS) // 2, 2)
+                   'pamap': (2, 0), 'ampd_water': (2, 1)}
+# dsets_plot_shape = (len(DSETS_POSITIONS) // 2, 2)
 
-USE_WHICH_DSETS = DSETS_POSITIONS.keys()
-USE_WHICH_DSETS = [cfg.NAME_2_DSET[name] for name in USE_WHICH_DSETS]
+# USE_WHICH_DSETS = DSETS_POSITIONS.keys()
+# USE_WHICH_DSETS = [cfg.NAME_2_DSET[name] for name in USE_WHICH_DSETS]
 
 FIG_SAVE_DIR = os.path.join(cfg.FIG_SAVE_DIR, 'paper')
 
@@ -50,8 +50,20 @@ def add_ylabel_on_right(ax, label, **ylabel_kwargs):
     ax2.set_ylabel(label, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
 
 
-def _apply_filters(df, nbits=None, order=None, deltas=None,
-                   memlimit=None, avg_across_files=True, algos=None,
+def _clean_algo_name(s):
+    name = s.split()[0]
+    if name.endswith('_16b'):
+        name = name[:-4]
+    return {'SprintzDelta': 'Sprintz -1',
+            'SprintzXff':   'Sprintz -2',
+            'SprintzXff_Huf': 'Sprintz -3',
+            'Delta': 'Delta',
+            'DoubleDelta': 'DoubleDelta',
+            'FIRE': 'FIRE'}.get(name, s)
+
+
+def _apply_filters(df, nbits=None, order=None, preproc=cfg.Preproc.NONE,
+                   memlimit=None, avg_across_files=False, algos=None,
                    exclude_algos=None):
 
     if nbits is not None:
@@ -62,8 +74,11 @@ def _apply_filters(df, nbits=None, order=None, deltas=None,
     if order is not None:
         df = df[df['Order'] == order]
 
-    if deltas is not None and deltas:
-        df = df[df['Order'] == deltas]
+    # if deltas is not None and deltas:
+    #     df = df[df['Deltas'] == deltas]
+
+    if preproc is not None:
+        df = df[df['Preprocs'] == preproc]
 
     if memlimit is not None:  # can use -1 for runs without a mem limit
         df = df[df['Memlimit'] == memlimit]
@@ -86,106 +101,191 @@ def _apply_filters(df, nbits=None, order=None, deltas=None,
     return df
 
 
-def _scatter_plot(ax, x, y, algos, labels, scales=None, colors=None):
+def _scatter_plot(ax, x, y, algos, labels, annotate=False,
+                  scales=None, colors=None, markers=None):
 
     print("labels: ", labels)
     print("labels type: ", type(labels))
 
     print("labels dtype: ", np.array(labels, dtype=np.object).dtype)
-    ax.scatter(x, y, s=scales, c=colors, label=np.array(labels))
+    # ax.scatter(x, y, s=scales, c=colors, label=np.array(labels))
+    # for xx, yy, ss, label
+    for i in range(len(x)):
+        s = scales[i] if scales is not None else None
+        c = colors[i] if colors is not None else None
+        m = markers[i] if markers is not None else 'o'
+        z = 99 if labels[i].startswith('Sprintz') else None
+        ax.scatter(x[i], y[i], s=s, c=c, label=labels[i], marker=m, zorder=z)
+
+    ax.margins(x=.05, y=0.18)
+    ax.set_ylim([.75, ax.get_ylim()[1]])
 
     # annotations
     xscale = ax.get_xlim()[1] - ax.get_xlim()[0]
     yscale = ax.get_ylim()[1] - ax.get_ylim()[0]
-    perturb_x = .01 * xscale
-    perturb_y = .01 * yscale
-    for i, algo in enumerate(algos):
-        # algo = algo + '-Delta' if used_delta[i] else algo
-        ax.annotate(algo, (x[i] + perturb_x, y[i] + perturb_y),
-                    rotation=30, rotation_mode='anchor')
-    ax.margins(0.2)
+    # perturb_x = .01 * xscale
+    # perturb_y = .01 * yscale
+    perturb_x = .03 * xscale
+    perturb_y = -.03 * yscale
+    if annotate:
+        for i, algo in enumerate(algos):
+            # allow only annotating certain algorithms by specifying a
+            # prefix instead of just True
+            if isinstance(annotate, str) and not algo.lower().startswith(annotate):
+                continue
+
+            # algo = algo + '-Delta' if used_delta[i] else algo
+            ax.annotate(algo, (x[i] + perturb_x, y[i] + perturb_y),
+                        # rotation=30, rotation_mode='anchor')
+                        rotation=10, rotation_mode='anchor')
+    # ax.margins(0.2)
 
 
 def _decomp_vs_ratio_plot(dset, ax, df):
     # dset_name = dset.pretty_name
     # dset_name = cfg.PRETTY_DSET_NAMES[dset] if dset in cfg.PRETTY_DSET_NAMES else dset
 
-    print("using dset ", dset)
+    # print("using dset ", dset)
     # print "df"
     # print df
 
+    rm_algos = ('SprintzDelta_Huf', 'SprintzDelta_Huf_16b',
+                'SprintzXff', 'SprintzXff_16b')
     df = df[df['Dataset'] == dset.bench_name]
+    rm_mask = df['Algorithm'].apply(lambda s: s.split()[0]).isin(rm_algos)
+    df = df[~rm_mask]
 
+    # algos = list(df['Algorithm'])
+    ratios = (100. / df['Ratio']).as_matrix()
+
+    # for i, algo in enumerate(list(df['Algorithm'])):  # undo artificial boost from 0 padding
+    for i, algo in enumerate(list(df['Algorithm'])):  # undo artificial boost from 0 padding
+        name = algo.split()[0]  # ignore level
+        if cfg.get_algo_info(name).needs_32b:
+            nbits = df['Nbits'].iloc[i]
+            ratios[i] *= nbits / 32.
+    # df['Ratio'] = ratios
+
+    df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
     algos = list(df['Algorithm'])
+
+    comp_speeds = df['Compression speed'].as_matrix()
+    # ratios = df['Ratio']
     # used_delta = list(df['Deltas'])
 
     # compress_speeds = df['Compression speed'].as_matrix()
     decompress_speeds = df['Decompression speed'].as_matrix()
-    ratios = (100. / df['Ratio']).as_matrix()
-
-    for i, algo in enumerate(algos):  # undo artificial boost from 0 padding
-        name = algo.split()[0]  # ignore level
-        if cfg.ALGO_INFO[name].needs_32b:
-            nbits = df['Nbits'].iloc[i]
-            ratios[i] *= nbits / 32.
+    # ratios = (100. / df['Ratio']).as_matrix()
 
     # compute colors for each algorithm in scatterplot
     # ignore level (eg, '-3') and deltas (eg, Zstd-Delta)
-    base_algos = [algo.split()[0] for algo in algos]
-    infos = [cfg.ALGO_INFO[algo] for algo in base_algos]
+    # base_algos = [algo.split()[0] for algo in algos]
+    # infos = [cfg.ALGO_INFO[algo] for algo in base_algos]
+    infos = [cfg.get_algo_info(algo) for algo in algos]
     colors = [info.color for info in infos]
-    scales = [36 if info.group != 'Sprintz' else 64 for info in infos]
+    # scales = [36 if info.group != 'Sprintz' else 64 for info in infos]
+    # scales = np.log2(comp_speeds)**(3./2)
+    scales = np.log2(comp_speeds)**2 / 2
+    markers = [info.marker for info in infos]
 
     # print "algos: ", algos
     # print "decompress_speeds", decompress_speeds
     # print "ratios", ratios
-    _scatter_plot(ax, decompress_speeds, ratios, algos,
-                  labels=algos, colors=colors, scales=scales)
+    _scatter_plot(ax, decompress_speeds, ratios, algos, markers=markers,
+                  labels=algos, colors=colors, scales=scales, annotate='sprintz')
 
 
-def decomp_vs_ratio_fig(nbits=None, deltas=None, memlimit=None, order=None,
-                        save=False):
-    fig, axes = plt.subplots(*DSETS_PLOT_SHAPE, figsize=(6, 7))
-    axes = axes.reshape(DSETS_PLOT_SHAPE)
+def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
+                         memlimit=None, order=None, save=False, dsets=None,
+                         save_as=None):
 
-    for ax in axes[:, 0]:
+    # if dsets_positions is None:
+        # dsets_positions = DSETS_POSITIONS
+
+    if dsets is None:
+        dsets = cfg.SUCCESS_DSETS
+
+    dsets = [cfg.NAME_2_DSET[name] for name in dsets]
+    # dsets_plot_shape = (len(dsets) // 2, 2)
+    dsets_plot_shape = (len(dsets), 2)
+
+    fig, axes = plt.subplots(*dsets_plot_shape, figsize=(6, 7), sharex=True)
+    axes = axes.reshape(dsets_plot_shape)
+
+    for ax in axes[-1, :]:
         ax.set_xlabel('Decompression Speed (MB/s)')
-    for ax in axes[0, :]:
+    for ax in axes[:, 0]:
         ax.set_ylabel('Compression Ratio')
 
     # print "axes.shape", axes.shape
 
-    dsets = USE_WHICH_DSETS
-    df = pd.read_csv(cfg.ALL_RESULTS_PATH)
-    df = _apply_filters(df, nbits=nbits, memlimit=memlimit, order=order)
-    for dset in dsets:
-        position = DSETS_POSITIONS[dset.bench_name]
-        ax = axes[position[0], position[1]]
-        ax.set_title(dset.pretty_name)
-        _decomp_vs_ratio_plot(dset=dset, ax=ax, df=df)
+    # dsets = USE_WHICH_DSETS
+    # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
+    df = pd.read_csv(cfg.MULTIDIM_RESULTS_PATH)
+    # all_nbits = (8, 16)
+    # dfs_for_nbits = []
+    # for nbits in all_nbits:
+    #     dfs_for_nbits.append(_apply_filters(df, nbits=nbits, memlimit=memlimit,
+    #                                         order=order, preproc=preprocs))
+
+    # print("filtered df: ")
+    # print(df)
+    # print("using dsets: ", dsets)
+    # return
+
+    for j, nbits in enumerate((8, 16)):
+        # position = dsets_positions[dset.bench_name]
+        # ax = axes[position[0], position[1]]
+        # use_df = df[df['Nbits'] == nbits]
+        # use_df = dfs_for_nbits[j]
+        use_df = _apply_filters(df, nbits=nbits, memlimit=memlimit,
+                                order=order, preproc=preprocs)
+        for i, dset in enumerate(dsets):
+            ax = axes[i, j]
+            ax.set_title("{}, {}bit".format(dset.pretty_name, nbits))
+            _decomp_vs_ratio_plot(dset=dset, ax=ax, df=use_df)
 
     leg_lines, leg_labels = axes.ravel()[0].get_legend_handles_labels()
     plt.figlegend(leg_lines, leg_labels, loc='lower center',
                   ncol=3, labelspacing=0)
 
-    plt.suptitle('Decompression Speed vs Compression Ratio')
-    plt.subplots_adjust(top=.90, bottom=.2)
+    # plt.suptitle('Decompression Speed vs Compression Ratio', fontweight='bold')
+    plt.suptitle(suptitle, fontweight='bold')
     plt.tight_layout()
+    plt.subplots_adjust(top=.91, bottom=.2)
 
-    save_dir = cfg.FIG_SAVE_DIR
-    if nbits is not None:
-        save_dir = os.path.join(save_dir, '{}b'.format(nbits))
-    if deltas is not None:
-        save_dir += '_deltas' if deltas else ''
-    if memlimit is not None and memlimit > 0:
-        save_dir += '_{}KB'.format(memlimit)
-    if order is not None:
-        save_dir += '_{}'.format(order)
-    if save:
-        files.ensure_dir_exists(save_dir)
-        plt.savefig(os.path.join(save_dir, dset.bench_name))
+    # if save and not isinstance(save, str):
+    #     save_dir = cfg.FIG_SAVE_DIR
+    #     if nbits is not None:
+    #         save_dir = os.path.join(save_dir, '{}b'.format(nbits))
+    #     if preprocs is not None:
+    #         save_dir += '_{}'.format(''.join(preprocs))
+    #     if memlimit is not None and memlimit > 0:
+    #         save_dir += '_{}KB'.format(memlimit)
+    #     if order is not None:
+    #         save_dir += '_{}'.format(order)
+    #     files.ensure_dir_exists(save_dir)
+    # elif save:
+    #     save_dir = save
+
+    if save_as:
+        save_fig_png(save_as)
+        # plt.savefig(os.path.join(save_dir, dset.bench_name))
     else:
         plt.show()
+
+
+def decomp_vs_ratio_fig_success(save=True):
+    _decomp_vs_ratio_fig(
+        suptitle='Decompression Speed vs Compression Ratio, Success Cases',
+        dsets=cfg.SUCCESS_DSETS, save_as='tradeoff_success')
+    # _decomp_vs_ratio_fig(*args, **kwargs)
+
+
+def decomp_vs_ratio_fig_failure(save=True):
+    _decomp_vs_ratio_fig(
+        suptitle='Decompression Speed vs Compression Ratio, Failure Cases',
+        dsets=cfg.FAILURE_DSETS, save_as='tradeoff_fail')
 
 
 def _compute_ranks(df, lower_better=True):
@@ -429,19 +529,6 @@ def cd_diagram_ours_vs_others_no_delta():
 
 def cd_diagram_ours_vs_others_delta():
     cd_diagram_ours_vs_others(others_deltas=True)
-
-
-def _clean_algo_name(s):
-    name = s.split()[0]
-    if name.endswith('_16b'):
-        name = name[:-4]
-    return {'SprintzDelta': 'Sprintz -1',
-            'SprintzXff':   'Sprintz -2',
-            'SprintzDelta_Huf': 'Sprintz -3',
-            'SprintzXff_Huf': 'Sprintz -4',
-            'Delta': 'Delta',
-            'DoubleDelta': 'DoubleDelta',
-            'FIRE': 'FIRE'}[name]
 
 
 def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None):
@@ -776,6 +863,10 @@ def theoretical_thruput(save=True):
     else:
         plt.show()
 
+# def decomp_vs_ratio_success(save=True):
+#     pass
+
+
 def main():
     # camera-ready can't have Type 3 fonts, which are what matplotlib
     # uses by default; 42 is apparently TrueType fonts
@@ -783,10 +874,11 @@ def main():
     mpl.rcParams['font.family'] = cfg.CAMERA_READY_FONT
 
     # decomp_vs_ratio_fig(nbits=8)
-
+    decomp_vs_ratio_fig_success()
+    # decomp_vs_ratio_fig_failure()
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
-    preproc_boxplot_ucr()
+    # preproc_boxplot_ucr()
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
