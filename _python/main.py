@@ -539,8 +539,19 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
 
 
 def run_ucr():
-    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=10,
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
               save_path=cfg.UCR_RESULTS_PATH)
+
+
+def run_memlimit_ucr():
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+              memlimit=1, save_path=cfg.UCR_MEMLIMIT_RESULTS_PATH)
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+              memlimit=10, save_path=cfg.UCR_MEMLIMIT_RESULTS_PATH)
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+              memlimit=2, nbits=16, save_path=cfg.UCR_MEMLIMIT_RESULTS_PATH)
+    run_sweep(dsets='ucr', algos=cfg.USE_WHICH_ALGOS, miniters=0,
+              memlimit=20, nbits=16, save_path=cfg.UCR_MEMLIMIT_RESULTS_PATH)
 
 
 def run_preprocs_ucr():
@@ -625,6 +636,10 @@ def main():
 
     if kwargs.get('run_ucr', False):
         run_ucr()
+        return
+
+    if kwargs.get('memlimit_ucr', False):
+        run_memlimit_ucr()
         return
 
     if kwargs.get('speed_vs_ndims', False):

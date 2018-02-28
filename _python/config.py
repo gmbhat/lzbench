@@ -14,6 +14,8 @@ RESULTS_SAVE_DIR = 'results'
 RESULTS_BACKUP_DIR = os.path.join(RESULTS_SAVE_DIR, 'backups')
 ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
 UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
+UCR_MEMLIMIT_RESULTS_PATH = os.path.join(
+    RESULTS_SAVE_DIR, 'ucr_memlimit', 'ucr_memlimit_results.csv')
 MULTIDIM_RESULTS_PATH = os.path.join(
     RESULTS_SAVE_DIR, 'multidim_results', 'multidim_results.csv')
 NDIMS_SPEED_RESULTS_PATH = os.path.join(
@@ -23,6 +25,7 @@ PREPROC_SPEED_RESULTS_PATH = os.path.join(
 PREPROC_UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'preproc_ucr', 'preproc_ucr_results.csv')
 
 files.ensure_dir_exists(RESULTS_BACKUP_DIR)
+files.ensure_dir_exists(os.path.dirname(UCR_MEMLIMIT_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(MULTIDIM_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
@@ -237,7 +240,7 @@ def get_algo_info(name_and_level, nbits=8):
         info = ALGO_INFO[name]
 
         if name in ('SprintzXff', 'SprintzXff_16b'):
-            print "using new marker!"
+            # print "using new marker!"
             new_marker = mpl.markers.MarkerStyle(SPRINTZ_MARKER, fillstyle='none')
             # new_marker = mpl.markers.MarkerStyle(SPRINTZ_MARKER, fillstyle='left')
             info.marker = new_marker
@@ -277,7 +280,8 @@ BENCH_NAME_TO_PRETTY_NAME = dict([(info.lzbench_name, key)
 USE_WHICH_ALGOS = 'SprintzDelta SprintzXff SprintzDelta_Huf SprintzXff_Huf ' \
     'SprintzDelta_16b SprintzXff_16b SprintzDelta_Huf_16b SprintzXff_Huf_16b '\
     'SIMDBP128 FastPFOR Simple8B ' \
-    'Zstd Snappy LZO LZ4 Zlib Huffman'.split()
+    'Zstd Snappy LZ4 Zlib Huffman'.split()
+    # 'Zstd Snappy LZO LZ4 Zlib Huffman'.split()
 SPRINTZ_ALGOS = [algo for algo in ALGO_INFO if algo.lower().startswith('sprintz')]
 
 PREPROC_EFFECTS_ALGOS = 'Zstd Snappy LZO LZ4 Zlib Huffman'.split()

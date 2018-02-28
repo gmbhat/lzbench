@@ -56,10 +56,15 @@ def _clean_algo_name(s):
         name = name[:-4]
     return {'SprintzDelta': 'Sprintz -1',
             'SprintzXff':   'Sprintz -2',
-            'SprintzXff_Huf': 'Sprintz -3',
-            'Delta': 'Delta',
-            'DoubleDelta': 'DoubleDelta',
-            'FIRE': 'FIRE'}.get(name, s)
+            # 'LZO': 'LZO'}.get(name, s)  # replaces 'LZO -1' with LZO
+            'SprintzXff_Huf': 'Sprintz -3'}.get(name, s)
+
+
+def _fix_algo_col_names(df):
+    colnames = list(df.columns)
+    new_colnames = [_clean_algo_name(name) for name in colnames]
+    rename_dict = dict(zip(colnames, new_colnames))
+    return df.rename(columns=rename_dict)
 
 
 def _apply_filters(df, nbits=None, order=None, preproc=cfg.Preproc.NONE,
@@ -290,14 +295,14 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
 
 def decomp_vs_ratio_fig_success(save=True):
     _decomp_vs_ratio_fig(
-        suptitle='Decompression Speed vs Compression Ratio, Success Cases',
+        suptitle='Decompression Speed vs Compression Ratio,\nSuccess Cases',
         dsets=cfg.SUCCESS_DSETS, save_as='tradeoff_success')
     # _decomp_vs_ratio_fig(*args, **kwargs)
 
 
 def decomp_vs_ratio_fig_failure(save=True):
     _decomp_vs_ratio_fig(
-        suptitle='Decompression Speed vs Compression Ratio, Failure Cases',
+        suptitle='Decompression Speed vs Compression Ratio,\nFailure Cases',
         dsets=['ampd_gas', 'ampd_water'], save_as='tradeoff_fail')
         # dsets=cfg.FAILURE_DSETS, save_as='tradeoff_fail')
 
@@ -333,7 +338,7 @@ def cd_diagram(df, lower_better=True):
 # def _read_and_clean_ucr_results(others_deltas=False):
 
 # @_memory.cache
-def _read_and_clean_ucr_results(no_preprocs, results_path=cfg.UCR_RESULTS_PATH):
+def _read_and_clean_ucr_results(no_preprocs, memlimit=-1, results_path=cfg.UCR_RESULTS_PATH):
     df = pd.read_csv(results_path)
 
     # df = df[df['Order'] == 'c']
@@ -343,6 +348,16 @@ def _read_and_clean_ucr_results(no_preprocs, results_path=cfg.UCR_RESULTS_PATH):
     #     df = df[df['Deltas'] | df['Algorithm'].str.startswith('Sprintz')]
     # else:
     #     df = df[~df['Deltas']]
+
+    # uniq_memlimits = df['Memlimit'].unique()
+    # print("uniq memlimts: ", uniq_memlimits)
+    # return
+
+    df = df[df['Memlimit'] == memlimit]
+    ignore_algos = ['SprintzDelta_Huf -1', 'SprintzDelta_Huf_16b -1',
+                    'LZO -1', 'LZO -9']
+    df = df[~df['Algorithm'].isin(ignore_algos)]
+
     if no_preprocs:
         df = df[df['Preprocs'] == cfg.Preproc.NONE]
         df = df[['Nbits', 'Algorithm', 'Filename', 'Order', 'Ratio']]
@@ -355,7 +370,7 @@ def _read_and_clean_ucr_results(no_preprocs, results_path=cfg.UCR_RESULTS_PATH):
 
 
 # def boxplot_ucr(others_deltas=False, save=True):
-def boxplot_ucr(save=True, preproc_plot=False):
+def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
 
     # if preproc_plot:
@@ -372,13 +387,23 @@ def boxplot_ucr(save=True, preproc_plot=False):
     # df = df[['Nbits', 'Algorithm', 'Filename', 'Ratio', 'Order']]
     # df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
     # df = _read_and_clean_ucr_results(others_deltas=others_deltas)
-    results_path = cfg.PREPROC_UCR_RESULTS_PATH \
-        if preproc_plot else cfg.UCR_RESULTS_PATH
+    if results_path is None:
+        results_path = cfg.PREPROC_UCR_RESULTS_PATH \
+            if preproc_plot else cfg.UCR_RESULTS_PATH
     df = _read_and_clean_ucr_results(
-        no_preprocs=not preproc_plot, results_path=results_path)
+        no_preprocs=not preproc_plot, memlimit=memlimit, results_path=results_path)
+
+    # print("got filenames: "), df['Filename']
+
+    # fnames = list(df['Filename'])
+    # algos = list(df['Algorithm'])
+    # nbitss = list(df['Nbits'])
+    # fname_and_algo = [f + a + '_' + str(b) for f, a, b in zip(fnames, algos, nbitss)]
+    # print("got initial ivar combos: ", "\n".join(fname_and_algo[:50]))
+    # return
 
     # sb.set_context("talk")
-    figsize = (10, 6) if preproc_plot else (5, 9)
+    figsize = (10, 6) if preproc_plot else (5, 7)
     _, axes = plt.subplots(2, 1, figsize=figsize, sharex=True, sharey=True)
 
     full_df = df
@@ -407,6 +432,8 @@ def boxplot_ucr(save=True, preproc_plot=False):
 
             # df[df['Algorithm'] == 'Huffman'].sort_values(['Filename', 'Preprocs']).to_csv('~/Desktop/tmp_{}bit.csv'.format(nbits))
 
+            df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
+
             sb.boxplot(ax=ax, data=df, x='Algorithm', y='Ratio', hue='Preprocs')
             # sb.violinplot(ax=ax, data=df, x='Algorithm', y='Ratio', hue='Preprocs')
         else:
@@ -425,7 +452,40 @@ def boxplot_ucr(save=True, preproc_plot=False):
             # ax = sb.violinplot(data=df, figsize=(8, 8))
             # ax = sb.boxplot(data=df)
             # ax = sb.boxplot(data=df.apply(np.log))
-            sb.boxplot(data=df, ax=ax)
+
+            # df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
+
+            # df.drop('SprintzDelta_Huf -1', axis=1, inplace=True)  # not using this
+            # df.drop('SprintzDelta_Huf_16b -1', axis=1, inplace=True)  # not using this
+
+            # rename_dict = {name: _clean_algo_name(name) for name in cfg.USE_WHICH_ALGOS}
+            # rename_dict = {name: 'fred' for name in cfg.USE_WHICH_ALGOS}
+
+            # print("colnames: ", colnames)
+            # print("new colnames: ", new_colnames)
+
+            df = _fix_algo_col_names(df)
+
+            ratios1 = df['Sprintz -1'].as_matrix()
+            ratios2 = df['Sprintz -2'].as_matrix()
+            num_wins = np.sum(ratios2 > ratios1)
+            rel_improvements = (ratios2 - ratios1) / ratios1
+            from scipy import stats
+            _, pvalue = stats.wilcoxon(ratios1, ratios2)
+            print("FIRE wins {} / {} datasets (p={}); mean, std of rel improvement = {}, {}".format(
+                num_wins, len(ratios1), pvalue,
+                np.mean(rel_improvements), np.std(rel_improvements)))
+
+            # print("colnames: ", colnames)
+            # print("new colnames: ", new_colnames)
+
+            order = ['Sprintz -1', 'Sprintz -2', 'Sprintz -3',
+                     'Zlib -1', 'Zlib -9', 'Zstd -1', 'Zstd -9',
+                     'FastPFOR', 'Huffman', 'LZ4',
+                     'SIMDBP128', 'Simple8B', 'Snappy']
+                     # 'FastPFOR', 'Huffman', 'LZ4', 'LZO -1', 'LZO -9',
+
+            sb.boxplot(data=df, ax=ax, order=order)
 
         ax.semilogy()
         # print("xticklabels: ", ax.get_xticklabels())
@@ -448,8 +508,10 @@ def boxplot_ucr(save=True, preproc_plot=False):
     axes[0].set_title("Compression Ratios on UCR Datasets", fontsize=16)
 
     plt.tight_layout()
+    figname = 'boxplot_preproc_ucr' if preproc_plot else 'boxplot_ucr'
+    figname += '' if memlimit <= 0 else "_{}KB".format(memlimit)
     if save:
-        save_fig_png('boxplot_preproc_ucr' if preproc_plot else 'boxplot_ucr')
+        save_fig_png(figname)
     else:
         plt.show()
 
@@ -458,7 +520,14 @@ def preproc_boxplot_ucr():
     boxplot_ucr(preproc_plot=True)
 
 
-def cd_diagram_ours_vs_others(save=True, preproc_plot=False):
+def memlimit_boxplot_ucr():
+    boxplot_ucr(preproc_plot=False, results_path=cfg.UCR_MEMLIMIT_RESULTS_PATH,
+                memlimit=1)
+    boxplot_ucr(preproc_plot=False, results_path=cfg.UCR_MEMLIMIT_RESULTS_PATH,
+                memlimit=10)
+
+
+def _cd_diagram_ours_vs_others(save=True, preproc_plot=False):
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
 
     # # df = df[df['Order'] == 'c']
@@ -521,6 +590,9 @@ def cd_diagram_ours_vs_others(save=True, preproc_plot=False):
                 # print("new df col:")
                 # print(df[col][:10])
 
+        df = _fix_algo_col_names(df)
+        # df = df.drop(['LZO -1', 'LZO -9'], axis=1)
+
         cd_diagram(df)  # if using % of orig
         cd_diagram(df, lower_better=False)
 
@@ -537,12 +609,12 @@ def cd_diagram_ours_vs_others(save=True, preproc_plot=False):
             plt.show()
 
 
-def cd_diagram_ours_vs_others_no_delta():
-    cd_diagram_ours_vs_others(others_deltas=False)
+def cd_diagram_ours_vs_others():
+    _cd_diagram_ours_vs_others()
 
 
-def cd_diagram_ours_vs_others_delta():
-    cd_diagram_ours_vs_others(others_deltas=True)
+# def cd_diagram_ours_vs_others_delta():
+#     _cd_diagram_ours_vs_others(others_deltas=True)
 
 
 def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None):
@@ -794,7 +866,8 @@ def quantize_err_results(save=True):
     snrs_list = []
     for k, v in snrs.items():
         snrs_list.append({'Dataset': k[0], 'Nbits': k[1],
-                          'Ratio': 10 * np.log10(v)})
+                          'Ratio': np.log10(v)})
+                          # 'Ratio': 10 * np.log10(v)})
     df = pd.DataFrame.from_records(snrs_list)
 
     sb.set_context('talk')
@@ -812,9 +885,10 @@ def quantize_err_results(save=True):
     # axes[1].semilogx()
 
     for ax in axes:
-        # ax.set_xlabel('Log(Variance / \nMean Quantization Error)')
+        ax.set_xlabel('Log10(Variance / \nMean Quantization Error)')
         # ax.set_xlabel('Variance / \nMean Quantization Error')
-        ax.set_xlabel('Signal-to-Noise Ratio (dB)')
+        # ax.set_xlabel('Signal-to-Noise Ratio (dB)')
+        # ax.set_xlabel('Orders of magnitude le')
         ax.set_xlim([0, ax.get_xlim()[1]])
         # cur_labels = ax.get_xticklabels()
         # new_labels = []
@@ -887,16 +961,19 @@ def main():
     mpl.rcParams['pdf.fonttype'] = 42
     mpl.rcParams['font.family'] = cfg.CAMERA_READY_FONT
 
+    # print("USE_WHICH_ALGOS: ", cfg.USE_WHICH_ALGOS)
+
     # decomp_vs_ratio_fig(nbits=8)
-    decomp_vs_ratio_fig_success()
+    # decomp_vs_ratio_fig_success()
     # decomp_vs_ratio_fig_failure()
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
     # preproc_boxplot_ucr()
+    # memlimit_boxplot_ucr()
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
-    # quantize_err_results()
+    quantize_err_results()
     # theoretical_thruput()
 
 
