@@ -70,7 +70,7 @@ LDFLAGS += $(MOREFLAGS)
 CXX_ONLY_FLAGS = -std=c++0x -Wno-c++11-narrowing
 
 LZBENCH_FILES =  _lzbench/lzbench.o _lzbench/compressors.o _lzbench/output.o
-LZBENCH_FILES += _lzbench/preprocessing.o _lzbench/main.o
+LZBENCH_FILES += _lzbench/preprocessing.o _lzbench/parallel.o _lzbench/main.o
 
 LZO_FILES = lzo/lzo1.o lzo/lzo1a.o lzo/lzo1a_99.o lzo/lzo1b_1.o lzo/lzo1b_2.o lzo/lzo1b_3.o lzo/lzo1b_4.o lzo/lzo1b_5.o
 LZO_FILES += lzo/lzo1b_6.o lzo/lzo1b_7.o lzo/lzo1b_8.o lzo/lzo1b_9.o lzo/lzo1b_99.o lzo/lzo1b_9x.o lzo/lzo1b_cc.o

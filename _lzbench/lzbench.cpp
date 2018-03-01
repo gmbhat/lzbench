@@ -19,6 +19,7 @@
 #include "lzbench.h"
 #include "util.h"
 #include "output.h"
+#include "parallel.h"
 #include "preprocessing.h"
 #include "query.hpp"
 
@@ -303,6 +304,14 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     // iteration of the compression
     total_d_iters = 0;
     GetTime(timer_ticks);
+
+    if (!params->compress_only && params->nthreads > 0) {
+        parallel_decomp(params, chunk_sizes,
+                desc, compr_sizes, compbuf, decomp, tmpbuf, rate, ctime,
+                param1, param2, workmem);
+        return;
+    }
+
     if (!params->compress_only)
     do {
         i = 0;

@@ -216,6 +216,9 @@ int main(int argc, char** argv) {
                 params->dloop_time = (params->dmintime)?DEFAULT_LOOP_TIME:0;
             }
             break;
+        case 'T':
+            params->nthreads = number;
+            break;
         case 'u':
             params->dmintime = 1000*number;
             params->dloop_time = (params->dmintime)?DEFAULT_LOOP_TIME:0;

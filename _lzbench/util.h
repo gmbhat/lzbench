@@ -557,6 +557,18 @@ UTIL_STATIC bool strings_equal(const char* s0, const char* s1) {
     return a.compare(b) == 0;
 }
 
+UTIL_STATIC size_t common(const uint8_t *p1, const uint8_t *p2, size_t limit) {
+    size_t size = 0;
+    for (size_t i = 0; i < limit; i++) {
+        if (*(p1++) != *(p2++)) { return size; }
+        size++;
+    }
+    // while (*(p1++) == *(p2++) && ) {
+        // size++;
+    // }
+    return size;
+}
+
 #if defined (__cplusplus)
 }
 #endif

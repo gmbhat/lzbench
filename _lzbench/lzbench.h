@@ -113,6 +113,7 @@ public:
     // int element_sz;
     QueryParams query_params;
     DataInfo data_info;
+    int nthreads;
     bool unverified;
 
     lzbench_params_t(const lzbench_params_t &) = default;
