@@ -29,18 +29,6 @@
 #include <string.h>
 
 
-size_t common(const uint8_t *p1, const uint8_t *p2, size_t limit) {
-    size_t size = 0;
-    for (size_t i = 0; i < limit; i++) {
-        if (*(p1++) != *(p2++)) { return size; }
-        size++;
-    }
-    // while (*(p1++) == *(p2++) && ) {
-        // size++;
-    // }
-    return size;
-}
-
 inline int64_t lzbench_compress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, compress_func compress,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
