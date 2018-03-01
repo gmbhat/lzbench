@@ -541,7 +541,7 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
     # for really unclear reasons, the second line is necessary when we
     # use rotation_mode='anchor' to avoid ticklabels ending up the plot
     xlabels = list(ax.get_xticklabels())
-    print("WTF are these xticklabels?: ", xlabels)
+    # print("WTF are these xticklabels?: ", xlabels)
     for i in range(3):
         # xlabels[i].weight = 'bold'
         xlabels[i].set_weight('bold')
@@ -673,11 +673,15 @@ def cd_diagram_ours_vs_others():
 #     _cd_diagram_ours_vs_others(others_deltas=True)
 
 
-def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None):
+def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1,), savepath=None):
     df = pd.read_csv(cfg.NDIMS_SPEED_RESULTS_PATH)
     sb.set_context("talk")
 
-    fig, axes = plt.subplots(len(use_ratios), 2, figsize=(8, 8), sharey=True)
+    # INCLUDE_HIGH_COMP = False
+
+    figsize = (8, 8) if len(use_ratios) == 2 else (8, 4.5)
+    fig, axes = plt.subplots(len(use_ratios), 2, figsize=figsize, sharey=True)
+    axes = axes.reshape(len(use_ratios), 2)
 
     # df = df[df['Order'] == 'c']
     # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
@@ -762,7 +766,10 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None
     # plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
     plt.suptitle(suptitle, fontweight='bold')
     plt.tight_layout()
-    plt.subplots_adjust(top=.9, bottom=.14)
+    if len(use_ratios) == 2:
+        plt.subplots_adjust(top=.9, bottom=.14)
+    else:
+        plt.subplots_adjust(top=.85, bottom=.24)
 
     if savepath is not None:
         save_fig_png(savepath)
@@ -872,7 +879,8 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
 def decomp_vs_ndims_results(save=True):
     # _speed_vs_ndims_fig_v2(ycol='Decompression speed',
     _speed_vs_ndims_fig(ycol='Decompression speed',
-                        ylabel='Decompression Speed\n(MB/s)',
+                        # ylabel='Decompression Speed\n(MB/s)',
+                        ylabel='Decompression Speed (MB/s)',
                         suptitle='Decompression Speed vs Number of Columns',
                         savepath=('ndims_vs_decomp_speed' if save else None))
 
@@ -880,7 +888,8 @@ def decomp_vs_ndims_results(save=True):
 def comp_vs_ndims_results(save=True):
     # _speed_vs_ndims_fig_v2(ycol='Compression speed',
     _speed_vs_ndims_fig(ycol='Compression speed',
-                        ylabel='Compression Speed\n(MB/s)',
+                        # ylabel='Compression Speed\n(MB/s)',
+                        ylabel='Compression Speed (MB/s)',
                         suptitle='Compression Speed vs Number of Columns',
                         savepath=('ndims_vs_comp_speed' if save else None))
 
@@ -1048,10 +1057,10 @@ def main():
     # print("USE_WHICH_ALGOS: ", cfg.USE_WHICH_ALGOS)
 
     # decomp_vs_ratio_fig(nbits=8)
-    decomp_vs_ratio_fig_success()
-    decomp_vs_ratio_fig_failure()
+    # decomp_vs_ratio_fig_success()
+    # decomp_vs_ratio_fig_failure()
     # cd_diagram_ours_vs_others()
-    # boxplot_ucr()
+    boxplot_ucr()
     # preproc_boxplot_ucr()
     # memlimit_boxplot_ucr()
     # decomp_vs_ndims_results()
