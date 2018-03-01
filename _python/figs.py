@@ -50,14 +50,40 @@ def add_ylabel_on_right(ax, label, **ylabel_kwargs):
     ax2.set_ylabel(label, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
 
 
+def vertical_line(x, ymin=None, ymax=None, ax=None, **plot_kwargs):
+    if ax and (not ymin or not ymax):
+        ymin, ymax = ax.get_ylim()
+    if not ax:
+        ax = plt
+
+    plot_kwargs.setdefault('color', 'k')
+    plot_kwargs.setdefault('linestyle', '--')
+    if 'linewidth' not in plot_kwargs:
+        plot_kwargs.setdefault('lw', 2)
+
+    ax.plot([x, x], [ymin, ymax], **plot_kwargs)
+
+
 def _clean_algo_name(s):
     name = s.split()[0]
     if name.endswith('_16b'):
         name = name[:-4]
-    return {'SprintzDelta': 'Sprintz -1',
-            'SprintzXff':   'Sprintz -2',
+    # return {'SprintzDelta': 'Sprintz -1',
+    #         'SprintzXff':   'Sprintz -2',
+    #         # 'LZO': 'LZO'}.get(name, s)  # replaces 'LZO -1' with LZO
+    #         'SprintzXff_Huf': 'Sprintz -3'}.get(name, s)
+
+    # #
+    # if s[-2:] == '-9':
+    #     return name
+
+    return {'SprintzDelta': 'SprintzDelta',
+            'SprintzXff':   'SprintzFIRE',
             # 'LZO': 'LZO'}.get(name, s)  # replaces 'LZO -1' with LZO
-            'SprintzXff_Huf': 'Sprintz -3'}.get(name, s)
+            'SprintzXff_Huf': 'SprintzFIRE+Huf',
+            'Delta': 'Delta',
+            'DoubleDelta': 'DoubleDelta',
+            'FIRE': 'FIRE'}.get(name, s)
 
 
 def _fix_algo_col_names(df):
@@ -122,7 +148,8 @@ def _scatter_plot(ax, x, y, algos, labels, annotate=False,
         z = 99 if labels[i].startswith('Sprintz') else None
         ax.scatter(x[i], y[i], s=s, c=c, label=labels[i], marker=m, zorder=z)
 
-    ax.margins(x=.05, y=0.19)
+    # ax.margins(x=.05, y=0.19)
+    ax.margins(x=.05, y=0.22)
     ax.set_ylim([.75, ax.get_ylim()[1]])
 
     # annotations
@@ -142,7 +169,8 @@ def _scatter_plot(ax, x, y, algos, labels, annotate=False,
             # algo = algo + '-Delta' if used_delta[i] else algo
             ax.annotate(algo, (x[i] + perturb_x, y[i] + perturb_y),
                         # rotation=30, rotation_mode='anchor')
-                        rotation=10, rotation_mode='anchor')
+                        # rotation=10, rotation_mode='anchor')
+                        rotation=7, rotation_mode='anchor')
     # ax.margins(0.2)
 
 
@@ -190,7 +218,8 @@ def _decomp_vs_ratio_plot(dset, ax, df):
     colors = [info.color for info in infos]
     # scales = [36 if info.group != 'Sprintz' else 64 for info in infos]
     # scales = np.log2(comp_speeds)**(3./2)
-    scales = np.log2(comp_speeds)**2 / 2
+    # scales = np.log2(comp_speeds)**2 / 2
+    scales = np.log2(np.minimum(1000, comp_speeds))**(1.9) / 2
     markers = [info.marker for info in infos]
 
     # print "algos: ", algos
@@ -214,7 +243,7 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     # dsets_plot_shape = (len(dsets) // 2, 2)
     dsets_plot_shape = (len(dsets), 2)
 
-    figsize = (6, 7) if len(dsets) == 3 else (6, 5.5)
+    figsize = (6, 7) if len(dsets) == 3 else (6, 5.2)
 
     fig, axes = plt.subplots(*dsets_plot_shape, figsize=figsize, sharex=True)
     axes = axes.reshape(dsets_plot_shape)
@@ -230,6 +259,7 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     # df = pd.read_csv(cfg.UCR_RESULTS_PATH)
     df = pd.read_csv(cfg.MULTIDIM_RESULTS_PATH)
     df = df[df['Algorithm'] != 'Memcpy']   # TODO only 1 memcpy instead?
+    df = df[~df['Algorithm'].isin(['LZO -1', 'LZO -9'])]
 
     df['__sort_key__'] = \
         df['Algorithm'].apply(lambda name_and_level: 'AAA' + name_and_level
@@ -268,9 +298,11 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
     plt.suptitle(suptitle, fontweight='bold')
     plt.tight_layout()
     if len(dsets) == 3:
-        plt.subplots_adjust(top=.91, bottom=.2)
+        # plt.subplots_adjust(top=.91, bottom=.2)
+        plt.subplots_adjust(top=.91, bottom=.18)
     elif len(dsets) == 2:
-        plt.subplots_adjust(top=.89, bottom=.28)
+        # plt.subplots_adjust(top=.89, bottom=.28)
+        plt.subplots_adjust(top=.89, bottom=.25)
 
     # if save and not isinstance(save, str):
     #     save_dir = cfg.FIG_SAVE_DIR
@@ -295,14 +327,14 @@ def _decomp_vs_ratio_fig(suptitle, nbits=None, preprocs=cfg.Preproc.NONE,
 
 def decomp_vs_ratio_fig_success(save=True):
     _decomp_vs_ratio_fig(
-        suptitle='Decompression Speed vs Compression Ratio,\nSuccess Cases',
+        suptitle='Decompression Speed vs Compression Ratio, Success Cases',
         dsets=cfg.SUCCESS_DSETS, save_as='tradeoff_success')
     # _decomp_vs_ratio_fig(*args, **kwargs)
 
 
 def decomp_vs_ratio_fig_failure(save=True):
     _decomp_vs_ratio_fig(
-        suptitle='Decompression Speed vs Compression Ratio,\nFailure Cases',
+        suptitle='Decompression Speed vs Compression Ratio, Failure Cases',
         dsets=['ampd_gas', 'ampd_water'], save_as='tradeoff_fail')
         # dsets=cfg.FAILURE_DSETS, save_as='tradeoff_fail')
 
@@ -313,7 +345,7 @@ def _compute_ranks(df, lower_better=True):
     return df.rank(axis=1, numeric_only=True, ascending=lower_better, method='min')
 
 
-def cd_diagram(df, lower_better=True):
+def cd_diagram(df, lower_better=True, verbose=1):
     import Orange as orn  # requires py3.4 or greater environment
 
     ranks = _compute_ranks(df, lower_better=lower_better)
@@ -321,18 +353,22 @@ def cd_diagram(df, lower_better=True):
     mean_ranks = ranks.mean(axis=0)
     ndatasets = df.shape[0]
 
-    print("--- raw ranks:")
-    print(ranks)
+    if verbose > 1:
+        print("--- raw ranks:")
+        print(ranks)
 
-    print("--- mean ranks:")
-    print("\n".join(["{}: {}".format(name, rank)
-                     for (name, rank) in zip(names, mean_ranks)]))
+    if verbose > 0:
+        print("--- mean ranks:")
+        print("\n".join(["{}: {}".format(name, rank)
+                         for (name, rank) in zip(names, mean_ranks)]))
 
     # alpha must be one of {'0.1', '0.05', '0.01'}
-    cd = orn.evaluation.compute_CD(mean_ranks, ndatasets, alpha='0.1')
-    # cd = orn.evaluation.compute_CD(mean_ranks, ndatasets, alpha='0.05')
+    # cd = orn.evaluation.compute_CD(mean_ranks, ndatasets, alpha='0.1')
+    cd = orn.evaluation.compute_CD(mean_ranks, ndatasets, alpha='0.05', test='nemenyi')
+    # cd = orn.evaluation.compute_CD(mean_ranks, ndatasets, alpha='0.05', test='bonferroni-dunn')
     orn.evaluation.graph_ranks(mean_ranks, names, cd=cd, reverse=True)
-    print("\nNemenyi critical difference: ", cd)
+    if verbose > 0:
+        print("\nNemenyi critical difference: ", cd)
 
 
 # def _read_and_clean_ucr_results(others_deltas=False):
@@ -355,7 +391,7 @@ def _read_and_clean_ucr_results(no_preprocs, memlimit=-1, results_path=cfg.UCR_R
 
     df = df[df['Memlimit'] == memlimit]
     ignore_algos = ['SprintzDelta_Huf -1', 'SprintzDelta_Huf_16b -1',
-                    'LZO -1', 'LZO -9']
+                    'LZO -1', 'LZO -9', 'Zstd -1', 'Zlib -1']
     df = df[~df['Algorithm'].isin(ignore_algos)]
 
     if no_preprocs:
@@ -392,6 +428,8 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
             if preproc_plot else cfg.UCR_RESULTS_PATH
     df = _read_and_clean_ucr_results(
         no_preprocs=not preproc_plot, memlimit=memlimit, results_path=results_path)
+
+    df['Algorithm'] = df['Algorithm'].apply(lambda s: s if s[-2:] != '-9' else s.split()[0])
 
     # print("got filenames: "), df['Filename']
 
@@ -466,8 +504,10 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
 
             df = _fix_algo_col_names(df)
 
-            ratios1 = df['Sprintz -1'].as_matrix()
-            ratios2 = df['Sprintz -2'].as_matrix()
+            # ratios1 = df['Sprintz -1'].as_matrix()
+            # ratios2 = df['Sprintz -2'].as_matrix()
+            ratios1 = df['SprintzDelta'].as_matrix()
+            ratios2 = df['SprintzFIRE'].as_matrix()
             num_wins = np.sum(ratios2 > ratios1)
             rel_improvements = (ratios2 - ratios1) / ratios1
             from scipy import stats
@@ -479,8 +519,10 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
             # print("colnames: ", colnames)
             # print("new colnames: ", new_colnames)
 
-            order = ['Sprintz -1', 'Sprintz -2', 'Sprintz -3',
-                     'Zlib -1', 'Zlib -9', 'Zstd -1', 'Zstd -9',
+            # order = ['Sprintz -1', 'Sprintz -2', 'Sprintz -3',
+            #          'Zlib -1', 'Zlib -9', 'Zstd -1', 'Zstd -9',
+            order = ['SprintzDelta', 'SprintzFIRE', 'SprintzFIRE+Huf',
+                     'Zlib', 'Zstd',
                      'FastPFOR', 'Huffman', 'LZ4',
                      'SIMDBP128', 'Simple8B', 'Snappy']
                      # 'FastPFOR', 'Huffman', 'LZ4', 'LZO -1', 'LZO -9',
@@ -488,21 +530,33 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
             sb.boxplot(data=df, ax=ax, order=order)
 
         ax.semilogy()
+
         # print("xticklabels: ", ax.get_xticklabels())
         # xticklabels = ax.get_xticklabels()
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=70)  # rotate labels
-        # plt.tight_layout()
-
-        # if save:
-        # plt.show()
-        # continue
-
-        # ax = plt.gca()
-
+        # ax.set_xticklabels(ax.get_xticklabels(), rotation=70)  # rotate labels
+        # ax.set_xticklabels(["\n" + lbl.get_text() for lbl in ax.get_xticklabels()], rotation=70)
         add_ylabel_on_right(ax, "{}-bit Data".format(nbits))
+
+    # for ax in axes:
+    # for really unclear reasons, the second line is necessary when we
+    # use rotation_mode='anchor' to avoid ticklabels ending up the plot
+    xlabels = list(ax.get_xticklabels())
+    print("WTF are these xticklabels?: ", xlabels)
+    for i in range(3):
+        # xlabels[i].weight = 'bold'
+        xlabels[i].set_weight('bold')
+    ax.set_xticklabels(xlabels, rotation=70, rotation_mode='anchor')
+    plt.setp(ax.xaxis.get_majorticklabels(), ha='right')  # align xticklabels nicely?
 
     for ax in axes:
         ax.set_ylabel("Compression Ratio", fontsize=14)
+
+        # # ymin, ymax = np.array(ax.get_ylim()) * 1./ax.get_margin()[1]
+        # ymin, ymax = np.array(ax.get_ylim()) * 1.25
+        # ymin, ymax = np.array(ax.get_ylim()) + np.array([.5, 0])
+        # # ymin, ymax = -1, np.array(ax.get_ylim())[1] * 2
+        # vertical_line(x=.235 * ax.get_xlim()[1], ax=ax, lw=.75, color='gray')
+        # ax.margins(y=.02)
 
     # axes[0].set_title("Compression Ratios on UCR Archive, {}-bit".format(nbits),
     axes[0].set_title("Compression Ratios on UCR Datasets", fontsize=16)
@@ -545,6 +599,8 @@ def _cd_diagram_ours_vs_others(save=True, preproc_plot=False):
         if preproc_plot else cfg.UCR_RESULTS_PATH
     df = _read_and_clean_ucr_results(
         no_preprocs=not preproc_plot, results_path=results_path)
+
+    df['Algorithm'] = df['Algorithm'].apply(lambda s: s if s[-2:] != '-9' else s.split()[0])
 
     full_df = df
     # for nbits in [8]:
@@ -626,7 +682,12 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None
     # df = df[df['Order'] == 'c']
     # df['Filename'] = df['Filename'].apply(lambda s: os.path.basename(s).split('.')[0])
     # df = df.sort_values(['Filename', 'Algorithm'])
-    df = df[df['Algorithm'] != 'Memcpy']
+    # df = df[df['Algorithm'] != 'Memcpy']
+    rm_algos = ('Memcpy', 'SprintzDelta_Huf', 'SprintzDelta_Huf_16b')
+    # df = df[df['Algorithm'].apply(lambda s: s.split()[0]).isin(ignore_algos)]
+    rm_mask = df['Algorithm'].apply(lambda s: s.split()[0]).isin(rm_algos)
+    df = df[~rm_mask]
+
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
 
     # Y_VAR_COL = 'Decompression speed'
@@ -643,7 +704,7 @@ def _speed_vs_ndims_fig(ycol, ylabel, suptitle, use_ratios=(1, 8), savepath=None
     full_df = df
     # for nbits in [8]:
     # use_ratios = df['TrueRatio'].unique()
-    uniq_algos = df['Algorithm'].unique()
+    uniq_algos = sorted(df['Algorithm'].unique())
     all_nbits = (8, 16)
 
     print("using ratios: ", use_ratios)
@@ -717,8 +778,20 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
 
     fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
 
+    # rm_algos = ('Memcpy', 'SprintzDelta_Huf', 'SprintzDelta_Huf_16b')
+    # # df = df[df['Algorithm'].apply(lambda s: s.split()[0]).isin(ignore_algos)]
+    # rm_mask = df['Algorithm'].apply(lambda s: s.split()[0]).isin(rm_algos)
+    # df = df[~rm_mask]
+
+    # print("here are the uniq algos at the start: ")
+    # print(df['Algorithm'].unique())
+    # return
+
     df = df[df['Algorithm'] != 'Memcpy']
     df['Ratio'] = 100. / df['Ratio']  # bench reports % of original size
+
+    # df = df['Algorithm'].apply(lambda s: s.split()[0])
+    # df = df['Algorithm'].apply(_clean_algo_name)
 
     ycols = ['Compression speed', 'Decompression speed']
 
@@ -733,7 +806,7 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
     full_df = df
     # for nbits in [8]:
     # use_ratios = df['TrueRatio'].unique()
-    uniq_algos = df['Algorithm'].unique()
+    uniq_algos = sorted(df['Algorithm'].unique())
     all_nbits = (8, 16)
 
     for i, ycol in enumerate(ycols):
@@ -754,6 +827,11 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
 
                 ax.plot(x, y, label=algo, lw=1)
 
+    y = y.as_matrix()
+    y[:] = 7500  # from repeated measurements across many experiments...
+    for ax in axes.ravel():
+        ax.plot(x, y, '--', label='Memcpy', lw=1)
+
     # for ax, nbits in zip(axes[0, :], all_nbits):
         # ax.set_title("{}-bit Values".format(nbits), fontsize=16)
     # for ax in axes[:, 0]:
@@ -771,10 +849,13 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
         ax.set_xlabel("Number of columns", fontsize=14)
     for ax in axes.ravel():
         ax.set_ylim([0, ax.get_ylim()[1]])
+    for ax in axes[:, 0]:
+        ax.set_ylabel(ylabel)
 
     leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
     plt.figlegend(leg_lines, leg_labels, loc='lower center',
-                  ncol=len(uniq_algos), labelspacing=0)
+                  ncol=len(uniq_algos) + 1, labelspacing=0)
+                  # ncol=len(uniq_algos), labelspacing=0)
 
     # plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
     plt.suptitle(suptitle, fontweight='bold')
@@ -785,9 +866,11 @@ def _speed_vs_ndims_fig_v2(results_path, ylabel, top_quantity, bottom_quantity,
         save_fig_png(savepath)
     else:
         plt.show()
+    # plt.show()
 
 
 def decomp_vs_ndims_results(save=True):
+    # _speed_vs_ndims_fig_v2(ycol='Decompression speed',
     _speed_vs_ndims_fig(ycol='Decompression speed',
                         ylabel='Decompression Speed\n(MB/s)',
                         suptitle='Decompression Speed vs Number of Columns',
@@ -795,6 +878,7 @@ def decomp_vs_ndims_results(save=True):
 
 
 def comp_vs_ndims_results(save=True):
+    # _speed_vs_ndims_fig_v2(ycol='Compression speed',
     _speed_vs_ndims_fig(ycol='Compression speed',
                         ylabel='Compression Speed\n(MB/s)',
                         suptitle='Compression Speed vs Number of Columns',
@@ -807,7 +891,7 @@ def preproc_vs_ndims_results(save=True):
         ylabel='Throughput (MB/s)',
         top_quantity='Encoding',
         bottom_quantity='Decoding',
-        suptitle='Preprocessing Speed vs Number of Columns',
+        suptitle='Forecaster Speed vs Number of Columns',
         savepath=('ndims_vs_preproc_speed' if save else None))
 
 
@@ -885,7 +969,7 @@ def quantize_err_results(save=True):
     # axes[1].semilogx()
 
     for ax in axes:
-        ax.set_xlabel('Log10(Variance / \nMean Quantization Error)')
+        ax.set_xlabel('Log10(Data Variance / \nMean Quantization Error)')
         # ax.set_xlabel('Variance / \nMean Quantization Error')
         # ax.set_xlabel('Signal-to-Noise Ratio (dB)')
         # ax.set_xlabel('Orders of magnitude le')
@@ -964,8 +1048,8 @@ def main():
     # print("USE_WHICH_ALGOS: ", cfg.USE_WHICH_ALGOS)
 
     # decomp_vs_ratio_fig(nbits=8)
-    # decomp_vs_ratio_fig_success()
-    # decomp_vs_ratio_fig_failure()
+    decomp_vs_ratio_fig_success()
+    decomp_vs_ratio_fig_failure()
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
     # preproc_boxplot_ucr()
@@ -973,7 +1057,7 @@ def main():
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
-    quantize_err_results()
+    # quantize_err_results()
     # theoretical_thruput()
 
 

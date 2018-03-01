@@ -147,10 +147,10 @@ ALGO_INFO = {
     'Zlib':             AlgoInfo('zlib', levels=DEFAULT_LEVELS),
     'Zstd':             AlgoInfo('zstd', levels=DEFAULT_LEVELS),
     'LZ4':              AlgoInfo('lz4'),
-    'LZO':              AlgoInfo('lzo1x', levels=DEFAULT_LEVELS),
+    'Huffman':          AlgoInfo('huff0'),
     'Snappy':           AlgoInfo('snappy'),
     'LZ4HC':            AlgoInfo('lz4hc', levels=DEFAULT_LEVELS),
-    'Huffman':          AlgoInfo('huff0'),
+    'LZO':              AlgoInfo('lzo1x', levels=DEFAULT_LEVELS),
     'Simple8B':         AlgoInfo('simple8b', needs_32b=True),
     'SIMDBP128':        AlgoInfo('binarypacking', needs_32b=True),
     'FastPFOR':         AlgoInfo('fastpfor', needs_32b=True),
@@ -192,6 +192,7 @@ ALL_SCATTER_MARKERS = [".", ",", "v", "^", "<", ">", "1", "2", "3", "4", "8",
                        lines.CARETLEFTBASE, lines.CARETRIGHTBASE,
                        lines.CARETUPBASE]
 # ALL_NOT_HIDEOUS_MARKERS = ALL_SCATTER_MARKERS
+# ALL_NOT_HIDEOUS_MARKERS = [".", "v", "^", "<", ">", "1", "2", "3", "4",
 ALL_NOT_HIDEOUS_MARKERS = [".", ",", "v", "^", "<", ">", "1", "2", "3", "4",
                            "h", "s", "p", "*", "+", "x", "X", "D", "o"]
 
@@ -225,6 +226,8 @@ for i, (name, info) in enumerate(sorted(ALGO_INFO.items())):
 def get_algo_info(name_and_level, nbits=8):
     name = name_and_level.split()[0]
 
+    # TODO this whole thing is a terrible hack because our figures rename
+    # algos to make them pretty
     if name.lower().startswith('sprintz'):
         if name == 'Sprintz':
             level = -int(name_and_level.split()[1])
@@ -234,6 +237,15 @@ def get_algo_info(name_and_level, nbits=8):
                     (1, 16): 'SprintzDelta_16b',
                     (2, 16): 'SprintzXff_16b',
                     (3, 16): 'SprintzXff_Huf_16b'}[level, nbits]
+
+        elif name in ('SprintzDelta', 'SprintzFIRE', 'SprintzFIRE+Huf'):
+            name = {('SprintzDelta', 8): 'SprintzDelta',
+                    ('SprintzDelta', 16): 'SprintzDelta_16b',
+                    ('SprintzFIRE', 8): 'SprintzXff',
+                    ('SprintzFIRE', 16): 'SprintzXff_16b',
+                    ('SprintzFIRE+Huf', 8): 'SprintzXff_Huf',
+                    ('SprintzFIRE+Huf', 16): 'SprintzXff_Huf_16b'
+                    }[(name, nbits)]
 
             print("mapped old name and level '{}' to new name: '{}'".format(name_and_level, name))
 
