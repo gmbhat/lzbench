@@ -55,6 +55,7 @@
 *  Dependencies
 ****************************************************************/
 #include <string.h>     /* memcpy, memset */
+#include <stdio.h>      /* printf before returning error */
 #include "bitstream.h"  /* BIT_* */
 #include "fse.h"        /* header compression */
 #define HUF_STATIC_LINKING_ONLY
@@ -841,7 +842,8 @@ size_t HUF_decompress (void* dst, size_t dstSize, const void* cSrc, size_t cSrcS
     /* validation checks */
     if (dstSize == 0) return ERROR(dstSize_tooSmall);
     if (cSrcSize > dstSize) {
-        printf("HUF_decompress: ERROR: cSrcSize > destSize\n");
+        printf("HUF_decompress: ERROR: cSrcSize %lld > destSize %lld\n",
+            (long long)cSrcSize, (long long)dstSize);
         return ERROR(corruption_detected);   /* invalid */
     }
     if (cSrcSize == dstSize) { memcpy(dst, cSrc, dstSize); return dstSize; }   /* not compressed */

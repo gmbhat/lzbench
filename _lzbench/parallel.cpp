@@ -25,7 +25,8 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
 
     size_t dlen;
     if (!already_materialized) {
-        if (comprsize == outsize) { // uncompressed
+        // if (comprsize == outsize) { // uncompressed
+        if (comprsize == outsize || true) { // TODO rm
             memcpy(outbuf, comprbuff, comprsize);
             dlen = comprsize;
         } else {
@@ -245,7 +246,8 @@ void parallel_decomp(lzbench_params_t *params,
     }
     auto run_for_usecs = run_for_nanosecs / 1000;
     auto thruput_MB_per_sec = total_scanned_bytes / run_for_usecs;
-    printf(">>\1%s avg thruput: %lld\n", desc->name, thruput_MB_per_sec);
+    printf(">> \1%s avg thruput: %lld\n", desc->name, thruput_MB_per_sec);
+    printf("------------------------");
 }
 
 
