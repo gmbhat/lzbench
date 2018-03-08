@@ -5,31 +5,33 @@
 #include "util.h"
 
 void usage(lzbench_params_t* params) {
-    fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory and [options] are:\n");
-    fprintf(stderr, " -b#   set block/chunk size to # KB (default = MIN(filesize,%d KB))\n", (int)(params->chunk_size>>10));
-    fprintf(stderr, " -c#   sort results by column # (1=algname, 2=ctime, 3=dtime, 4=comprsize)\n");
-    fprintf(stderr, " -e#   #=compressors separated by '/' with parameters specified after ',' (deflt=fast)\n");
-    fprintf(stderr, " -iX,Y set min. number of compression and decompression iterations (default = %d, %d)\n", params->c_iters, params->d_iters);
-    fprintf(stderr, " -j    join files in memory but compress them independently (for many small files)\n");
-    fprintf(stderr, " -l    list of available compressors and aliases\n");
-    fprintf(stderr, " -R    read block/chunk size from random blocks (to estimate for large files)\n");
-    fprintf(stderr, " -m#   set memory limit to # MB (default = no limit)\n");
-    fprintf(stderr, " -o#   output text format 1=Markdown, 2=text, 3=text+origSize, 4=CSV (default = %d)\n", params->textformat);
-    fprintf(stderr, " -p#   print time for all iterations: 1=fastest 2=average 3=median (default = %d)\n", params->timetype);
-#ifdef UTIL_HAS_CREATEFILELIST
-    fprintf(stderr, " -r    operate recursively on directories\n");
-#endif
-    fprintf(stderr, " -s#   use only compressors with compression speed over # MB (default = %d MB)\n", params->cspeed);
-    fprintf(stderr, " -tX,Y set min. time in seconds for compression and decompression (default = %.0f, %.0f)\n", params->cmintime/1000.0, params->dmintime/1000.0);
-    fprintf(stderr, " -v    disable progress information\n");
-    fprintf(stderr, " -x    disable real-time process priority\n");
-    fprintf(stderr, " -z    show (de)compression times instead of speed\n");
-    fprintf(stderr,"\nExample usage:\n");
-    fprintf(stderr,"  " PROGNAME " -ezstd filename = selects all levels of zstd\n");
-    fprintf(stderr,"  " PROGNAME " -ebrotli,2,5/zstd filename = selects levels 2 & 5 of brotli and zstd\n");
-    fprintf(stderr,"  " PROGNAME " -t3 -u5 fname = 3 sec compression and 5 sec decompression loops\n");
-    fprintf(stderr,"  " PROGNAME " -t0 -u0 -i3 -j5 -ezstd fname = 3 compression and 5 decompression iter.\n");
-    fprintf(stderr,"  " PROGNAME " -t0u0i3j5 -ezstd fname = the same as above with aggregated parameters\n");
+    // fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory and [options] are:\n");
+    fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory.\n");
+    fprintf(stderr, "See README for more information.\n");
+//     fprintf(stderr, " -b#   set block/chunk size to # KB (default = MIN(filesize,%d KB))\n", (int)(params->chunk_size>>10));
+//     fprintf(stderr, " -c#   sort results by column # (1=algname, 2=ctime, 3=dtime, 4=comprsize)\n");
+//     fprintf(stderr, " -e#   #=compressors separated by '/' with parameters specified after ',' (deflt=fast)\n");
+//     fprintf(stderr, " -iX,Y set min. number of compression and decompression iterations (default = %d, %d)\n", params->c_iters, params->d_iters);
+//     fprintf(stderr, " -j    join files in memory but compress them independently (for many small files)\n");
+//     fprintf(stderr, " -l    list of available compressors and aliases\n");
+//     fprintf(stderr, " -R    read block/chunk size from random blocks (to estimate for large files)\n");
+//     fprintf(stderr, " -m#   set memory limit to # MB (default = no limit)\n");
+//     fprintf(stderr, " -o#   output text format 1=Markdown, 2=text, 3=text+origSize, 4=CSV (default = %d)\n", params->textformat);
+//     fprintf(stderr, " -p#   print time for all iterations: 1=fastest 2=average 3=median (default = %d)\n", params->timetype);
+// #ifdef UTIL_HAS_CREATEFILELIST
+//     fprintf(stderr, " -r    operate recursively on directories\n");
+// #endif
+//     fprintf(stderr, " -s#   use only compressors with compression speed over # MB (default = %d MB)\n", params->cspeed);
+//     fprintf(stderr, " -tX,Y set min. time in seconds for compression and decompression (default = %.0f, %.0f)\n", params->cmintime/1000.0, params->dmintime/1000.0);
+//     fprintf(stderr, " -v    disable progress information\n");
+//     fprintf(stderr, " -x    disable real-time process priority\n");
+//     fprintf(stderr, " -z    show (de)compression times instead of speed\n");
+//     fprintf(stderr,"\nExample usage:\n");
+//     fprintf(stderr,"  " PROGNAME " -ezstd filename = selects all levels of zstd\n");
+//     fprintf(stderr,"  " PROGNAME " -ebrotli,2,5/zstd filename = selects levels 2 & 5 of brotli and zstd\n");
+//     fprintf(stderr,"  " PROGNAME " -t3 -u5 fname = 3 sec compression and 5 sec decompression loops\n");
+//     fprintf(stderr,"  " PROGNAME " -t0 -u0 -i3 -j5 -ezstd fname = 3 compression and 5 decompression iter.\n");
+//     fprintf(stderr,"  " PROGNAME " -t0u0i3j5 -ezstd fname = the same as above with aggregated parameters\n");
 }
 
 bool query_needs_data_window(QueryParams q) {
