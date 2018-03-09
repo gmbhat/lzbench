@@ -559,7 +559,10 @@ def boxplot_ucr(save=True, preproc_plot=False, memlimit=-1, results_path=None):
         # ax.margins(y=.02)
 
     # axes[0].set_title("Compression Ratios on UCR Archive, {}-bit".format(nbits),
-    axes[0].set_title("Compression Ratios on UCR Datasets", fontsize=16)
+    title = "Compression Ratios on UCR Datasets"
+    if memlimit > 0:
+        title += '\nBlock Size = {}KB'.format(memlimit)
+    axes[0].set_title(title, fontsize=16)
 
     plt.tight_layout()
     figname = 'boxplot_preproc_ucr' if preproc_plot else 'boxplot_ucr'
@@ -1060,9 +1063,9 @@ def main():
     # decomp_vs_ratio_fig_success()
     # decomp_vs_ratio_fig_failure()
     # cd_diagram_ours_vs_others()
-    boxplot_ucr()
+    # boxplot_ucr()
     # preproc_boxplot_ucr()
-    # memlimit_boxplot_ucr()
+    memlimit_boxplot_ucr()
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
