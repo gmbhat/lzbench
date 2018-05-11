@@ -10,6 +10,7 @@
 #include <future>
 #include <thread>
 
+#include "output.h"
 #include "preprocessing.h"
 #include "query.hpp"
 #include "util.h"
@@ -102,7 +103,7 @@ void parallel_decomp(lzbench_params_t *params,
     size_t param1, size_t param2, char* workmem)
 {
     // printf("calling parallel decomp for algorithm (T=%d): %s!\n", params->nthreads, desc->name);
-    printf("calling parallel decomp for algorithm %s!\n", desc->name);
+    // printf("calling parallel decomp for algorithm %s!\n", desc->name);
     // if (params) {
     //     printf("using nthreads: %d\n", params->nthreads);
     // }
@@ -120,7 +121,7 @@ void parallel_decomp(lzbench_params_t *params,
     // }
     // printf("\n");
 
-    printf("param1, param2 = %lu, %lu\n", param1, param2);
+    // printf("param1, param2 = %lu, %lu\n", param1, param2);
     // if (param1 != 80) {
     //     printf("param1 is %lu, not 80!\n", param1);
     // }
@@ -178,7 +179,7 @@ void parallel_decomp(lzbench_params_t *params,
             // XXX this is an ugly way to check this
 
             // printf("using num_chunks: %lld\n", (int64_t)num_chunks);
-            printf("using chunk sizes:"); for (auto sz : chunk_sizes) { printf("%lld, ", (int64_t)sz); } printf("\n");
+            // printf("using chunk sizes:"); for (auto sz : chunk_sizes) { printf("%lld, ", (int64_t)sz); } printf("\n");
 
             // printf("max chunk sz: %lu\n", max_chunk_sz);
             uint8_t* decomp_buff = alloc_data_buffer(max_chunk_sz + 4096);
@@ -201,8 +202,6 @@ void parallel_decomp(lzbench_params_t *params,
                     auto insize = compr_sizes[chunk_idx];
                     auto rawsize = chunk_sizes[chunk_idx];
 
-                    // TODO uncomment
-                    //
                     _decomp_and_query(params, desc, inptr, insize,
                         decomp_buff, rawsize, already_materialized,
                         param1, param2, workmem);
@@ -225,7 +224,7 @@ void parallel_decomp(lzbench_params_t *params,
                 done = done || ((max_iters >= 0) && (niters >= max_iters));
                 if (done) {
                 // if (true) {
-                    LZBENCH_PRINT(0, "%d) elapsed iters, time: %lld, %lld/%lldns\n",
+                    LZBENCH_PRINT(8, "%d) elapsed iters, time: %lld, %lld/%lldns\n",
                         i, niters, elapsed_nanos, run_for_nanosecs);
                 }
                 if (done) { break; }
@@ -275,11 +274,11 @@ void parallel_decomp(lzbench_params_t *params,
     //     t.join();
     // }
 
-    printf("total sizes: ");
-    for (auto res : thread_results) {
-        printf("(%lldB, %lldns), ", std::get<0>(res), std::get<1>(res));
-    }
-    printf("\n");
+    // printf("total sizes: ");
+    // for (auto res : thread_results) {
+    //     printf("(%lldB, %lldns), ", std::get<0>(res), std::get<1>(res));
+    // }
+    // printf("\n");
 
     // compute total amount of data all the threads got through
     int64_t total_scanned_bytes = 0;
@@ -300,8 +299,18 @@ void parallel_decomp(lzbench_params_t *params,
     // auto run_for_usecs = run_for_nanosecs / 1000;
     // auto thruput_MB_per_sec = total_scanned_bytes / run_for_usecs;
     // printf(">> \1%s avg thruput: %lld(MB/s)\n", desc->name, thruput_MB_per_sec);
-    printf(">> \1%s avg thruput: %lld(MB/s)\n", desc->name, thruput_MB_per_sec);
-    printf("------------------------");
+    // printf(">> \1%s avg thruput: %lld(MB/s)\n", desc->name, thruput_MB_per_sec);
+
+    size_t complen = 0;
+    for (auto sz : compr_sizes) { complen += sz; }
+
+    bool decomp_error = false;
+    std::vector<uint64_t> decomp_times {total_cpu_time};
+    size_t insize = total_scanned_bytes;
+    print_stats(params, desc, param1, comp_times, decomp_times, insize,
+        complen, decomp_error);
+
+    // printf("------------------------");
 }
 
 
