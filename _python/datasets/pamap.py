@@ -4,7 +4,7 @@ import os
 from joblib import Memory
 
 import paths
-from ..utils.files import listFilesInDir, ensure_dir_exists
+from ..files import list_files, ensure_dir_exists
 from pamap_common import *  # noqa
 
 memory = Memory('./')
@@ -59,11 +59,11 @@ ALL_COL_NAMES.extend([name + '_shoe' for name in IMU_COL_NAMES])
 # utility funcs
 
 def getIndoorFilePaths():
-    return listFilesInDir(INDOOR_DIR, endswith='.dat', absPaths=True)
+    return list_files(INDOOR_DIR, endswith='.dat', abs_paths=True)
 
 
 def getOutdoorFilePaths():
-    return listFilesInDir(OUTDOOR_DIR, endswith='.dat', absPaths=True)
+    return list_files(OUTDOOR_DIR, endswith='.dat', abs_paths=True)
 
 # def dfFromFileAtPath(path):
 #     # read in the data file and pull out the

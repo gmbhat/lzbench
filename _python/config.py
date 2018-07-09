@@ -107,6 +107,7 @@ ALL_DSETS = [
     DsetInfo('AMPD Power', 'ampd_power', 23),
     DsetInfo('AMPD Weather', 'ampd_weather', 7),
     DsetInfo('MSRC-12', 'msrc', 80),
+    DsetInfo('MSRC-Split', 'msrc_split', 80)
     DsetInfo('PAMAP', 'pamap', 31),
     DsetInfo('UCI Gas', 'uci_gas', 18),
     DsetInfo('UCR', 'ucr', 1)

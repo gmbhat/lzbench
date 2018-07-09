@@ -4,9 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from joblib import Memory
 
-from ..utils.files import basename
-from ..utils.arrays import downsampleMat, zNormalizeCols, zeroOneScaleMat
-from ..utils import sequence as seq
+from ..files import basename
+from .. import arrays as ar
+# from ..arrays import downsampleMat, zNormalizeCols, zeroOneScaleMat
 
 memory = Memory('./', verbose=1)
 
@@ -96,9 +96,38 @@ def dfFromFileAtPath(path, missingDataVal, allColNames, keepColNames):
     return df.filter(keepColNames)
 
 
+def rangesOfConstantValue(seq):
+    """
+    >>> a = [1, 1, 4, 3]
+    >>> rangesOfConstantValue(a)
+    ... # doctest: +NORMALIZE_WHITESPACE
+    array([[0, 2], [2, 3], [3, 4]])
+    >>> b = [1, 2, 2, 2]
+    >>> rangesOfConstantValue(b)
+    ... # doctest: +NORMALIZE_WHITESPACE
+    array([[0, 1], [1, 4]])
+    >>> c = [1]
+    >>> rangesOfConstantValue(c)
+    ... # doctest: +NORMALIZE_WHITESPACE
+    array([[0, 1]])
+    """
+    if seq is None or len(seq) == 0:
+        return np.array([])
+
+    starts = [0]
+    ends = []
+    for i in xrange(1, len(seq)):
+        if seq[i] != seq[i-1]:
+            starts.append(i)
+            ends.append(i)
+    ends.append(len(seq))
+
+    return np.array(zip(starts, ends))
+
+
 def findActivityBoundaries(df, labelColName=LABEL_COL_NAME):
     labelCol = df[labelColName]
-    boundaries = seq.rangesOfConstantValue(labelCol)
+    boundaries = rangesOfConstantValue(labelCol)
     labels = [labelCol[row[0]] for row in boundaries]
     assert(len(labels) == len(boundaries))
     return boundaries, labels
@@ -114,8 +143,8 @@ def plotVertLine(x, ymin, ymax):
 
 def imshowData(data, znorm=False):
     if (znorm):
-        data = zNormalizeCols(data)
-    data = zeroOneScaleMat(data)
+        data = ar.zNormalizeCols(data)
+    data = ar.zeroOneScaleMat(data)
     plt.imshow(data, aspect='auto')
     plt.colorbar()
 
@@ -173,5 +202,5 @@ class Recording(object):
         data[np.isnan(data)] = MINVAL  # znorming breaks everything without this
         # downsample by k cuz otherwise a whole bunch of rows get averaged
         # together in the plot and the whole thing is just ~.5
-        data = downsampleMat(data, rowsBy=4)
+        data = ar.downsampleMat(data, rowsBy=4)
         imshowData(data, znorm)

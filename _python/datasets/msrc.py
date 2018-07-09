@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from joblib import Memory
 
 import paths
-from ..utils.files import ensure_dir_exists
+from ..files import ensure_dir_exists
 from . import viz
 
 _memory = Memory('./', verbose=1)

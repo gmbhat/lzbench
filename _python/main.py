@@ -666,7 +666,7 @@ def main():
         run_sweep(**kwargs)
         return
 
-    if kwargs.get('dsets', None) == 'all':
+    if kwargs.get('dsets') == 'all':
         kwargs['dsets'] = cfg.ALL_DSET_NAMES
 
     # print kwargs; return

@@ -8,14 +8,14 @@ import pandas as pd
 from joblib import Memory
 
 import paths
-from ..utils import files
+from .. import files
 from . import viz
 
 _memory = Memory('./')
 
 
 def _list_csvs(directory):
-    return files.listFilesInDir(directory, endswith='.csv', absPaths=True)
+    return files.list_files(directory, endswith='.csv', abs_paths=True)
 
 
 ELECTRIC_PATHS = _list_csvs(paths.AMPD2_POWER)

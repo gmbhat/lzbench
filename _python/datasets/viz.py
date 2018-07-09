@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sb
 
-from ..utils.files import ensure_dir_exists
+from ..files import ensure_dir_exists
 
 # funcs for plotting datasets that are toot tightly coupled to assumptions
 # about how we store the data to be in the utils directory

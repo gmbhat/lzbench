@@ -6,7 +6,8 @@ import os
 import numpy as np
 from joblib import Memory
 
-from ..utils.files import ensure_dir_exists
+# from . utils.files import ensure_dir_exists
+from .. import files
 
 from . import ampds, ucr, pamap, uci_gas, msrc
 from . import paths
@@ -46,7 +47,7 @@ def _quantize(mat, dtype, axis=0):
     # print "quantize: got mat with shape: ", mat.shape
     mat -= np.min(mat, axis=axis, keepdims=True)
     mat = mat.astype(np.float32)
-    mat /= max(1, np.max(mat, axis=axis, keepdims=True))
+    mat /= np.maximum(1, np.max(mat, axis=axis, keepdims=True))
     if dtype == np.uint8:
         max_val = 255
     elif dtype in (np.uint16, np.uint32):  # NOTE: u32 -> 16 leading 0s
@@ -111,7 +112,7 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
     savedir = os.path.join(base_savedir, child_dir)
     if subdir:
         savedir = os.path.join(savedir, subdir)
-    ensure_dir_exists(savedir)
+    files.ensure_dir_exists(savedir)
     path = os.path.join(savedir, name + '.dat')
 
     # actually write out the data
@@ -224,27 +225,17 @@ def mat_from_recordings(recs):
     return concat_and_interpolate(mats)
 
 
-def main():
-    write_normal_datasets = False
-    write_ucr_datasets = False
-    # write_normal_datasets = True
-    write_ucr_datasets = True
+def write_dsets(which_dsets='normal', delta_encode=False,
+                zigzag_encode=False, store_as_dtype=None, storage_order='c',
+                dtypes=[np.uint8, np.uint16]):
 
-    # delta_encode = False
-    # zigzag_encode = False
-    delta_encode = True
-    zigzag_encode = True
+    write_normal_datasets = which_dsets == 'normal'
+    write_ucr_datasets = which_dsets == 'ucr'
+    write_split_datasets = which_dsets == 'split'
 
-    # STORAGE_ORDER = 'f'
-    STORAGE_ORDER = 'c'
+    write_each_recording = write_split_datasets
 
-    dtypes = [np.uint8, np.uint16]
-    # dtypes = [np.uint32]
-
-    # store_as_dtype = None
-    store_as_dtype = np.uint32
-
-    if write_normal_datasets:
+    if write_normal_datasets or write_split_datasets:
         funcs_and_names = [
             (ampds.all_gas_recordings, 'ampd_gas'),
             (ampds.all_water_recordings, 'ampd_water'),
@@ -254,16 +245,27 @@ def main():
             (pamap.all_recordings, 'pamap'),
             (msrc.all_recordings, 'msrc'),
         ]
+        if write_split_datasets:
+            funcs_and_names = [(msrc.all_recordings, 'msrc_split')]
 
         for func, name in funcs_and_names:
             recordings = func()
             print "data shapes: ", [r.data.shape for r in recordings]
-            mat = mat_from_recordings(recordings)
-            for dtype in dtypes:
-                write_dataset(mat, name, order=STORAGE_ORDER, subdir=name,
-                              dtype=dtype, delta_encode=delta_encode,
-                              zigzag_encode=zigzag_encode,
-                              store_as_dtype=store_as_dtype, verbose=1)
+            if write_each_recording:
+                for r in recordings:
+                    for dtype in dtypes:
+                        write_dataset(
+                            r.data, r.name, order=storage_order, subdir=name,
+                            dtype=dtype, delta_encode=delta_encode,
+                            zigzag_encode=zigzag_encode,
+                            store_as_dtype=store_as_dtype, verbose=1)
+            else:
+                mat = mat_from_recordings(recordings)
+                for dtype in dtypes:
+                    write_dataset(mat, name, order=storage_order, subdir=name,
+                                  dtype=dtype, delta_encode=delta_encode,
+                                  zigzag_encode=zigzag_encode,
+                                  store_as_dtype=store_as_dtype, verbose=1)
 
     if write_ucr_datasets:
         # i = 0 # TODO rm
@@ -273,7 +275,7 @@ def main():
             mat = concat_and_interpolate(dset.X)
             for dtype in dtypes:
                 dtype2path = write_dataset(
-                    mat, dset.name, order=STORAGE_ORDER, dtype=dtype,
+                    mat, dset.name, order=storage_order, dtype=dtype,
                     subdir='ucr', delta_encode=delta_encode,
                     zigzag_encode=zigzag_encode, store_as_dtype=store_as_dtype,
                     verbose=1)
@@ -288,7 +290,6 @@ def main():
 
             #     out_mat_u8 = np.fromfile(dtype2path[np.uint8], dtype=np.uint8)
             #     out_mat_u16 = np.fromfile(dtype2path[np.uint16], dtype=np.uint16)
-
 
             #     print "mat size: ", mat_u8.size
             #     print "out_mat size: ", out_mat_u8.size
@@ -305,6 +306,14 @@ def main():
             #     plt.show()
             #     break
             # i += 1;
+
+
+def main():
+    # *************** uncomment all these lines to create split msrc12 dataset
+    # write_dsets(which_dsets='split')
+    # write_dsets(which_dsets='split', storage_order='f')
+    write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
+    write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
 
 
 if __name__ == '__main__':
