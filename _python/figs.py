@@ -1020,8 +1020,8 @@ def theoretical_thruput(save=True):
     #   -memory bw
     #   -compression ratio
     #
-    # suppose 20MB/s DDR4 RAM
-    # then limiting thruput is 20MB/s * ratio
+    # suppose 20GB/s DDR4 RAM
+    # then limiting thruput is 20GB/s * ratio
     # and until this point, thruput is ncores * thruput/core
 
     ratios = [1.5, 2, 4]
@@ -1065,12 +1065,12 @@ def main():
     # cd_diagram_ours_vs_others()
     # boxplot_ucr()
     # preproc_boxplot_ucr()
-    memlimit_boxplot_ucr()
+    # memlimit_boxplot_ucr()
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
     # quantize_err_results()
-    # theoretical_thruput()
+    theoretical_thruput(save=False)
 
 
 if __name__ == '__main__':

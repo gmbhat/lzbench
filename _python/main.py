@@ -121,6 +121,7 @@ def _dset_path(nbits, dset, algos, order, deltas):
 def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
                   miniters=1, use_u32=False, ndims=None, dset_name=None,
                   custom_levels=None, inject_str=None, min_comp_iters=0,
+                  query_id=-1, nthreads=0, order=None,
                   **sink):
     algos = pyience.ensure_list_or_tuple(algos)
     inject_str = inject_str if inject_str is not None else ''
@@ -170,6 +171,14 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
     if not use_u32:
         cmd += ' -e{}'.format(int(nbits / 8))
+    if query_id >= 0:
+        cmd += ' -q{}'.format(query_id)
+    if nthreads > 0:
+        cmd += ' -T{}'.format(nthreads)
+    if order is not None:
+        cmd += ' -S{}'.format(cfg.id_for_order(order))
+    if ndims is not None:
+        cmd += ' -c{}'.format(int(ndims))
 
     cmd += ' {}'.format(dset_path)
     return cmd
@@ -198,7 +207,8 @@ def _run_cmd(cmd, verbose=0):
     return _df_from_string(trimmed[:])
 
 
-def _clean_results(results, dset, memlimit, miniters, nbits, order, preprocs):
+def _clean_results(results, dset, memlimit, miniters, nbits, order,
+                   preprocs, nthreads, query_id):
     # print "==== results df:\n", results
     # print results_dicts
     results_dicts = results.to_dict('records')
@@ -210,6 +220,8 @@ def _clean_results(results, dset, memlimit, miniters, nbits, order, preprocs):
         d['Order'] = order
         # d['Deltas'] = deltas
         d['Preprocs'] = preprocs
+        d['Nthreads'] = nthreads
+        d['Query'] = query_id
         d['Algorithm'] = _clean_algorithm_name(d['Compressor name'])
         # if deltas and algo != 'Memcpy':
         #     d['Algorithm'] = d['Algorithm'] + '-Delta'
@@ -224,7 +236,7 @@ def _clean_results(results, dset, memlimit, miniters, nbits, order, preprocs):
 
 def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f',
                     preprocs=None, create_fig=False, verbose=1, dry_run=DEBUG,
-                    save_path=None, **cmd_kwargs):
+                    save_path=None, nthreads=0, query_id=None, **cmd_kwargs):
     dsets = cfg.ALL_DSET_NAMES if dsets is None else dsets
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
@@ -244,6 +256,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
                             miniters=miniters, use_u32=use_u32, dset_name=dset,
+                            order=order, query_id=query_id,
                             **cmd_kwargs)
 
         if verbose > 0 or dry_run:
@@ -259,7 +272,8 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         # print "...command successful"
         results = _clean_results(
             results, dset=dset, memlimit=memlimit, miniters=miniters,
-            nbits=nbits, order=order, preprocs=preprocs)
+            nbits=nbits, order=order, preprocs=preprocs,
+            nthreads=nthreads, query_id=query_id)
 
         if verbose > 1:
             print "==== Results"
@@ -464,13 +478,16 @@ def fig_for_dsets(dsets=None, **kwargs):
 
 def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
               preprocs=None, miniters=0, memlimit=-1,
-              orders=['c', 'f'], dsets=None, **kwargs):
+              orders=['c', 'f'], dsets=None, nthreads=[0],
+              queries=[None], **kwargs):
     # TODO I should just rename these vars
     all_nbits = nbits
     all_preprocs = preprocs  # 'deltas' was a more intuitive kwarg
     all_dsets = dsets  # rename kwarg for consistency
     all_algos = algos
     all_orders = orders
+    all_nthreads = nthreads
+    all_queries = queries
 
     if all_nbits is None:
         # all_nbits = [16]
@@ -486,6 +503,8 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
         all_dsets = cfg.ALL_DSET_NAMES
     if all_algos is None:
         all_algos = cfg.USE_WHICH_ALGOS
+    # if all_queries is None:
+        # all_queries = [None]
         # all_algos = ('Zstd LZ4 LZ4HC Snappy FSE Huffman FastPFOR Delta ' +
         #              'DoubleDelta DeltaRLE_HUF DeltaRLE BitShuffle8b ' +
         #              'ByteShuffle8b').split()
@@ -504,8 +523,9 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
     # delta_u32_algos = [algo for algo in delta_algos if ALGO_INFO[algo].needs_32b]
 
     all_combos = itertools.product(
-        all_nbits, all_use_u32, all_preprocs, all_orders)
-    for (use_nbits, use_u32, use_preproc, use_order) in all_combos:
+        all_nbits, all_use_u32, all_preprocs, all_orders,
+        all_nthreads, all_queries)
+    for (use_nbits, use_u32, use_preproc, use_order, use_nthreads, use_query) in all_combos:  # noqa
 
         # print "considering preproc: '{}'".format(use_preproc)
 
@@ -534,8 +554,10 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
             continue
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
-                        preprocs=use_preproc, memlimit=memlimit, miniters=miniters,
-                        order=use_order, create_fig=create_fig, **kwargs)
+                        preprocs=use_preproc, memlimit=memlimit,
+                        miniters=miniters, order=use_order,
+                        create_fig=create_fig, nthreads=use_nthreads,
+                        query_id=use_query, **kwargs)
 
 
 def run_ucr():
@@ -614,6 +636,12 @@ def run_speed_vs_ndims_preprocs():
     #           custom_levels=np.arange(40, 80 + 1))
 
 
+def run_multidim():
+    run_sweep(dsets=cfg.USE_WHICH_MULTIDIM_DSETS, algos=cfg.USE_WHICH_ALGOS,
+              miniters=20, min_comp_iters=10,
+              save_path=cfg.MULTIDIM_RESULTS_PATH)
+
+
 def run_queries():
     pass
     # a couple examples:
@@ -621,10 +649,15 @@ def run_queries():
     # export D=80; make && ./lzbench -r -S0 -c$D -e2 -q0 -amaterialized/snappy/zstd,1,7 -t0,0 -i0,0 -j ~/Desktop/datasets/compress/rowmajor/uint16/msrc # noqa
 
 
-def run_multidim():
-    run_sweep(dsets=cfg.USE_WHICH_MULTIDIM_DSETS, algos=cfg.USE_WHICH_ALGOS,
-              miniters=20, min_comp_iters=10,
-              save_path=cfg.MULTIDIM_RESULTS_PATH)
+def run_multicore_queries():
+
+    use_nthreads = [1, 2, 3, 4]
+    query_ids = [cfg.Queries.NONE, cfg.Queries.SUM, cfg.Queries.MAX]
+
+    run_sweep(dsets=['msrc_split'], algos=cfg.USE_WHICH_ALGOS,
+              miniters=0, min_comp_iters=0,
+              nthreads=use_nthreads, queries=query_ids,
+              save_path=cfg.MULTICORE_RESULTS_PATH)
 
 
 def main():
@@ -660,6 +693,11 @@ def main():
     if kwargs.get('multidim', False):
         run_multidim()
         print "ran multidim"
+        return
+
+    if kwargs.get('multicore', False):
+        run_multicore_queries()
+        print "ran multicore queries"
         return
 
     if kwargs is not None and kwargs.get('sweep', False):

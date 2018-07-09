@@ -11,29 +11,32 @@ DATASETS_DIR = os.path.expanduser('~/Desktop/datasets/compress')
 
 FIG_SAVE_DIR = 'figs'
 RESULTS_SAVE_DIR = 'results'
-RESULTS_BACKUP_DIR = os.path.join(RESULTS_SAVE_DIR, 'backups')
-ALL_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'all_results.csv')
-UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'ucr', 'ucr_results.csv')
-UCR_MEMLIMIT_RESULTS_PATH = os.path.join(
-    RESULTS_SAVE_DIR, 'ucr_memlimit', 'ucr_memlimit_results.csv')
-MULTIDIM_RESULTS_PATH = os.path.join(
-    RESULTS_SAVE_DIR, 'multidim_results', 'multidim_results.csv')
-NDIMS_SPEED_RESULTS_PATH = os.path.join(
-    RESULTS_SAVE_DIR, 'ndims_speed', 'ndims_speed_results.csv')
-PREPROC_SPEED_RESULTS_PATH = os.path.join(
-    RESULTS_SAVE_DIR, 'preproc_speed', 'preproc_speed_results.csv')
-PREPROC_UCR_RESULTS_PATH = os.path.join(RESULTS_SAVE_DIR, 'preproc_ucr', 'preproc_ucr_results.csv')
+
+
+def _results_path(*args):
+    return os.path.join(RESULTS_SAVE_DIR, *args)
+
+
+RESULTS_BACKUP_DIR          = _results_path('backups')  # noqa
+ALL_RESULTS_PATH            = _results_path('all_results.csv') # noqa
+UCR_RESULTS_PATH            = _results_path('ucr', 'ucr_results.csv') # noqa
+UCR_MEMLIMIT_RESULTS_PATH   = _results_path('ucr_memlimit', 'ucr_memlimit_results.csv') # noqa
+MULTIDIM_RESULTS_PATH       = _results_path('multidim_results', 'multidim_results.csv') # noqa
+NDIMS_SPEED_RESULTS_PATH    = _results_path('ndims_speed', 'ndims_speed_results.csv') # noqa
+PREPROC_SPEED_RESULTS_PATH  = _results_path('preproc_speed', 'preproc_speed_results.csv') # noqa
+PREPROC_UCR_RESULTS_PATH    = _results_path('preproc_ucr', 'preproc_ucr_results.csv') # noqa
+MULTICORE_RESULTS_PATH      = _results_path('multicore', 'multicore_queries.csv') # noqa
 
 files.ensure_dir_exists(RESULTS_BACKUP_DIR)
+files.ensure_dir_exists(os.path.dirname(ALL_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(UCR_MEMLIMIT_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(MULTIDIM_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_SPEED_RESULTS_PATH))
 files.ensure_dir_exists(os.path.dirname(PREPROC_UCR_RESULTS_PATH))
-
-files.ensure_dir_exists(os.path.dirname(ALL_RESULTS_PATH))
-files.ensure_dir_exists(os.path.dirname(UCR_RESULTS_PATH))
-files.ensure_dir_exists(os.path.dirname(NDIMS_SPEED_RESULTS_PATH))
+files.ensure_dir_exists(os.path.dirname(MULTICORE_RESULTS_PATH))
 
 SYNTH_LOW_COMPRESSION_RATIO = 1
 SYNTH_HIGH_COMPRESSION_RATIO = 8
@@ -51,6 +54,35 @@ SYNTH_100M_U16_HIGH_PATH = os.path.join(SYNTH_DATASETS_DIR,
 DEFAULT_LEVELS = [1, 9]  # many compressors have levels 1-9
 
 CAMERA_READY_FONT = 'DejaVu Sans'
+
+
+class Queries:  # needs to match cpp query enum
+    NONE = 0
+    MEAN = 1
+    MIN = 2
+    MAX = 3
+    SUM = 7
+    ALL_QUERIES = [NONE, MEAN, MEAN, MIN, MAX, SUM]
+
+
+def query_name(query_id):
+    return {
+        Queries.NONE: "None",
+        Queries.MEAN: "Mean",
+        Queries.MAX: "Max",
+        Queries.MIN: "Min",
+        Queries.SUM: "Sum"
+        }[query_id]
+
+
+class StorageOrder:  # needs to match cpp enum
+    ROWMAJOR = 0
+    COLMAJOR = 1
+
+
+def id_for_order(order_char):
+    return {'c': StorageOrder.ROWMAJOR, 'f': StorageOrder.COLMAJOR}[
+        order_char.lower()]
 
 
 class Preproc:
@@ -92,7 +124,6 @@ class AlgoInfo(object):
             self.allowed_preprocs = Preproc.NONE
 
 
-
 class DsetInfo(object):
 
     def __init__(self, pretty_name, bench_name, ndims):
@@ -107,7 +138,7 @@ ALL_DSETS = [
     DsetInfo('AMPD Power', 'ampd_power', 23),
     DsetInfo('AMPD Weather', 'ampd_weather', 7),
     DsetInfo('MSRC-12', 'msrc', 80),
-    DsetInfo('MSRC-Split', 'msrc_split', 80)
+    DsetInfo('MSRC-Split', 'msrc_split', 80),
     DsetInfo('PAMAP', 'pamap', 31),
     DsetInfo('UCI Gas', 'uci_gas', 18),
     DsetInfo('UCR', 'ucr', 1)
