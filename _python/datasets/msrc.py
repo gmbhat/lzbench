@@ -13,6 +13,7 @@ from . import viz
 _memory = Memory('./', verbose=1)
 
 NUM_RECORDINGS = 594
+NUM_COLS = 80
 DATA_DIR = paths.MSRC_12
 # OUTPUT_DATA_DIR = './data'
 
@@ -108,6 +109,7 @@ def read_answer_times(tagFile):
     return times
 
 
+@_memory.cache
 def read_data_file(dataFile):
     contents = np.genfromtxt(dataFile, delimiter=' ')
     timeStamps = contents[:, 0]
@@ -128,26 +130,35 @@ def _create_recording(*args, **kwargs):
 
 
 @_memory.cache
-def all_recordings(idxs=None):
+def all_recordings(idxs=None, only_valid=True):
     dataFiles, tagFiles = all_file_names()
     recs = []
     if idxs is None:
         idxs = range(len(dataFiles))
+    num_valid_recordings = 0
     for i in idxs:
         try:
-            # r = Recording(dataFiles[i], tagFiles[i], recID=i)
-            r = _create_recording(dataFiles[i], tagFiles[i], recID=i)
+            r = _create_recording(dataFiles[i], tagFiles[i], recID=i,
+                                  needs_label_times=only_valid)
             recs.append(r)
-        except IndexError:  # empty or all 0s file -> IndexError
+            num_valid_recordings += 1
+        except IOError:
+            print("skipping broken recording #{}".format(i))
+        except IndexError:  # we only get this if only_valid=True
             print("skipping broken recording #{}".format(i))
             continue
+    print("number of valid recordings {}/{}".format(
+        num_valid_recordings, len(dataFiles)))
     return recs
 
 
 def _compute_label_idxs(labelTimes, sampleTimes):
+    """Throws IndexError if any label time is outside range of sample times"""
     labelIdxs = np.empty(len(labelTimes), dtype=np.int)
+    # print("sampleTimes shape: ", sampleTimes.shape)
     for i, time in enumerate(labelTimes):
         # extra [0] to unpack where()
+        # print("raw where output: ", np.where(sampleTimes >= time))
         labelIdxs[i] = np.where(sampleTimes >= time)[0][0]
     return labelIdxs
 
@@ -166,7 +177,7 @@ def _compute_label_idxs(labelTimes, sampleTimes):
 
 class Recording:
 
-    def __init__(self, dataFile, tagFile, recID=-1):
+    def __init__(self, dataFile, tagFile, recID=-1, needs_label_times=True):
         print("creating recording #{}".format(recID))
         self.id = recID
         self.fileName = dataFile.split('.')[0]
@@ -179,9 +190,30 @@ class Recording:
         # self.rawData, self.sampleTimes = read_data_file(dataFile)
         # self.data = _uniformlyResample(self.sampleTimes, self.rawData)
 
-        self.gestureIdxs = _compute_label_idxs(self.gestureTimes, self.sampleTimes)
-        self.name = "{}_subj{}".format(
-            self.gestureLabel.replace(' ', '-'), self.subjId)
+        # print("instruction: {}".format(self.instruction))
+
+        try:
+            self.gestureIdxs = _compute_label_idxs(
+                self.gestureTimes, self.sampleTimes)
+        except IndexError as e:
+            if needs_label_times:
+                raise e
+            else:
+                self.gestureIdxs = np.array([])
+
+        # self.name = "{}_subj={}_instr={}".format(
+        #     self.gestureLabel.replace(' ', '-'), self.subjId, self.instruction)
+        self.name = "{}_subj={}_idx={}".format(
+            # self.gestureLabel.replace(' ', '-'), self.subjId, self.fileName)
+            self.gestureLabel.replace(' ', '-'), self.subjId, self.id)
+        # self.name += self.fileName
+        # self.name += "_{}".format(self.instruction)
+
+        if len(self.data.shape) < 2 or self.data.shape[0] < 2 or \
+                self.data.shape[1] < NUM_COLS:
+            raise IOError("Broken file "
+                          "'{}' for recording '{}'; data shape = {}".format(
+                            dataFile, self.name, self.data.shape))
 
     def __str__(self):
         s1 = "instruction: %s\ngestureId: %s\nsubjId: %s\n" \

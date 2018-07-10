@@ -79,7 +79,11 @@ def _ensure_list_or_tuple(x):
 
 # def write_dataset(mat, name, dtypes=(np.uint8, np.uint16),
 def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
-                  delta_encode=False, zigzag_encode=False, subdir='', verbose=1):
+                  delta_encode=False, zigzag_encode=False, subdir='',
+                  dry_run=False, verbose=1):
+
+    if dry_run:
+        verbose = max(verbose, 1)
 
     dtype_names = {np.uint8: 'uint8', np.uint16: 'uint16', np.uint32: 'uint32',
                    np.int8: 'int8', np.int16: 'int16', np.int32: 'int32'}
@@ -89,6 +93,7 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
                     'f': paths.COMPRESSION_COLMAJOR_DIR}
 
     store_mat = _quantize(mat, dtype=dtype)
+    assert store_mat.shape == mat.shape
 
     if delta_encode:
         store_mat = store_mat.astype(np.int32)
@@ -120,20 +125,23 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
     store_mat = store_mat.astype(store_as_dtype)
     if order == 'f':
         store_mat = np.ascontiguousarray(store_mat.T)  # tofile always writes in C order
-    store_mat.tofile(path)
+    if not dry_run:
+        store_mat.tofile(path)
     # out_paths.append(path)
 
     if verbose > 0:
         print "saved mat {} ({}) as {}".format(name, store_mat.shape, path)
 
-    load_mat = np.fromfile(path, dtype=store_as_dtype)
+    if not dry_run:
+        load_mat = np.fromfile(path, dtype=store_as_dtype)
+        assert np.array_equal(store_mat.ravel(), load_mat.ravel())
+    else:
+        load_mat = store_mat
 
     if verbose > 1:
         print "stored mat shape: ", load_mat.shape
-        print "stored mat[:10]: ", store_mat[:10]
-        print "loaded mat[:10]: ", load_mat[:10]
-
-    assert np.array_equal(store_mat.ravel(), load_mat.ravel())
+        # print "stored mat[:10]: ", store_mat[:10]
+        # print "loaded mat[:10]: ", load_mat[:10]
 
     if verbose > 1:
         import matplotlib.pyplot as plt
@@ -160,9 +168,15 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
 def concat_and_interpolate(mats, interp_npoints=5):
     # assumes each row of each mat is one time step and mats is a list
 
-    print "mats: ", mats
+    # print "mats: ", mats
 
     dtype = mats[0].dtype
+
+    # shapes = np.array([mat.shape for mat in mats])
+    # print "where empty: ", np.where(shapes[:, 0] < 1)[0]
+    # # print "mat shapes: ",
+    # print "bad mat: ", shapes[468]
+    # import sys; sys.exit()
 
     first_vals = np.vstack([mat[0] for mat in mats])
     last_vals = np.vstack([mat[-1] for mat in mats])
@@ -227,7 +241,7 @@ def mat_from_recordings(recs):
 
 def write_dsets(which_dsets='normal', delta_encode=False,
                 zigzag_encode=False, store_as_dtype=None, storage_order='c',
-                dtypes=[np.uint8, np.uint16]):
+                dtypes=[np.uint8, np.uint16], dry_run=False):
 
     write_normal_datasets = which_dsets == 'normal'
     write_ucr_datasets = which_dsets == 'ucr'
@@ -248,23 +262,44 @@ def write_dsets(which_dsets='normal', delta_encode=False,
         if write_split_datasets:
             funcs_and_names = [(msrc.all_recordings, 'msrc_split')]
 
+        # # TODO rm
+        # # recordings = list(msrc.all_recordings())
+        # # shapes = np.array([r.data.shape for r in recordings])
+        # # combined_mat = mat_from_recordings(recordings)
+
+        # # print "number of recordings: ", len(recordings)
+        # # print "sum of lengths", shapes.sum(axis=0)[0]
+        # # print "concat length", combined_mat.shape[0]
+
+        # recordings = list(msrc.all_recordings())
+        # names = [r.name for r in recordings]
+        # uniq_names, counts = np.unique(names, return_counts=True)
+        # # print "dup names, counts"
+        # dup_idxs = counts > 1
+        # dup_names, dup_counts = uniq_names[dup_idxs], counts[dup_idxs]
+        # # print "dup names, dup counts: ", dup_names, dup_counts
+        # # print "num uniq rec names: ", len(uniq_names)
+        # # print "num rec names: ", len(names)
+        # assert len(np.unique(names)) == len(names)
+        # # return
+
         for func, name in funcs_and_names:
             recordings = func()
-            print "data shapes: ", [r.data.shape for r in recordings]
+            # print "data shapes: ", [r.data.shape for r in recordings]
             if write_each_recording:
                 for r in recordings:
                     for dtype in dtypes:
                         write_dataset(
                             r.data, r.name, order=storage_order, subdir=name,
                             dtype=dtype, delta_encode=delta_encode,
-                            zigzag_encode=zigzag_encode,
+                            zigzag_encode=zigzag_encode, dry_run=dry_run,
                             store_as_dtype=store_as_dtype, verbose=1)
             else:
                 mat = mat_from_recordings(recordings)
                 for dtype in dtypes:
                     write_dataset(mat, name, order=storage_order, subdir=name,
                                   dtype=dtype, delta_encode=delta_encode,
-                                  zigzag_encode=zigzag_encode,
+                                  zigzag_encode=zigzag_encode, dry_run=dry_run,
                                   store_as_dtype=store_as_dtype, verbose=1)
 
     if write_ucr_datasets:
@@ -311,11 +346,13 @@ def write_dsets(which_dsets='normal', delta_encode=False,
 def main():
     # *************** uncomment all these lines to create split msrc12 dataset
     # write_dsets(which_dsets='split')
-    # write_dsets(which_dsets='split', storage_order='f')
+    write_dsets(which_dsets='split', storage_order='f')
     write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
     write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
 
+    # write_dsets(which_dsets='split', dry_run=True)
+
 
 if __name__ == '__main__':
-    _test_concat_and_interpolate()
+    # _test_concat_and_interpolate()
     main()
