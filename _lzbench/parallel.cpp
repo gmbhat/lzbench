@@ -18,7 +18,7 @@
 
 size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc,
     const uint8_t* comprbuff, size_t comprsize, uint8_t* outbuf, size_t outsize,
-    bool already_materialized,
+    bool already_materialized, bool push_down_query,
     size_t param1, size_t param2, char* workmem)
 {
     // printf("decomp_and_query: running '%s' with insize %lu, outsize %u!\n", desc->name, comprsize, outsize);
@@ -27,7 +27,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
     compress_func decompress = desc->decompress;
 
     size_t dlen = -1;
-    if (!already_materialized) {
+    if (!already_materialized || push_down_query) {
         // if (comprsize == outsize || true) { // TODO rm
         if (comprsize == outsize) { // uncompressed
             memcpy(outbuf, comprbuff, comprsize);
@@ -64,21 +64,24 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
         // printf("dlen: %lld\n", (int64_t)dlen);
         // printf("dinfo nrows, ncols, size: %lu, %lu, %lu\n",
         //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
-        QueryResult result = run_query(
-            params->query_params, dinfo, outbuf);
+        QueryResult result;
+        if (push_down_query) {
+            result = ((QueryRefs*)workmem)->qres;
+        } else {
+            result = run_query(params->query_params, dinfo, outbuf);
+        }
         // QueryResult result = frobnicate(                         // TODO rm
         //     params->query_params, dinfo, outbuf);
         // printf("ran query type: %d\n", qparams.type);
         // printf("number of idxs in result: %lu\n", result.idxs.size());
 
-
-        // hack so it can't pull the above check out of the loop; dummy
+        // hack so it can't pull the below check out of the loop; dummy
         // can be any u8 but next line will always add 0, although compiler
         // doesn't know this (it's 0 because element_sz is in {1,2})
         auto dummy = result.vals_u8.size() > 0 ? result.vals_u8[0] : 0;
         params->verbose += result.idxs.size() > ((int64_t)1e9) ? dummy : 0;
 
-        // prevent compiler from optiming away query
+        // prevent compiler from optimizing away query
         // XXX does it actually have this effect? could pull this check
         // out of the loop and do nothing if condition is false
         if (params->verbose > 999) {
@@ -127,8 +130,10 @@ void parallel_decomp(lzbench_params_t *params,
     // }
 
     uint64_t run_for_nanosecs = (uint64_t)params->dmintime*1000*1000;
+    // printf("running for min nanosecs: %llu\n", run_for_nanosecs);
 
-    using result_t = std::tuple<int64_t, int64_t>;
+    // using result_t = std::tuple<int64_t, int64_t>;
+    using result_t = std::tuple<int64_t, int64_t, int64_t>;
 
     int nthreads = params->nthreads;
     // std::vector<int64_t> total_scanned_sizes(nthreads);
@@ -139,37 +144,53 @@ void parallel_decomp(lzbench_params_t *params,
     // std::vector<std::thread> threads(nthreads);
 
     auto max_chunk_sz = chunk_sizes[0];
-    auto total_raw_sz = 0;
+    int64_t total_raw_sz = 0;
     for (auto sz : chunk_sizes) {
         if (sz > max_chunk_sz) { max_chunk_sz = sz; }
         total_raw_sz += sz;
     }
 
     bool already_materialized = strings_equal(desc->name, "materialized");
+    bool push_down_query = can_push_down_query(desc->name);
+
+    // printf("number of chunks: %lu; raw size: %lld\n", compressed_chunk_starts.size(), total_raw_sz);
+
+    // hack to pass query info to algorithms that can push down queries
+    QueryResult res;
+    QueryRefs qrefs { .qparams = params->query_params,
+        .dinfo = params->data_info, .qres = res};
+    if (!workmem) { workmem = (char*)&qrefs; }
+
+    uint8_t* buffs[nthreads];
+    for (int i = 0; i < nthreads; i++) {
+        buffs[i] = alloc_data_buffer(max_chunk_sz + 4096);
+    }
 
     // for (int i = 0; i < nthreads; i++) {
         // auto& this_total = total_scanned_sizes[i];
         // size_t* this_total = total_scanned_sizes[i];
         // threads[i] = std::thread([&total_scanned_sizes[i]] {
         auto run_in_thread =
-            // [i, run_for_nanosecs, max_chunk_sz, total_raw_sz, inbuf, nthreads,
-            [run_for_nanosecs, max_chunk_sz, total_raw_sz, inbuf, nthreads,
+            [run_for_nanosecs, &buffs, total_raw_sz, inbuf, nthreads,
                 params, desc, compr_sizes, chunk_sizes, rate,
                 compressed_chunk_starts,
-                already_materialized,
+                already_materialized, push_down_query,
                 // &total_scanned_sizes,
                 param1, param2, workmem](int i) {
 
             // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
-            // std::this_thread::sleep_for(std::chrono::duration<double>(1));
-            // std::this_thread::sleep_for(std::chrono::duration<double>(2));
-            // return (int64_t)total_raw_sz;
+            // // std::this_thread::sleep_for(std::chrono::duration<double>(1));
+            // // std::this_thread::sleep_for(std::chrono::duration<double>(2));
+            // // return (int64_t)total_raw_sz;
+            // printf("Thread %d, done sleeping!\n", i);
+            // return std::make_tuple(total_raw_sz, (int64_t)(100 * 1000 * 1000));
 
             //
             // TODO uncomment below here
             // EDIT: this scales linearly, so issue is something below here...
             //
 
+            int64_t comp_sz = 0;
             int64_t decomp_sz = 0;
 
             bench_timer_t t_end;
@@ -182,7 +203,8 @@ void parallel_decomp(lzbench_params_t *params,
             // printf("using chunk sizes:"); for (auto sz : chunk_sizes) { printf("%lld, ", (int64_t)sz); } printf("\n");
 
             // printf("max chunk sz: %lu\n", max_chunk_sz);
-            uint8_t* decomp_buff = alloc_data_buffer(max_chunk_sz + 4096);
+            // uint8_t* decomp_buff = alloc_data_buffer(max_chunk_sz + 4096);
+            uint8_t* decomp_buff = buffs[i];
 
             int64_t elapsed_nanos = 0;
 
@@ -192,8 +214,8 @@ void parallel_decomp(lzbench_params_t *params,
             do {
                 // run multiple iters betwen rtsc calls to avoid sync overhead
                 // use nthreads iters as a heuristic so syncs/sec is constant
-                // for (int it = 0; it < num_chunks*nthreads; it++) {
-                for (int it = 0; it < nthreads; it++) {
+                for (int it = 0; it < num_chunks*nthreads; it++) {
+                // for (int it = 0; it < nthreads; it++) {
                 // for (int it = 0; it < 1; it++) { // TODO uncomment above
                     auto chunk_idx = rand() % num_chunks;
                     // auto chunk_idx = it % num_chunks;
@@ -203,13 +225,15 @@ void parallel_decomp(lzbench_params_t *params,
                     auto rawsize = chunk_sizes[chunk_idx];
 
                     _decomp_and_query(params, desc, inptr, insize,
-                        decomp_buff, rawsize, already_materialized,
+                        decomp_buff, rawsize,
+                        already_materialized, push_down_query,
                         param1, param2, workmem);
 
                     // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
                     // std::this_thread::sleep_for(std::chrono::duration<double>(1));
 
                     // this_total += rawsize;
+                    comp_sz += insize;
                     decomp_sz += rawsize;
                     // total_scanned_sizes[i] += rawsize;
                     // *(this_total) = *(this_total) + rawsize;
@@ -243,10 +267,10 @@ void parallel_decomp(lzbench_params_t *params,
             //     desc->name, (int32_t)cmn, (int32_t)max_chunk_sz);
             // }
 
-            free_data_buffer(decomp_buff);
+            // free_data_buffer(decomp_buff);
 
             // return decomp_sz;
-            return std::make_tuple(decomp_sz, elapsed_nanos);
+            return std::make_tuple(comp_sz, decomp_sz, elapsed_nanos);
         // });
         };
     // }
@@ -259,11 +283,20 @@ void parallel_decomp(lzbench_params_t *params,
         // thread_results_futures.push_back(std::async(debug_lambda, i));
     }
     // printf("about to try get()ing all the futures...\n");
+    bench_timer_t t_start_main;
+    GetTime(t_start_main);
     for (int i = 0; i < nthreads; i++) {
         thread_results[i] = thread_results_futures[i].get();
         // thread_results_futures[i].get();
     }
+    bench_timer_t t_end_main;
+    GetTime(t_end_main);
+    auto elapsed_nanos_main = GetDiffTime(rate, t_start_main, t_end_main);
+    // printf("Joined all the threads in %lld ns!\n", elapsed_nanos_main);
 
+    for (int i = 0; i < nthreads; i++) {
+        free_data_buffer(buffs[i]);
+    }
 
     // // Single threaded version (for debugging)
     // for (int i = 0; i < nthreads; i++) {
@@ -281,14 +314,17 @@ void parallel_decomp(lzbench_params_t *params,
     // printf("\n");
 
     // compute total amount of data all the threads got through
-    int64_t total_scanned_bytes = 0;
-    int64_t total_cpu_time = 0;
+    int64_t total_decomp_bytes = 0;
+    int64_t total_comp_bytes = 0;
+    // int64_t total_cpu_time = 0;
     for (auto res : thread_results) {
-        total_scanned_bytes += std::get<0>(res);
-        total_cpu_time += std::get<1>(res);
+        total_comp_bytes += std::get<0>(res);
+        total_decomp_bytes += std::get<1>(res);
+        // total_cpu_time += std::get<2>(res);
     }
-    double thruput_bytes_per_cpu_ns = total_scanned_bytes / (double)total_cpu_time;
-    int64_t thruput_MB_per_sec = (int64_t)((thruput_bytes_per_cpu_ns * 1000) * nthreads);
+    double thruput_bytes_per_ns = total_decomp_bytes / elapsed_nanos_main;
+    int64_t thruput_MB_per_sec = (int64_t)(thruput_bytes_per_ns * 1000);
+    // printf("scanned %lld total bytes in %lld ns\n", total_decomp_bytes, elapsed_nanos_main);
 
     // if (!run_for_nanosecs) { // this case shouldn't be used for real results
     //     bench_timer_t t_end;
@@ -297,7 +333,7 @@ void parallel_decomp(lzbench_params_t *params,
     //     run_for_nanosecs = GetDiffTime(rate, t_start, t_end);
     // }
     // auto run_for_usecs = run_for_nanosecs / 1000;
-    // auto thruput_MB_per_sec = total_scanned_bytes / run_for_usecs;
+    // auto thruput_MB_per_sec = total_decomp_bytes / run_for_usecs;
     // printf(">> \1%s avg thruput: %lld(MB/s)\n", desc->name, thruput_MB_per_sec);
     // printf(">> \1%s avg thruput: %lld(MB/s)\n", desc->name, thruput_MB_per_sec);
 
@@ -305,12 +341,24 @@ void parallel_decomp(lzbench_params_t *params,
     for (auto sz : compr_sizes) { complen += sz; }
 
     bool decomp_error = false;
-    std::vector<uint64_t> decomp_times {total_cpu_time};
-    size_t insize = total_scanned_bytes;
-    print_stats(params, desc, param1, comp_times, decomp_times, insize,
-        complen, decomp_error);
+    // std::vector<uint64_t> decomp_times {total_cpu_time};
+    std::vector<uint64_t> decomp_times {elapsed_nanos_main};
+    // size_t insize = total_decomp_bytes;
 
-    // printf("------------------------");
+    // correct compressed size so compression thruputs are about right; note
+    // that these are single-threaded thruputs, since we aren't actually
+    // running compression in parallel
+    size_t dset_comp_bytes = 0;
+    for (int i = 0; i < compr_sizes.size(); i++) {
+        dset_comp_bytes += compr_sizes[i];
+    }
+    for (int i = 0; i < comp_times.size(); i++) {
+        comp_times[i] *= total_comp_bytes / (double)dset_comp_bytes;
+    }
+    print_stats(params, desc, param1, comp_times, decomp_times, total_decomp_bytes,
+        total_comp_bytes, decomp_error);
+
+    printf("------------------------\n");
 }
 
 

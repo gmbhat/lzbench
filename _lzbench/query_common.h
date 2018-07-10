@@ -83,6 +83,12 @@ typedef struct DataInfo {
     storage_order_e storage_order;
 } DataInfo;
 
+typedef struct QueryRefs { // used in hack for pushing down queries
+    const QueryParams& qparams;
+    QueryResult& qres;
+    const DataInfo& dinfo;
+} QueryRefs;
+
 template <class data_t> struct DataTypeTraits {};
 template <> struct DataTypeTraits<uint8_t> { using AccumulatorT = uint16_t; };
 template <> struct DataTypeTraits<uint16_t> { using AccumulatorT = uint32_t; };

@@ -64,6 +64,12 @@
 //     return QueryResult{}; // TODO
 // }
 
+
+
+static inline bool can_push_down_query(std::string algo_name) {
+    return algo_name.find("sprintz") == 0; // yes iff starts with "sprintz"
+}
+
 template<class DataT>
 QueryResult corr(const QueryParams& q, const DataInfo& di,
     const DataT* buff)

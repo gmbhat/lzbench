@@ -578,8 +578,10 @@ int lzbench_join(lzbench_params_t* params, const char** inFileNames,
         lzbench_params_t params_memcpy(*params);
 
         print_header(params);
-        params_memcpy.cmintime = params_memcpy.dmintime = 0;
-        params_memcpy.c_iters = params_memcpy.d_iters = 0;
+        // params_memcpy.cmintime = params_memcpy.dmintime = 0;
+        // params_memcpy.c_iters = params_memcpy.d_iters = 0;
+        // params_memcpy.cmintime = params.cmintime;
+        // params_memcpy.dmintime = params.dmintime;
         params_memcpy.cloop_time = params_memcpy.dloop_time = DEFAULT_LOOP_TIME;
         single_file.push_back(totalsize);
         lzbench_test(&params_memcpy, file_sizes, &comp_desc[0], 0, inbuf, totalsize, compbuf, totalsize, decomp, rate, 0);
