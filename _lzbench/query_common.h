@@ -5,6 +5,8 @@
 
 #include <vector>
 
+namespace lzbench {
+
 enum query_type_e { QUERY_NONE = 0, QUERY_MEAN = 1, QUERY_MIN = 2,
     QUERY_MAX = 3, QUERY_L2 = 4, QUERY_DOT = 5, QUERY_NORM = 6,
     QUERY_SUM = 7 };
@@ -133,5 +135,7 @@ template <> struct QueryDataValsRef<uint16_t> {
         return q.window_data_u16;
     }
 };
+
+}
 
 #endif // QUERY_HPP

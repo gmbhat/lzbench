@@ -4,6 +4,8 @@
 #include "output.h"
 #include "util.h"
 
+using namespace lzbench; // TODO separate out individual types/funcs we need
+
 void usage(lzbench_params_t* params) {
     // fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory and [options] are:\n");
     fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory.\n");

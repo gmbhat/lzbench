@@ -10,6 +10,8 @@
 
 #include <iostream> // TODO rm
 
+namespace lzbench {
+
 template<class DataT, int OpE>
 class OnlineBinaryOpRowmajor {
 public:
@@ -413,4 +415,5 @@ static inline QueryResult reduce_contiguous(const QueryParams& q,
     return ret;
 }
 
+} // namespace lzbench
 #endif // QUERY_MIN_MAX_HPP

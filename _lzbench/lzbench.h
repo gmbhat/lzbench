@@ -84,6 +84,7 @@
 #endif
 #endif
 
+namespace lzbench {
 
 typedef struct string_table
 {
@@ -96,7 +97,6 @@ typedef struct string_table
 enum textformat_e { MARKDOWN=1, TEXT, TEXT_FULL, CSV, TURBOBENCH, MARKDOWN2 };
 enum timetype_e { FASTEST=1, AVERAGE, MEDIAN };
 enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4};
-
 
 class lzbench_params_t {
 public:
@@ -328,5 +328,5 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames,
 int lzbench_join(lzbench_params_t* params, const char** inFileNames,
     unsigned ifnIdx, char* encoder_list);
 
-
+} // namespace
 #endif

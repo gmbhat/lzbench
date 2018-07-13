@@ -4,6 +4,7 @@
 #include <deque>
 #include "query_common.h"
 
+namespace lzbench {
 
 template<class DataT, int OpE>
 class OnlineWindowReductionRowmajor {
@@ -240,5 +241,7 @@ QueryResult sliding_dot(const QueryParams& q,
     // printf("running sliding dot prod query!\n");
     return sliding_window_reduction<DataT, OpE::PRODUCT>(q, di, buff);
 }
+
+} // namespace lzbench
 
 #endif // QUERY_REDUCE_ROW_HPP

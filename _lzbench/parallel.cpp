@@ -15,6 +15,7 @@
 #include "query.hpp"
 #include "util.h"
 
+namespace lzbench {
 
 size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc,
     const uint8_t* comprbuff, size_t comprsize, uint8_t* outbuf, size_t outsize,
@@ -151,7 +152,14 @@ void parallel_decomp(lzbench_params_t *params,
     }
 
     bool already_materialized = strings_equal(desc->name, "materialized");
-    bool push_down_query = can_push_down_query(desc->name);
+    // bool push_down_query = can_push_down_query(desc->name);
+
+
+
+    bool push_down_query = false; // TODO uncomment above
+
+
+
 
     // printf("number of chunks: %lu; raw size: %lld\n", compressed_chunk_starts.size(), total_raw_sz);
 
@@ -362,4 +370,4 @@ void parallel_decomp(lzbench_params_t *params,
 }
 
 
-
+} // namespace lzbench

@@ -1,4 +1,5 @@
 #include "compressors.h"
+#include "query_common.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h> // memcpy
@@ -2601,8 +2602,11 @@ int64_t lzbench_sprintz_delta_compress_16b(char *inbuf, size_t insize, char *out
     return sprintz_compress_delta_16b((uint16_t*)inbuf, insize/2, (int16_t*)outbuf, ndims) * 2;
 }
 int64_t lzbench_sprintz_delta_decompress_16b(char *inbuf, size_t insize, char *outbuf,
-    size_t outsize, size_t ndims, size_t, char*)
+    size_t outsize, size_t ndims, size_t, char* queryPtr)
 {
+    if (queryPtr) {
+        lzbench::QueryRefs qrefs = *(lzbench::QueryRefs*)queryPtr;
+    }
     return sprintz_decompress_delta_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
 }
 

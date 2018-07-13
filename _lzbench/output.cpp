@@ -4,6 +4,8 @@
 #include <algorithm> // sort
 #include <numeric>
 
+namespace lzbench {
+
 int istrcmp(const char *str1, const char *str2) {
     int c1, c2;
     while (1) {
@@ -235,3 +237,5 @@ void print_stats(lzbench_params_t *params, const compressor_desc_t* desc,
     ctime.clear();
     dtime.clear();
 }
+
+} // namespace lzbench

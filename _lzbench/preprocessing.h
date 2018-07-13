@@ -9,9 +9,14 @@
 #include <stdint.h>
 #include <vector>
 
+
+namespace lzbench {
+
 void apply_preprocessors(const std::vector<int64_t>& preprocessors,
     const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf);
 void undo_preprocessors(const std::vector<int64_t>& preprocessors,
     uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf=nullptr);
+
+} // namespace lzbench
 
 #endif

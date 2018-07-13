@@ -4,6 +4,8 @@
 
 #include "query_common.h"
 
+namespace lzbench {
+
 // template<class DataT, bool IsDense>
 template<class DataT>
 class OnlineMeanRowmajor {
@@ -158,5 +160,6 @@ QueryResult sliding_mean(const QueryParams& q,
     return ret;
 }
 
+} // namespace lzbench
 
 #endif // QUERY_MEAN_HPP

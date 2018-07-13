@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <string.h>
 
+namespace lzbench {
 
 inline int64_t lzbench_compress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, compress_func compress,
@@ -701,3 +702,5 @@ int lzbench_main(lzbench_params_t* params, const char** inFileNames,
 
     return 0;
 }
+
+} // namespace lzbench

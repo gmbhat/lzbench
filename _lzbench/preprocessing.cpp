@@ -13,6 +13,8 @@
     #include "sprintz/format.h"  // for simd delta preproc?
 #endif
 
+namespace lzbench {
+
 static const int64_t kDoubleDeltaThreshold = 1 << 16;
 
 void apply_preprocessors(const std::vector<int64_t>& preprocessors,
@@ -355,3 +357,5 @@ void undo_preprocessors(const std::vector<int64_t>& preprocessors,
 #undef UNDO_DELTA_FOR_OFFSET
     }
 }
+
+} // namespace lzbench

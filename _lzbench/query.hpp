@@ -7,6 +7,8 @@
 #include "query_minmax.hpp"
 #include "query_reduce_row.hpp"
 
+namespace lzbench {
+
 // if we weren't just benchmarking, would need to return something in all
 // of these
 
@@ -128,5 +130,7 @@ QueryResult run_query(const QueryParams& q, const DataInfo& di, const DataT* buf
     // }
     return QueryResult{}; // can't happen, in theory
 }
+
+} // namespace lzbench
 
 #endif // QUERY_HPP
