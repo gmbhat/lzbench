@@ -20,7 +20,7 @@ namespace lzbench {
 size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc,
     const uint8_t* comprbuff, size_t comprsize, uint8_t* outbuf, size_t outsize,
     bool already_materialized, bool push_down_query,
-    size_t param1, size_t param2, char* workmem)
+    size_t param1, size_t param2, void* workmem)
 {
     // printf("decomp_and_query: running '%s' with insize %lu, outsize %u!\n", desc->name, comprsize, outsize);
     // bool already_materialized = strings_equal(desc->name, "materialized");
@@ -35,6 +35,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
             dlen = comprsize;
         } else {
             // printf("about to decomp using compressor: %s\n", desc->name);
+            // printf("can push down query: %d; workmem = %p\n", (int)push_down_query, workmem);
             dlen = decompress((char*)comprbuff, comprsize, (char*)outbuf,
                               outsize, param1, param2, workmem);
         }
@@ -53,7 +54,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
 
     // run query if one is specified
     auto qparams = params->query_params;
-    if (qparams.type != QUERY_NONE) {
+    if (qparams.type != QUERY_NONE && !push_down_query) {
         // printf("got query type: %d; about to run a query...\n", qparams.type);
         // auto& dinfo = params->data_info;
         DataInfo dinfo = params->data_info;
@@ -67,7 +68,8 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
         //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
         QueryResult result;
         if (push_down_query) {
-            result = ((QueryRefs*)workmem)->qres;
+            // result = ((QueryRefs*)workmem)->qres;
+            result = *((QueryRefs*)workmem)->qres;
         } else {
             result = run_query(params->query_params, dinfo, outbuf);
         }
@@ -152,22 +154,24 @@ void parallel_decomp(lzbench_params_t *params,
     }
 
     bool already_materialized = strings_equal(desc->name, "materialized");
-    // bool push_down_query = can_push_down_query(desc->name);
+    bool push_down_query = can_push_down_query(desc->name);
 
 
 
-    bool push_down_query = false; // TODO uncomment above
+    // bool push_down_query = false; // TODO uncomment above
 
 
 
 
     // printf("number of chunks: %lu; raw size: %lld\n", compressed_chunk_starts.size(), total_raw_sz);
 
-    // hack to pass query info to algorithms that can push down queries
-    QueryResult res;
-    QueryRefs qrefs { .qparams = params->query_params,
-        .dinfo = params->data_info, .qres = res};
-    if (!workmem) { workmem = (char*)&qrefs; }
+    // // hack to pass query info to algorithms that can push down queries
+    // QueryResult res;
+    // QueryRefs qrefs { .qparams = params->query_params,
+    //     .dinfo = params->data_info, .qres = res};
+    // if (!workmem) { workmem = (char*)&qrefs; }
+
+    // nthreads = 1; // TODO uncomment
 
     uint8_t* buffs[nthreads];
     for (int i = 0; i < nthreads; i++) {
@@ -197,6 +201,37 @@ void parallel_decomp(lzbench_params_t *params,
             // TODO uncomment below here
             // EDIT: this scales linearly, so issue is something below here...
             //
+
+            void* workmem_ptr = workmem;
+
+            //
+            // TODO uncomment all this
+            //
+            // hack to pass query info to algorithms that can push down queries
+            QueryResult res;
+            // QueryRefs qrefs { .qparams = &params->query_params,
+            //     .dinfo = &params->data_info, .qres = &res};
+            // QueryRefs* qrefsPtr = new QueryRefs{
+            void* qrefsPtr = (void*)new QueryRefs{
+                .qparams = &params->query_params,
+                .dinfo = &params->data_info, .qres = &res};
+
+            // void* qrefsPtr = malloc(sizeof(QueryRefs));
+            // memcpy(qrefsPtr, &qrefs, sizeof(qrefs));
+
+            QueryRefs qrefs2 = *(lzbench::QueryRefs*)qrefsPtr;
+            // printf("orig qrefs op: %d\n", (int)qrefs.qparams->type);
+            printf("copied qrefs op: %d\n", (int)((lzbench::QueryRefs*)qrefsPtr)->qparams->type);
+            // *(QueryRefs*)qrefsPtr = qrefs;
+
+            // printf("about to write workmem; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);
+            // printf("&qrefs = %p; workmem is null? %d\n", qrefsPtr, (int)(workmem_ptr == nullptr));
+            if (push_down_query && workmem_ptr == nullptr) {
+                workmem_ptr = qrefsPtr;
+                printf("assigning workmem_ptr to %p (%p as void*)\n", qrefsPtr, (void*)qrefsPtr);
+            }
+
+            printf("about to run stuff; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);
 
             int64_t comp_sz = 0;
             int64_t decomp_sz = 0;
@@ -235,7 +270,7 @@ void parallel_decomp(lzbench_params_t *params,
                     _decomp_and_query(params, desc, inptr, insize,
                         decomp_buff, rawsize,
                         already_materialized, push_down_query,
-                        param1, param2, workmem);
+                        param1, param2, workmem_ptr);
 
                     // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
                     // std::this_thread::sleep_for(std::chrono::duration<double>(1));
@@ -276,6 +311,9 @@ void parallel_decomp(lzbench_params_t *params,
             // }
 
             // free_data_buffer(decomp_buff);
+
+            delete (QueryRefs*)qrefsPtr; // TODO uncomment
+            // free(qrefsPtr);
 
             // return decomp_sz;
             return std::make_tuple(comp_sz, decomp_sz, elapsed_nanos);

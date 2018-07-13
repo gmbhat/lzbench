@@ -7,9 +7,9 @@
 
 namespace lzbench {
 
-enum query_type_e { QUERY_NONE = 0, QUERY_MEAN = 1, QUERY_MIN = 2,
-    QUERY_MAX = 3, QUERY_L2 = 4, QUERY_DOT = 5, QUERY_NORM = 6,
-    QUERY_SUM = 7 };
+enum query_type_e { QUERY_NONE = 0, QUERY_MAX = 1, QUERY_SUM = 2,
+    QUERY_MEAN = 3, QUERY_MIN = 4,
+    QUERY_L2 = 5, QUERY_DOT = 6, QUERY_NORM = 7};
 enum query_reduction_e { REDUCE_NONE = 0, REDUCE_THRESH = 1, REDUCE_TOP_K = 2};
 enum storage_order_e { ROWMAJOR = 0, COLMAJOR = 1};
 
@@ -86,9 +86,9 @@ typedef struct DataInfo {
 } DataInfo;
 
 typedef struct QueryRefs { // used in hack for pushing down queries
-    const QueryParams& qparams;
-    QueryResult& qres;
-    const DataInfo& dinfo;
+    const QueryParams* qparams;
+    QueryResult* qres;
+    const DataInfo* dinfo;
 } QueryRefs;
 
 template <class data_t> struct DataTypeTraits {};

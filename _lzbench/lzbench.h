@@ -126,9 +126,9 @@ struct less_using_3rd_column { inline bool operator() (const string_table_t& str
 struct less_using_4th_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col4_comprsize < struct2.col4_comprsize); } };
 struct less_using_5th_column { inline bool operator() (const string_table_t& struct1, const string_table_t& struct2) {  return (struct1.col5_origsize < struct2.col5_origsize); } };
 
-typedef int64_t (*compress_func)(char *in, size_t insize, char *out, size_t outsize, size_t, size_t, char*);
+typedef int64_t (*compress_func)(char *in, size_t insize, char *out, size_t outsize, size_t, size_t, void*);
 typedef char* (*init_func)(size_t insize, size_t, size_t);
-typedef void (*deinit_func)(char* workmem);
+typedef void (*deinit_func)(void* workmem);
 
 typedef struct
 {
