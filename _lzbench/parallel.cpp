@@ -76,7 +76,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
         // QueryResult result = frobnicate(                         // TODO rm
         //     params->query_params, dinfo, outbuf);
         // printf("ran query type: %d\n", qparams.type);
-        // printf("number of idxs in result: %lu\n", result.idxs.size());
+        // printf("number of idxs in regisult: %lu\n", result.idxs.size());
 
         // hack so it can't pull the below check out of the loop; dummy
         // can be any u8 but next line will always add 0, although compiler
@@ -106,7 +106,7 @@ void parallel_decomp(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, const compressor_desc_t* desc,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
     uint8_t* tmpbuf, bench_rate_t rate, std::vector<uint64_t> comp_times,
-    size_t param1, size_t param2, char* workmem)
+    size_t param1, size_t param2, char** workmems)
 {
     // printf("calling parallel decomp for algorithm (T=%d): %s!\n", params->nthreads, desc->name);
     // printf("calling parallel decomp for algorithm %s!\n", desc->name);
@@ -188,7 +188,7 @@ void parallel_decomp(lzbench_params_t *params,
                 compressed_chunk_starts,
                 already_materialized, push_down_query,
                 // &total_scanned_sizes,
-                param1, param2, workmem](int i) {
+                param1, param2, workmems](int i) {
 
             // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
             // // std::this_thread::sleep_for(std::chrono::duration<double>(1));
@@ -202,7 +202,7 @@ void parallel_decomp(lzbench_params_t *params,
             // EDIT: this scales linearly, so issue is something below here...
             //
 
-            void* workmem_ptr = workmem;
+            void* workmem_ptr = workmems[i];
 
             //
             // TODO uncomment all this
@@ -221,7 +221,7 @@ void parallel_decomp(lzbench_params_t *params,
 
             QueryRefs qrefs2 = *(lzbench::QueryRefs*)qrefsPtr;
             // printf("orig qrefs op: %d\n", (int)qrefs.qparams->type);
-            printf("copied qrefs op: %d\n", (int)((lzbench::QueryRefs*)qrefsPtr)->qparams->type);
+            // printf("copied qrefs op: %d\n", (int)((lzbench::QueryRefs*)qrefsPtr)->qparams->type);
             // *(QueryRefs*)qrefsPtr = qrefs;
 
             // printf("about to write workmem; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);

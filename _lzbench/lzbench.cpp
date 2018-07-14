@@ -216,9 +216,23 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
 
     LZBENCH_PRINT(5, "*** trying %s insize=%d comprsize=%d chunk_size=%d\n", desc->name, (int)insize, (int)comprsize, (int)chunk_size);
 
+    int nthreads = params->nthreads > 0 ? params->nthreads : 1;
+    char* workmems[nthreads];
+    for (int i = 0; i < nthreads; i++) { workmems[i] = nullptr; }
+    if (desc->init) {
+        for (int i = 0; i < nthreads; i++) {
+            workmems[i] = desc->init(chunk_size, param1, param2);
+        }
+        workmem = workmems[0];
+
+        printf("workmem ptrs: ");
+        for (int i = 0; i < nthreads; i++) { printf("%p, ", workmems[i]); }
+        printf("\n");
+    }
+
     if (desc->max_block_size != 0 && chunk_size > desc->max_block_size) chunk_size = desc->max_block_size;
     if (!desc->compress || !desc->decompress) goto done;
-    if (desc->init) workmem = desc->init(chunk_size, param1, param2);
+    // if (desc->init) workmem = desc->init(chunk_size, param1, param2);
 
     // if there's a minimum speed, check whether this codec is fast enough
     if (params->cspeed > 0) {
@@ -299,8 +313,9 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     if (!params->compress_only && params->nthreads > 0) {
         parallel_decomp(params, chunk_sizes,
                 desc, compr_sizes, compbuf, decomp, tmpbuf, rate, ctime,
-                param1, param2, workmem);
-        return;
+                param1, param2, &workmems[0]);
+        // return;
+        goto done;
     }
 
     if (!params->compress_only)
@@ -437,7 +452,11 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         complen, decomp_error);
 
 done:
-    if (desc->deinit) desc->deinit(workmem);
+    if (desc->deinit) {
+        for (int i = 0; i < nthreads; i++) {
+            if (workmems[i]) { desc->deinit(workmems[i]); }
+        }
+    }
 }
 
 

@@ -1753,6 +1753,7 @@ char* lzbench_zstd_init(size_t insize, size_t level, size_t windowLog)
 
 void lzbench_zstd_deinit(void* workmem)
 {
+    printf("calling zstd deinit on workmem %p...\n", workmem);
     zstd_params_s* zstd_params = (zstd_params_s*) workmem;
     if (!zstd_params) return;
     if (zstd_params->cctx) ZSTD_freeCCtx(zstd_params->cctx);
@@ -1766,7 +1767,10 @@ int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t o
     size_t res;
 
     zstd_params_s* zstd_params = (zstd_params_s*) workmem;
-    if (!zstd_params || !zstd_params->cctx) return 0;
+    if (!zstd_params || !zstd_params->cctx) {
+        printf("ERROR: zstd compress had null params or compress context!\n");
+        return 0;
+    }
 
 #if 1
     zstd_params->zparams = ZSTD_getParams(level, insize, 0);
@@ -1782,7 +1786,7 @@ int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t o
     res = ZSTD_compress_usingCDict(zstd_params->cctx, outbuf, outsize, inbuf, insize, zstd_params->cdict);
 #endif
     if (ZSTD_isError(res)) printf("zstd compress got error: %d!\n", (int)res);
-    if (ZSTD_isError(res)) return res;
+    // if (ZSTD_isError(res)) return res;
 
     return res;
 }
