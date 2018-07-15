@@ -495,7 +495,7 @@ UTIL_STATIC void UTIL_freeFileList(const char** filenameTable, char* allocatedBu
 
 /* Allocate aligned memory in a portable way.
  *
- * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
+ * Memory allocated with aligned alloc *MUST* be freed using _aligned_free.
  *
  * @param alignment The number of bytes to which memory must be aligned. This
  *  value *must* be <= 255.
@@ -505,7 +505,7 @@ UTIL_STATIC void UTIL_freeFileList(const char** filenameTable, char* allocatedBu
  * @returns A pointer to `size` bytes of memory, aligned to an `alignment`-byte
  *  boundary.
  */
-UTIL_STATIC void *aligned_alloc(size_t alignment, size_t size, bool zero) {
+UTIL_STATIC void *_aligned_alloc(size_t alignment, size_t size, bool zero) {
     size_t request_size = size + alignment;
     char* buf = (char*)(zero ? calloc(1, request_size) : malloc(request_size));
 
@@ -520,8 +520,8 @@ UTIL_STATIC void *aligned_alloc(size_t alignment, size_t size, bool zero) {
     return (void*)ret;
 }
 
-/* Free memory allocated with aligned_alloc */
-UTIL_STATIC void aligned_free(void* aligned_ptr) {
+/* Free memory allocated with _aligned_alloc */
+UTIL_STATIC void _aligned_free(void* aligned_ptr) {
     int offset = *(((char*)aligned_ptr) - 1);
     free(((char*)aligned_ptr) - offset);
 }
@@ -529,7 +529,7 @@ UTIL_STATIC void aligned_free(void* aligned_ptr) {
 UTIL_STATIC uint8_t* alloc_data_buffer(size_t size) {
     void* buf;
     if (ALIGN_BYTES > 1) {
-        buf = aligned_alloc(ALIGN_BYTES, size, true);
+        buf = _aligned_alloc(ALIGN_BYTES, size, true);
     } else {
         buf = calloc(1, size);
     }
@@ -545,7 +545,7 @@ UTIL_STATIC uint8_t* alloc_data_buffer(size_t size) {
 
 UTIL_STATIC void free_data_buffer(void* ptr) {
     if (ALIGN_BYTES > 1) {
-        aligned_free(ptr);
+        _aligned_free(ptr);
     } else {
         free(ptr);
     }
