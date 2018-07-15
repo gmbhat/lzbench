@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h> // int64_t
 
+#define BENCH_REMOVE_LZHAM  // not compiling on ubuntu for some reason
+
 int64_t lzbench_memcpy(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t , size_t, void* );
 int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t , size_t, void* );
 

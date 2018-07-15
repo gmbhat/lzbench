@@ -38,7 +38,7 @@ else
 
 	# MacOS doesn't support -lrt -static
 	ifeq ($(shell uname -s),Darwin)
-		DONT_BUILD_LZHAM ?= 1
+		# DONT_BUILD_LZHAM ?= 1
 		DONT_BUILD_CSC ?= 1
 	else
 		LDFLAGS	+= -lrt -static
@@ -186,14 +186,14 @@ else
     GLZA_FILES = glza/GLZAcomp.o glza/GLZAformat.o glza/GLZAcompress.o glza/GLZAencode.o glza/GLZAdecode.o glza/GLZAmodel.o
 endif
 
-ifeq "$(DONT_BUILD_LZHAM)" "1"
-    DEFINES += -DBENCH_REMOVE_LZHAM
-else
-    LZHAM_FILES = lzham/lzham_assert.o lzham/lzham_checksum.o lzham/lzham_huffman_codes.o lzham/lzham_lzbase.o
-    LZHAM_FILES += lzham/lzham_lzcomp.o lzham/lzham_lzcomp_internal.o lzham/lzham_lzdecomp.o lzham/lzham_lzdecompbase.o
-    LZHAM_FILES += lzham/lzham_match_accel.o lzham/lzham_mem.o lzham/lzham_platform.o lzham/lzham_lzcomp_state.o
-    LZHAM_FILES += lzham/lzham_prefix_coding.o lzham/lzham_symbol_codec.o lzham/lzham_timer.o lzham/lzham_vector.o lzham/lzham_lib.o
-endif
+# ifeq "$(DONT_BUILD_LZHAM)" "1"
+#     DEFINES += -DBENCH_REMOVE_LZHAM
+# else
+#     LZHAM_FILES = lzham/lzham_assert.o lzham/lzham_checksum.o lzham/lzham_huffman_codes.o lzham/lzham_lzbase.o
+#     LZHAM_FILES += lzham/lzham_lzcomp.o lzham/lzham_lzcomp_internal.o lzham/lzham_lzdecomp.o lzham/lzham_lzdecompbase.o
+#     LZHAM_FILES += lzham/lzham_match_accel.o lzham/lzham_mem.o lzham/lzham_platform.o lzham/lzham_lzcomp_state.o
+#     LZHAM_FILES += lzham/lzham_prefix_coding.o lzham/lzham_symbol_codec.o lzham/lzham_timer.o lzham/lzham_vector.o lzham/lzham_lib.o
+# endif
 
 ifeq "$(DONT_BUILD_LZSSE)" "1"
     DEFINES += -DBENCH_REMOVE_LZSSE
@@ -263,11 +263,14 @@ nakamichi/Nakamichi_Okamigan.o: nakamichi/Nakamichi_Okamigan.c
 
 _lzbench/lzbench.o: _lzbench/lzbench.cpp _lzbench/lzbench.h
 
+
+# $(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) 		\
+
 lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
 		$(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) 		\
 		$(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) 		\
 		$(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) 			\
-		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) $(LZHAM_FILES) 		\
+		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) 						\
 		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
 		$(LIBDEFLATE_FILES) $(EXAMPLE_FILES) $(FASTPFOR_FILES) 				\
 		$(BLOSC_FILES) $(BBP_FILES)	$(SPRINTZ_FILES)						\
