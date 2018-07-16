@@ -64,35 +64,43 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
         }
         dinfo.nrows = dlen / (dinfo.ncols * dinfo.element_sz);
         // printf("dlen: %lld\n", (int64_t)dlen);
-        // printf("dinfo nrows, ncols, size: %lu, %lu, %lu\n",
-        //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
+        // printf("dinfo elem_sz, nrows, ncols, size: %lu, %lu, %lu, %lu\n",
+        //     dinfo.element_sz, dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
         QueryResult result;
         if (push_down_query) {
             // result = ((QueryRefs*)workmem)->qres;
             result = *((QueryRefs*)workmem)->qres;
         } else {
-            result = run_query(params->query_params, dinfo, outbuf);
+            // printf("------------------------\nrunning query since can't push it down \n");
+            // result = run_query(params->query_params, dinfo, outbuf);
+            result = *run_query(params->query_params, dinfo, outbuf);
+            // auto resPtr = run_query(params->query_params, dinfo, outbuf);
+            // printf("size of ptr result_vals: %lu\n", resPtr->vals.size());
+            // result = *resPtr;
         }
         // QueryResult result = frobnicate(                         // TODO rm
         //     params->query_params, dinfo, outbuf);
         // printf("ran query type: %d\n", qparams.type);
-        // printf("number of idxs in regisult: %lu\n", result.idxs.size());
+        // // printf("number of idxs in result: %lu\n", result.idxs.size());
+        // printf("size of result_vals: %lu\n", result.vals.size());
 
         // hack so it can't pull the below check out of the loop; dummy
         // can be any u8 but next line will always add 0, although compiler
         // doesn't know this (it's 0 because element_sz is in {1,2})
-        auto dummy = result.vals_u8.size() > 0 ? result.vals_u8[0] : 0;
+        // auto dummy = result.vals_u8.size() > 0 ? result.vals_u8[0] : 0;
+        auto dummy = result.vals.size() > 0 ? result.vals[0] : 0;
         params->verbose += result.idxs.size() > ((int64_t)1e9) ? dummy : 0;
+
+        // printf("query result: ");
+        // for (auto val : result.vals) { printf("%d ", (int)val); }
+        // printf("\n");
 
         // prevent compiler from optimizing away query
         // XXX does it actually have this effect? could pull this check
         // out of the loop and do nothing if condition is false
         if (params->verbose > 999) {
-            printf("query u8 result: ");
-            for (auto val : result.vals_u8) { printf("%d ", (int)val); }
-            printf("\n");
-            printf("query u16 result: ");
-            for (auto val : result.vals_u16) { printf("%d ", (int)val); }
+            printf("query result bytes: ");
+            for (auto val : result.vals) { printf("%u ", (uint32_t)val); }
             printf("\n");
         }
     }

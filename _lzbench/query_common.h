@@ -70,11 +70,12 @@ typedef struct QueryParams {
 
 typedef struct QueryResult {
     std::vector<int64_t> idxs;
-    std::vector<int8_t> vals_i8;
-    std::vector<uint8_t> vals_u8;
-    std::vector<int16_t> vals_i16;
-    std::vector<uint16_t> vals_u16;
-    std::vector<int32_t> vals_i32;
+    std::vector<uint8_t> vals;
+    // std::vector<int8_t> vals_i8;
+    // std::vector<uint8_t> vals_u8;
+    // std::vector<int16_t> vals_i16;
+    // std::vector<uint16_t> vals_u16;
+    // std::vector<int32_t> vals_i32;
 } QueryResult;
 
 typedef struct DataInfo {
@@ -99,20 +100,20 @@ template <int ElemSz> struct ElemSizeTraits {};
 template <> struct ElemSizeTraits<1> { using DataT = uint8_t; };
 template <> struct ElemSizeTraits<2> { using DataT = uint16_t; };
 
-// pull out reference to appropriate vector of values
-template<class DataT> struct QueryResultValsRef {};
-template <> struct QueryResultValsRef<int8_t> {
-    std::vector<int8_t>& operator()(QueryResult& qr) { return qr.vals_i8; }
-};
-template <> struct QueryResultValsRef<uint8_t> {
-    std::vector<uint8_t>& operator()(QueryResult& qr) { return qr.vals_u8; }
-};
-template <> struct QueryResultValsRef<int16_t> {
-    std::vector<int16_t>& operator()(QueryResult& qr) { return qr.vals_i16; }
-};
-template <> struct QueryResultValsRef<uint16_t> {
-    std::vector<uint16_t>& operator()(QueryResult& qr) { return qr.vals_u16; }
-};
+// // pull out reference to appropriate vector of values
+// template<class DataT> struct QueryResultValsRef {};
+// template <> struct QueryResultValsRef<int8_t> {
+//     std::vector<int8_t>& operator()(QueryResult& qr) { return qr.vals_i8; }
+// };
+// template <> struct QueryResultValsRef<uint8_t> {
+//     std::vector<uint8_t>& operator()(QueryResult& qr) { return qr.vals_u8; }
+// };
+// template <> struct QueryResultValsRef<int16_t> {
+//     std::vector<int16_t>& operator()(QueryResult& qr) { return qr.vals_i16; }
+// };
+// template <> struct QueryResultValsRef<uint16_t> {
+//     std::vector<uint16_t>& operator()(QueryResult& qr) { return qr.vals_u16; }
+// };
 
 template<class DataT> struct QueryDataValsRef {};
 template <> struct QueryDataValsRef<int8_t> {

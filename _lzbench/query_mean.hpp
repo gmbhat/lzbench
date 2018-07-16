@@ -91,6 +91,8 @@ private:
     bool _is_dense;
 };
 
+// XXX this func will return wrong results since buff is always u8 at call
+// sites; this needs to take in elem_sz as well
 template<class DataT>
 QueryResult sliding_mean(const QueryParams& q,
     const DataInfo& di, const DataT* buff)
@@ -98,6 +100,7 @@ QueryResult sliding_mean(const QueryParams& q,
 {
     // using StatT = typename DataTypeTraits<DataT>::AccumulatorT;
 
+    using RealDataType = DataT; // XXX need to infer this from ElemSz
 
     auto window_nrows = q.window_nrows > 0 ? q.window_nrows : di.nrows;
     // printf("actually running sliding mean! window nrows, ncols, stride "
@@ -112,16 +115,17 @@ QueryResult sliding_mean(const QueryParams& q,
     size_t sparse_ncols = q.which_cols.size();
     bool sparse = sparse_ncols > 0;
     auto ret_ncols = sparse ? sparse_ncols : di.ncols;
-    auto ret_size = nwindows * ret_ncols;
+    auto ret_size = nwindows * ret_ncols * sizeof(RealDataType);
 
     QueryResult ret;
-    auto& ret_vals = QueryResultValsRef<DataT>{}(ret);
+    auto& ret_vals = ret.vals;
+    // auto& ret_vals = QueryResultValsRef<DataT>{}(ret);
     ret_vals.resize(ret_size);
 
     if (nwindows < 1) { return ret; }
 
     if (di.storage_order == ROWMAJOR) {
-        OnlineMeanRowmajor<DataT> stat(window_nrows, di.ncols, q.which_cols);
+        OnlineMeanRowmajor<RealDataType> stat(window_nrows, di.ncols, q.which_cols);
         stat.init(buff);
         auto ret_ptr = ret_vals.data();
         stat.write_stats(ret_ptr);
@@ -145,7 +149,7 @@ QueryResult sliding_mean(const QueryParams& q,
         }
     }
     for (int j_idx = 0; j_idx < which_cols.size(); j_idx++) {
-        OnlineMeanRowmajor<DataT> stat(window_nrows, 1);
+        OnlineMeanRowmajor<RealDataType> stat(window_nrows, 1);
         auto buff_ptr = buff + di.nrows;
         auto ret_ptr = ret_vals.data() + di.nrows; // write to ret in colmajor order
         stat.init(buff_ptr);
