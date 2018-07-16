@@ -135,7 +135,8 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // printf("dinfo nrows, ncols, size: %lu, %lu, %lu\n",
             //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
 
-            QueryResult result = run_query(
+            // printf("------------------------ running query %d", (int)qparams.type);
+            QueryResult result = *run_query(
                 params->query_params, dinfo, outbuf);
             // printf("ran query type: %d\n", qparams.type);
             // printf("number of idxs in result: %lu\n", result.idxs.size());
@@ -163,22 +164,28 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             //     LZBENCH_PRINT(0, "%d ", (int)val);
             // }
 
-            // prevent compiler from optiming away query
+            // prevent compiler from optimizing away query
             if (params->verbose > 999) {
-                printf("query u8 result: ");
-                for (auto val : result.vals_u8) { printf("%d ", (int)val); }
-                printf("\n");
-                printf("query u16 result: ");
-                for (auto val : result.vals_u16) { printf("%d ", (int)val); }
+                printf("query result bytes: ");
+                for (auto val : result.vals) { printf("%u ", (uint32_t)val); }
                 printf("\n");
             }
+            // if (params->verbose > 999) {
+            //     printf("query u8 result: ");
+            //     for (auto val : result.vals_u8) { printf("%d ", (int)val); }
+            //     printf("\n");
+            //     printf("query u16 result: ");
+            //     for (auto val : result.vals_u16) { printf("%d ", (int)val); }
+            //     printf("\n");
+            // }
             // for (auto val : result.vals_u8) { LZBENCH_PRINT(99, "%d ", (int)val); }
             // for (auto val : result.vals_u16) { LZBENCH_PRINT(99, "%d ", (int)val); }
 
             // res.vals_u8 = result.vals_u8;
             // res.vals_u16 = result.vals_u16;
-            LZBENCH_PRINT(4, "number of result values: %lu (u8) %lu (u16)\n",
-                result.vals_u8.size(), result.vals_u16.size());
+            // LZBENCH_PRINT(4, "number of result values: %lu (u8) %lu (u16)\n",
+            //     result.vals_u8.size(), result.vals_u16.size());
+            LZBENCH_PRINT(4, "number of result values: %lu \n", result.vals.size());
         }
 
         LZBENCH_PRINT(9, "chunk %d: DEC part=%d dlen=%d out=%d\n",

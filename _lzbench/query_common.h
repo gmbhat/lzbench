@@ -76,6 +76,11 @@ typedef struct QueryResult {
     // std::vector<int16_t> vals_i16;
     // std::vector<uint16_t> vals_u16;
     // std::vector<int32_t> vals_i32;
+
+    QueryResult() = default;
+    QueryResult(const QueryResult& other) = default;
+    QueryResult(QueryResult&& other) = default;
+    QueryResult& operator=(const QueryResult& other) = default;
 } QueryResult;
 
 typedef struct DataInfo {

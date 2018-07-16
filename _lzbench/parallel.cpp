@@ -23,7 +23,6 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
     size_t param1, size_t param2, void* workmem)
 {
     // printf("decomp_and_query: running '%s' with insize %lu, outsize %u!\n", desc->name, comprsize, outsize);
-    // bool already_materialized = strings_equal(desc->name, "materialized");
 
     compress_func decompress = desc->decompress;
 

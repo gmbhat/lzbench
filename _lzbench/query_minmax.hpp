@@ -193,7 +193,7 @@ static inline auto div_round_up(T x, T2 y) -> decltype(x + y) {
 }
 
 
-template <typename DataT, int elem_sz=sizeof(DataT)>
+template <int elem_sz, typename DataT>
 void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
     int64_t ncols, int32_t* out)
 {
@@ -215,8 +215,14 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
 
     // SIMD sum until the last few rows; we leave enough rows at the end
     // so that this loop can read past the row end
-    int padding_nrows = div_round_up(ncols, vector_sz_elems);
-    size_t i = 0;
+    int padding_nrows = div_round_up(vector_sz_elems, ncols);
+
+    // printf("nstripes_in, nstripes_out = %d, %d\n", nstripes_in, nstripes_out);
+    // printf("nrows = %lld, ncols = %lld, padding_nrows = %d, buff* = %p, out* = %p\n", nrows, ncols, padding_nrows, buff, out);
+    // // memset(out, 77, ncols*elem_sz);
+    // // return;
+
+    int64_t i = 0;
     const DataT* read_ptr = buff;
     for ( ; i < nrows - padding_nrows; i++) {
         auto row_start_ptr = buff + i * ncols;

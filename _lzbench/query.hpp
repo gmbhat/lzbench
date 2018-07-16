@@ -165,12 +165,16 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
         switch (q.type) {
         case QUERY_MEAN:
             // printf("running rowmajor query_mean!\n");
-            reduce_sum_avx2_rowmajor_ax0(mat.data(), di.nrows, di.ncols, (int32_t*)ret_vals.data());
+            reduce_sum_avx2_rowmajor_ax0<ElemSz>(
+                mat.data(), di.nrows, di.ncols, (int32_t*)ret_vals.data());
             // for (size_t j = 0; j < di.ncols; j++) {
             //     ret_buff_i32[j] /= di.nrows;
             // }
         case QUERY_SUM:
-            reduce_sum_avx2_rowmajor_ax0(mat.data(), di.nrows, di.ncols, (int32_t*)ret_vals.data());
+            // printf("about to compute the sum...\n");
+            reduce_sum_avx2_rowmajor_ax0<ElemSz>(
+                mat.data(), di.nrows, di.ncols, (int32_t*)ret_vals.data());
+            // printf("computed the sum!\n");
         case QUERY_MIN:
             ret_vec = mat.row(0);
             for (size_t i = 1; i < di.nrows; i++) {
@@ -214,6 +218,7 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
                 (int)q.type); exit(1);
         }
     }
+    // printf("ran the query; about to return result\n");
     return ret;
 }
 
