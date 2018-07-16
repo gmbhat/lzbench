@@ -126,6 +126,9 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     algos = pyience.ensure_list_or_tuple(algos)
     inject_str = inject_str if inject_str is not None else ''
 
+    if ndims is None:
+        ndims = int(cfg.NAME_2_DSET[dset_name].ndims)
+
     # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
     cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
     cmd += inject_str
@@ -142,7 +145,6 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
             if info.levels is not None:
                 s += ',' + ','.join([str(lvl) for lvl in info.levels])
             if info.needs_ndims:
-                ndims = cfg.NAME_2_DSET[dset_name].ndims
                 s += ',{}'.format(int(ndims))
         else:
             s += ',' + ','.join([str(lvl) for lvl in custom_levels])
@@ -169,16 +171,21 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
             cmd += ' ' + cfg.cmd_line_arg_for_preproc(preproc)
 
-    if not use_u32:
+    # if (not use_u32):
+    if (not use_u32) or (nthreads > 0):  # not sure first clause is good?
         cmd += ' -e{}'.format(int(nbits / 8))
     if query_id >= 0:
         cmd += ' -q{}'.format(query_id)
+        assert ndims > 0  # running query requires specifying ndims
     if nthreads > 0:
         cmd += ' -T{}'.format(nthreads)
     if order is not None:
         cmd += ' -S{}'.format(cfg.id_for_order(order))
     if ndims is not None:
-        cmd += ' -c{}'.format(int(ndims))
+        effective_ndims = int(ndims)
+        if use_u32:
+            effective_ndims = effective_ndims * 32 / nbits
+        cmd += ' -c{}'.format(effective_ndims)
 
     cmd += ' {}'.format(dset_path)
     return cmd
@@ -204,7 +211,11 @@ def _run_cmd(cmd, verbose=0):
         print "trimmed output:\n", trimmed
 
     # print "about to turn string into df"
-    return _df_from_string(trimmed[:])
+    try:
+        return _df_from_string(trimmed[:])
+    except:  # noqa
+        print "ERROR: couldn't parse dataframe from output: '{}'".format(output)
+        sys.exit(1)
 
 
 def _clean_results(results, dset, memlimit, miniters, nbits, order,
@@ -241,6 +252,9 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
 
+    # print "using nthreads, query: ", nthreads, query_id
+    # return
+
     for dset in dsets:
         # if verbose > 0:
         #     print "================================ {}".format(dset)
@@ -256,7 +270,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
         cmd = _generate_cmd(nbits=nbits, dset_path=dset_path, algos=algos,
                             preprocs=preprocs, memlimit=memlimit,
                             miniters=miniters, use_u32=use_u32, dset_name=dset,
-                            order=order, query_id=query_id,
+                            order=order, nthreads=nthreads, query_id=query_id,
                             **cmd_kwargs)
 
         if verbose > 0 or dry_run:
@@ -553,6 +567,9 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
         if len(algos) == 0:
             continue
 
+        # print "using nthreads, query: ", use_nthreads, use_query
+        # continue
+
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
                         preprocs=use_preproc, memlimit=memlimit,
                         miniters=miniters, order=use_order,
@@ -651,13 +668,19 @@ def run_queries():
 
 def run_multicore_queries():
 
-    use_nthreads = [1, 2, 3, 4]
+    use_nthreads = np.arange(1, 16)
+    # use_nthreads = [1, 2]
     query_ids = [cfg.Queries.NONE, cfg.Queries.SUM, cfg.Queries.MAX]
+    algos = cfg.USE_WHICH_ALGOS
+    algos.remove('FastPFOR')  # makes queries segfault for unclear reasons
+    # print "algos: ", algos
+    # return
 
-    run_sweep(dsets=['msrc_split'], algos=cfg.USE_WHICH_ALGOS,
+    # run_sweep(dsets=['msrc_split'], algos=cfg.USE_WHICH_ALGOS,
+    run_sweep(dsets=['msrc_split'], algos=algos,
               miniters=0, min_comp_iters=0,
               nthreads=use_nthreads, queries=query_ids,
-              save_path=cfg.MULTICORE_RESULTS_PATH)
+              save_path=cfg.MULTICORE_RESULTS_PATH, inject_str=' -j')
 
 
 def main():

@@ -58,11 +58,9 @@ CAMERA_READY_FONT = 'DejaVu Sans'
 
 class Queries:  # needs to match cpp query enum
     NONE = 0
-    MEAN = 1
-    MIN = 2
-    MAX = 3
-    SUM = 7
-    ALL_QUERIES = [NONE, MEAN, MEAN, MIN, MAX, SUM]
+    MAX = 1
+    SUM = 2
+    ALL_QUERIES = [NONE, MAX, SUM]
 
 
 def query_name(query_id):
