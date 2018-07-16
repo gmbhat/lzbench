@@ -73,6 +73,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
             // printf("------------------------\nrunning query since can't push it down \n");
             // result = run_query(params->query_params, dinfo, outbuf);
             result = *run_query(params->query_params, dinfo, outbuf);
+            // result = *poopinize(params->query_params, dinfo, outbuf);
             // auto resPtr = run_query(params->query_params, dinfo, outbuf);
             // printf("size of ptr result_vals: %lu\n", resPtr->vals.size());
             // result = *resPtr;

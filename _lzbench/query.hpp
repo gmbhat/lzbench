@@ -123,7 +123,11 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
     // auto& ret_vals = QueryResultValsRef<RealDataType>{}(ret);
     // auto& ret_vals_i32 = ret.vals_i32;
 
-    bool use_i32_output = q.type != QUERY_MIN and q.type != QUERY_MAX;
+    // only rowmajor impl actually upconverts to prevent overhead without
+    // overflow; colmajor impls just use eigen, which doesn't, AFAICT,
+    // support summing using more bits than original dtype
+    bool use_i32_output = (q.type != QUERY_MIN) && (q.type != QUERY_MAX);
+    use_i32_output = use_i32_output && di.storage_order == ROWMAJOR;
 
     // ret_vals.resize(di.ncols);
     int output_elem_sz = use_i32_output ? sizeof(int32_t) : ElemSz;
@@ -157,7 +161,6 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
         // RowVector tmp(di.ncols);
 
         // printf("*** using rowmajor storage order\n");
-
         // printf("rowmajor size of reduce_sum: %d\n", (int)mat.colwise().sum().size());
 
         // NOTE: using same eigen cols as below is insanely slow, so we
@@ -199,14 +202,18 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
         // printf("colmajor size of reduce_sum: %d\n", (int)mat.colwise().sum().size());
         // printf("colmajor number of rows, cols: %d, %d\n", (int)mat.rows(), (int)mat.cols());
         // printf("colmajor size of ret_vec: %d\n", (int)ret_vec.size());
-        // printf("colmajor last val in sum: %d\n", (int)mat.colwise().sum()(0, 17));
+        // // printf("colmajor last val in sum: %d\n", (int)mat.colwise().sum()(0, 17));
 
         switch (q.type) {
         case QUERY_MEAN:
             ret_vec = mat.colwise().mean(); break;
         case QUERY_SUM:
-            /// XXX this will overflow for small int types
+            /// XXX sums will integer overflow for small int types
             ret_vec = mat.colwise().sum(); break;
+            // printf("about to compute the sum...\n");
+            // ret_vec = mat.colwise().sum();
+            // printf("computed the sum!\n");
+            // break;
         case QUERY_MIN:
             ret_vec = mat.colwise().minCoeff(); break;
         case QUERY_MAX:
@@ -224,6 +231,7 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
 
 template<class DataT>
 // QueryResult run_query(const QueryParams& q, const DataInfo& di, const DataT* buff) {
+// std::unique_ptr<QueryResult> poopinize(const QueryParams& q, const DataInfo& di, const DataT* buff) {
 std::unique_ptr<QueryResult> run_query(const QueryParams& q, const DataInfo& di, const DataT* buff) {
 
     // printf("actually running run_query; query_type=%d!\n", (int)q.type);

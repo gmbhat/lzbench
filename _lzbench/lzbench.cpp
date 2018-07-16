@@ -136,6 +136,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
 
             // printf("------------------------ running query %d", (int)qparams.type);
+            // QueryResult result = *poopinize(
             QueryResult result = *run_query(
                 params->query_params, dinfo, outbuf);
             // printf("ran query type: %d\n", qparams.type);
@@ -163,6 +164,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             //     // volatile uint8_t x = val;
             //     LZBENCH_PRINT(0, "%d ", (int)val);
             // }
+
 
             // prevent compiler from optimizing away query
             if (params->verbose > 999) {
