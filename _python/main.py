@@ -33,6 +33,9 @@
 #       SprintzDelta_HUF,SprintzDelta_HUF_16b,Zstd,Brotli,LZ4,Huffman,
 #       FastPFOR,SIMDBP128 --dsets=uci_gas --miniters=10 --create_fig
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import itertools
 import os
@@ -66,18 +69,18 @@ RAW_DSET_PATH_PREFIX = 'RAW_PATH:'
 
 def _clean_algorithm_name(algo_name):
     algo_name = algo_name.strip()
-    # print "cleaning algo name: '{}'".format(algo_name)
+    # print("cleaning algo name: '{}'".format(algo_name))
     tokens = algo_name.split(' ')
     algo_name = cfg.BENCH_NAME_TO_PRETTY_NAME[tokens[0]]
     if tokens[-1][0] == '-':  # if compression level given; eg, '-5'
         algo_name += ' ' + tokens[-1]
-    # print "cleaned algo name: '{}'".format(algo_name)
+    # print("cleaned algo name: '{}'".format(algo_name))
     return algo_name
 
 
 def _df_from_string(s, **kwargs):
-    # print '>>>>>>>>>>>> got df string:\n', s
-    # print '<<<<<<<<<<<<'
+    # print('>>>>>>>>>>>> got df string:\n', s)
+    # print('<<<<<<<<<<<<')
     return pd.read_csv(StringIO(s), **kwargs)
 
 
@@ -184,7 +187,7 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     if ndims is not None:
         effective_ndims = int(ndims)
         if use_u32:
-            effective_ndims = effective_ndims * 32 / nbits
+            effective_ndims = effective_ndims * 32 // nbits
         cmd += ' -c{}'.format(effective_ndims)
 
     cmd += ' {}'.format(dset_path)
@@ -192,13 +195,13 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 
 
 def _run_cmd(cmd, verbose=0):
-    # print "------------------------"
-    # print "actually about to run it..."
+    # print("------------------------")
+    # print("actually about to run it...")
     output = os.popen(cmd).read()
     # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
-    # print "here's the start of the raw output: \n"
+    # print("here's the start of the raw output: \n")
     # print output[:1000]
-    # print "about to trim output..."
+    # print("about to trim output...")
     trimmed = output[:output.find('\ndone...')]
     # trimmed = trimmed[:]
 
@@ -206,21 +209,21 @@ def _run_cmd(cmd, verbose=0):
         os.path.system('make')
 
     if verbose > 1:
-        # print "------------------------"
-        print "raw output:\n" + output
-        print "trimmed output:\n", trimmed
+        # print("------------------------")
+        print("raw output:\n" + output)
+        print("trimmed output:\n", trimmed)
 
-    # print "about to turn string into df"
+    # print("about to turn string into df")
     try:
         return _df_from_string(trimmed[:])
     except:  # noqa
-        print "ERROR: couldn't parse dataframe from output: '{}'".format(output)
+        print("ERROR: couldn't parse dataframe from output: '{}'".format(output))
         sys.exit(1)
 
 
 def _clean_results(results, dset, memlimit, miniters, nbits, order,
                    preprocs, nthreads, query_id):
-    # print "==== results df:\n", results
+    # print("==== results df:\n", results)
     # print results_dicts
     results_dicts = results.to_dict('records')
     for i, d in enumerate(results_dicts):
@@ -252,12 +255,12 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
     dsets = pyience.ensure_list_or_tuple(dsets)
     algos = pyience.ensure_list_or_tuple(algos)
 
-    # print "using nthreads, query: ", nthreads, query_id
+    # print("using nthreads, query: ", nthreads, query_id)
     # return
 
     for dset in dsets:
         # if verbose > 0:
-        #     print "================================ {}".format(dset)
+        #     print("================================ {}".format(dset))
 
         # don't tell dset_path about delta encoding; we'll use the benchmark's
         # preprocessing abilities for that, so that the time gets taken into
@@ -274,24 +277,24 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                             **cmd_kwargs)
 
         if verbose > 0 or dry_run:
-            print '------------------------'
-            print cmd
+            print('------------------------')
+            print(cmd)
 
             if dry_run:
-                print "Warning: abandoning early for debugging!"
+                print("Warning: abandoning early for debugging!")
                 continue
 
-        # print "about to run command:"
+        # print("about to run command:")
         results = _run_cmd(cmd, verbose=verbose)
-        # print "...command successful"
+        # print("...command successful")
         results = _clean_results(
             results, dset=dset, memlimit=memlimit, miniters=miniters,
             nbits=nbits, order=order, preprocs=preprocs,
             nthreads=nthreads, query_id=query_id)
 
         if verbose > 1:
-            print "==== Results"
-            print results
+            print("==== Results")
+            print(results)
 
         # dump raw results with a timestamp for archival purposes
         pyience.save_data_frame(results, cfg.RESULTS_BACKUP_DIR,
@@ -311,7 +314,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
             all_results = results
 
         all_results.to_csv(save_path, index=False)
-        # print "all results ever:\n", all_results
+        # print("all results ever:\n", all_results)
 
     if create_fig and not dry_run:
         for dset in dsets:
@@ -352,7 +355,7 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     if df is None:
         df = pd.read_csv(cfg.ALL_RESULTS_PATH)
-    # print "read back df"
+    # print("read back df")
     # print df
 
     df = df[df['Dataset'] == dset]
@@ -361,14 +364,14 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
         df = df[df['Order'] == order]
     # df = df[df['Algorithm'] != 'Memcpy']
 
-    # print "using algos before exlude deltas: ", sorted(list(df['Algorithm']))
+    # print("using algos before exlude deltas: ", sorted(list(df['Algorithm'])))
     # return
 
     if exclude_preprocs:
         # df = df[~df['Deltas']]
         df = df[df['Preprocs'].isin([cfg.Preproc.NONE])]
 
-    # print "using algos before memlimit: ", sorted(list(df['Algorithm']))
+    # print("using algos before memlimit: ", sorted(list(df['Algorithm'])))
 
     if memlimit is not None:  # can use -1 for runs without a mem limit
         df = df[df['Memlimit'] == memlimit]
@@ -376,7 +379,7 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
     if avg_across_files:
         df = df.groupby(
             cfg.INDEPENDENT_VARS, as_index=False)[cfg.DEPENDENT_VARS].mean()
-        # print "means: "
+        # print("means: ")
         # print df
         # return
 
@@ -395,17 +398,17 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     if exclude_algos is not None:
         exclude_set = set(pyience.ensure_list_or_tuple(exclude_algos))
-        # print "exclude algos set:", exclude_set
+        # print("exclude algos set:", exclude_set)
         mask = [algo.split()[0] not in exclude_set for algo in df['Algorithm']]
         df = df[mask]
 
     algos = list(df['Algorithm'])
     used_preprocs = list(df['Preprocs'])
 
-    print "fig_for_dset: using algos: ", sorted(list(df['Algorithm']))
+    print("fig_for_dset: using algos: ", sorted(list(df['Algorithm'])))
     # return
 
-    # print "pruned df to:"
+    # print("pruned df to:")
     # print df; return
 
     # # munge algorithm names
@@ -436,9 +439,9 @@ def fig_for_dset(dset, algos=None, save=True, df=None, nbits=None,
 
     # ratios = 100. / ratios
     # df['Ratio'] = 100. / df['Ratio']
-    # print "algos: ", algos
-    # print "compress_speeds: ", compress_speeds
-    # print "ratios: ", ratios
+    # print("algos: ", algos)
+    # print("compress_speeds: ", compress_speeds)
+    # print("ratios: ", ratios)
 
     # option 1: annotate each point with the algorithm name
     def scatter_plot(ax, x, y, colors=None):
@@ -541,33 +544,33 @@ def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
         all_nthreads, all_queries)
     for (use_nbits, use_u32, use_preproc, use_order, use_nthreads, use_query) in all_combos:  # noqa
 
-        # print "considering preproc: '{}'".format(use_preproc)
+        # print("considering preproc: '{}'".format(use_preproc))
 
         # filter algorithms with incompatible requirements
         algos = []
         for algo in all_algos:
             info = cfg.ALGO_INFO[algo]
 
-            # print "algo {} allows preprocs: {}".format(info.lzbench_name, info.allowed_preprocs)
+            # print("algo {} allows preprocs: {}".format(info.lzbench_name, info.allowed_preprocs))
 
             if use_nbits not in info.allowed_nbits:
                 continue
             if use_u32 != info.needs_32b:
                 continue
-            # print "{} passed all non-preproc checks".format(info.lzbench_name)
+            # print("{} passed all non-preproc checks".format(info.lzbench_name))
             if use_preproc not in info.allowed_preprocs:
                 continue
-            # print "{} passed preproc check".format(info.lzbench_name)
+            # print("{} passed preproc check".format(info.lzbench_name))
             if use_order not in info.allowed_orders:
                 continue
             algos.append(algo)
 
-        # print "eligible algos: ", algos
+        # print("eligible algos: ", algos)
 
         if len(algos) == 0:
             continue
 
-        # print "using nthreads, query: ", use_nthreads, use_query
+        # print("using nthreads, query: ", use_nthreads, use_query)
         # continue
 
         _run_experiment(algos=algos, dsets=all_dsets, nbits=use_nbits,
@@ -673,7 +676,7 @@ def run_multicore_queries():
     query_ids = [cfg.Queries.NONE, cfg.Queries.SUM, cfg.Queries.MAX]
     algos = cfg.USE_WHICH_ALGOS
     algos.remove('FastPFOR')  # makes queries segfault for unclear reasons
-    # print "algos: ", algos
+    # print("algos: ", algos)
     # return
 
     # run_sweep(dsets=['msrc_split'], algos=cfg.USE_WHICH_ALGOS,
@@ -700,27 +703,27 @@ def main():
 
     if kwargs.get('speed_vs_ndims', False):
         run_speed_vs_ndims()
-        print "ran speed vs ndims..."
+        print("ran speed vs ndims...")
         return
 
     if kwargs.get('preproc_speeds', False):
         run_speed_vs_ndims_preprocs()
-        print "ran preproc speed vs ndims..."
+        print("ran preproc speed vs ndims...")
         return
 
     if kwargs.get('preproc_ucr', False):
         run_preprocs_ucr()
-        print "ran preproc + ucr"
+        print("ran preproc + ucr")
         return
 
     if kwargs.get('multidim', False):
         run_multidim()
-        print "ran multidim"
+        print("ran multidim")
         return
 
     if kwargs.get('multicore', False):
         run_multicore_queries()
-        print "ran multicore queries"
+        print("ran multicore queries")
         return
 
     if kwargs is not None and kwargs.get('sweep', False):
