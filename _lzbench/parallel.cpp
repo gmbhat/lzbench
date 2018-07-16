@@ -209,12 +209,15 @@ void parallel_decomp(lzbench_params_t *params,
             //
             // hack to pass query info to algorithms that can push down queries
             QueryResult res;
-            // QueryRefs qrefs { .qparams = &params->query_params,
+            // void* qrefsPtr = (void*)new QueryRefs{
+            //     .qparams = &params->query_params,
             //     .dinfo = &params->data_info, .qres = &res};
-            // QueryRefs* qrefsPtr = new QueryRefs{
-            void* qrefsPtr = (void*)new QueryRefs{
-                .qparams = &params->query_params,
-                .dinfo = &params->data_info, .qres = &res};
+            QueryRefs* qrefs = new QueryRefs();
+            qrefs->qparams = &params->query_params;
+            qrefs->dinfo = &params->data_info;
+            qrefs->qres = &res;
+
+            void* qrefsPtr = (void*)qrefs;
 
             // void* qrefsPtr = malloc(sizeof(QueryRefs));
             // memcpy(qrefsPtr, &qrefs, sizeof(qrefs));
