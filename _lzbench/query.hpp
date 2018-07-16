@@ -70,7 +70,7 @@ namespace lzbench {
 
 static inline bool can_push_down_query(std::string algo_name) {
     auto is_sprintz_algo = algo_name.find("sprintz") == 0; //  "sprintz"
-    auto uses_huf = algo_name.find("HUF") >= 0;
+    auto uses_huf = algo_name.find("HUF") != std::string::npos;
     return is_sprintz_algo && !uses_huf;
 }
 
