@@ -1,4 +1,5 @@
 
+#include <algorithm> // std::sort
 
 #include "lzbench.h"
 #include "output.h"

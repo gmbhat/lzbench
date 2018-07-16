@@ -19,7 +19,7 @@
 // #endif
 
 // TODO move impls to headers so we can actually force inline
-#define SPRINTZ_FORCE_INLINE inline
+#define SPRINTZ_FORCE_INLINE
 
 // ------------------------ restrict keyword
 // adapted from http://stackoverflow.com/a/5948101/1153180
