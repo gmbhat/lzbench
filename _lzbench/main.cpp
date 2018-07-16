@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
             break;
         case 'q':
             qparams.type = (query_type_e)number;
-            printf("set query type to %d\n", (int)qparams.type);
+            // printf("set query type to %d\n", (int)qparams.type);
             break;
         case 'Q':
             qparams.window_data_dbl.push_back(number);

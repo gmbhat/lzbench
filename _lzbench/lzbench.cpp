@@ -225,9 +225,9 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         }
         workmem = workmems[0];
 
-        printf("workmem ptrs: ");
-        for (int i = 0; i < nthreads; i++) { printf("%p, ", workmems[i]); }
-        printf("\n");
+        // printf("workmem ptrs: ");
+        // for (int i = 0; i < nthreads; i++) { printf("%p, ", workmems[i]); }
+        // printf("\n");
     }
 
     if (desc->max_block_size != 0 && chunk_size > desc->max_block_size) chunk_size = desc->max_block_size;

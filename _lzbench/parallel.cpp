@@ -231,10 +231,10 @@ void parallel_decomp(lzbench_params_t *params,
             // printf("&qrefs = %p; workmem is null? %d\n", qrefsPtr, (int)(workmem_ptr == nullptr));
             if (push_down_query && workmem_ptr == nullptr) {
                 workmem_ptr = qrefsPtr;
-                printf("assigning workmem_ptr to %p (%p as void*)\n", qrefsPtr, (void*)qrefsPtr);
+                // printf("assigning workmem_ptr to %p (%p as void*)\n", qrefsPtr, (void*)qrefsPtr);
             }
 
-            printf("about to run stuff; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);
+            // printf("about to run stuff; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);
 
             int64_t comp_sz = 0;
             int64_t decomp_sz = 0;
@@ -407,7 +407,7 @@ void parallel_decomp(lzbench_params_t *params,
     print_stats(params, desc, param1, comp_times, decomp_times, total_decomp_bytes,
         total_comp_bytes, decomp_error);
 
-    printf("------------------------\n");
+    // printf("------------------------\n");
 }
 
 

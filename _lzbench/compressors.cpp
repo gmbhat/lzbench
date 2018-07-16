@@ -1747,13 +1747,13 @@ char* lzbench_zstd_init(size_t insize, size_t level, size_t windowLog)
     zstd_params->cdict = ZSTD_createCDict_advanced(NULL, 0, zstd_params->zparams, zstd_params->cmem);
 #endif
 
-    printf("zstd returning workmem ptr: %p\n", (char*) zstd_params);
+    // printf("zstd returning workmem ptr: %p\n", (char*) zstd_params);
     return (char*) zstd_params;
 }
 
 void lzbench_zstd_deinit(void* workmem)
 {
-    printf("calling zstd deinit on workmem %p...\n", workmem);
+    // printf("calling zstd deinit on workmem %p...\n", workmem);
     zstd_params_s* zstd_params = (zstd_params_s*) workmem;
     if (!zstd_params) return;
     if (zstd_params->cctx) ZSTD_freeCCtx(zstd_params->cctx);
