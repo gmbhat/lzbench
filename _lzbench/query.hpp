@@ -69,7 +69,9 @@ namespace lzbench {
 
 
 static inline bool can_push_down_query(std::string algo_name) {
-    return algo_name.find("sprintz") == 0; // yes iff starts with "sprintz"
+    auto is_sprintz_algo = algo_name.find("sprintz") == 0; //  "sprintz"
+    auto uses_huf = algo_name.find("HUF") >= 0;
+    return is_sprintz_algo && !uses_huf;
 }
 
 template<class DataT>

@@ -2542,6 +2542,19 @@ int64_t lzbench_sprintz_row_xff_rle_lowdim_decompress(char *inbuf, size_t insize
 
 // ================================ top-level sprintz functions
 
+QueryParams create_sprintz_query_params(void* queryPtr) {
+    lzbench::QueryRefs qrefs = *(lzbench::QueryRefs*)queryPtr;
+    QueryTypes::Operation op;
+    switch (qrefs.qparams->type) {
+    case (lzbench::QUERY_NONE): op = QueryTypes::NOOP; break;
+    case (lzbench::QUERY_MAX): op = QueryTypes::REDUCE_MAX; break;
+    case (lzbench::QUERY_SUM): op = QueryTypes::REDUCE_SUM; break;
+    default: op = QueryTypes::NOOP; break;
+    }
+    QueryParams sprintz_qparams{ .op = op, .materialize = false };
+    return sprintz_qparams;
+}
+
 // ------------------------ 8b
 
 // delta
@@ -2551,8 +2564,13 @@ int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
     return sprintz_compress_delta_8b((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
 }
 int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
-    size_t outsize, size_t ndims, size_t, void*)
+    size_t outsize, size_t ndims, size_t, void* queryPtr)
 {
+    if (queryPtr) {
+        auto sprintz_qparams = create_sprintz_query_params(queryPtr);
+        query_rowmajor_delta_rle_8b((int8_t*)inbuf, (uint8_t*)outbuf, sprintz_qparams);
+        return -1;
+    }
     return sprintz_decompress_delta_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
@@ -2563,8 +2581,13 @@ int64_t lzbench_sprintz_xff_compress(char *inbuf, size_t insize, char *outbuf,
     return sprintz_compress_xff_8b((uint8_t*)inbuf, insize, (int8_t*)outbuf, ndims);
 }
 int64_t lzbench_sprintz_xff_decompress(char *inbuf, size_t insize, char *outbuf,
-    size_t outsize, size_t ndims, size_t, void*)
+    size_t outsize, size_t ndims, size_t, void* queryPtr)
 {
+    if (queryPtr) {
+        auto sprintz_qparams = create_sprintz_query_params(queryPtr);
+        query_rowmajor_xff_rle_8b((int8_t*)inbuf, (uint8_t*)outbuf, sprintz_qparams);
+        return -1;
+    }
     return sprintz_decompress_xff_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 
@@ -2612,6 +2635,19 @@ int64_t lzbench_sprintz_xff_huf_decompress(char *inbuf, size_t insize, char *out
 
 // ------------------------ 16b
 
+// #define CREATE_SPRINTZ_QUERY_PARAMS(queryPtr)                           \
+//     lzbench::QueryRefs qrefs = *(lzbench::QueryRefs*)queryPtr;          \
+//     QueryTypes::Operation op;                                           \
+//     switch (qrefs.qparams->type) {                                      \
+//     case (lzbench::QUERY_NONE): op = QueryTypes::NOOP; break;           \
+//     case (lzbench::QUERY_MAX): op = QueryTypes::REDUCE_MAX; break;
+//     case (lzbench::QUERY_SUM): op = QueryTypes::REDUCE_SUM; break;
+//     default: op = QueryTypes::NOOP; break;
+//     }
+//     QueryParams sprintz_qparams{ .op = op, .materialize = false };
+
+
+
 // delta
 int64_t lzbench_sprintz_delta_compress_16b(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, void*)
@@ -2623,18 +2659,19 @@ int64_t lzbench_sprintz_delta_decompress_16b(char *inbuf, size_t insize, char *o
 {
     // if (false) {
     if (queryPtr) {
-        // printf("about to deref workmem; addr = %p\n", queryPtr);
-        lzbench::QueryRefs qrefs = *(lzbench::QueryRefs*)queryPtr;
-        // printf("qrefs op: %d\n", (int)qrefs.qparams.type);
-        QueryTypes::Operation op;
-        switch (qrefs.qparams->type) {
-        case (lzbench::QUERY_NONE): op = QueryTypes::NOOP; break;
-        case (lzbench::QUERY_MAX): op = QueryTypes::REDUCE_MAX; break;
-        case (lzbench::QUERY_SUM): op = QueryTypes::REDUCE_SUM; break;
-        default: op = QueryTypes::NOOP; break;
-        }
-        QueryParams sprintz_qparams{ .op = op, .materialize = false };
+        // // printf("about to deref workmem; addr = %p\n", queryPtr);
+        // lzbench::QueryRefs qrefs = *(lzbench::QueryRefs*)queryPtr;
+        // // printf("qrefs op: %d\n", (int)qrefs.qparams.type);
+        // QueryTypes::Operation op;
+        // switch (qrefs.qparams->type) {
+        // case (lzbench::QUERY_NONE): op = QueryTypes::NOOP; break;
+        // case (lzbench::QUERY_MAX): op = QueryTypes::REDUCE_MAX; break;
+        // case (lzbench::QUERY_SUM): op = QueryTypes::REDUCE_SUM; break;
+        // default: op = QueryTypes::NOOP; break;
+        // }
+        // QueryParams sprintz_qparams{ .op = op, .materialize = false };
         // printf("running query #%d!\n", (int)op);
+        auto sprintz_qparams = create_sprintz_query_params(queryPtr);
         query_rowmajor_delta_rle_16b((int16_t*)inbuf, (uint16_t*)outbuf, sprintz_qparams);
         return -1;
     }
@@ -2648,8 +2685,13 @@ int64_t lzbench_sprintz_xff_compress_16b(char *inbuf, size_t insize, char *outbu
     return sprintz_compress_xff_16b((uint16_t*)inbuf, insize/2, (int16_t*)outbuf, ndims) * 2;
 }
 int64_t lzbench_sprintz_xff_decompress_16b(char *inbuf, size_t insize, char *outbuf,
-    size_t outsize, size_t ndims, size_t, void*)
+    size_t outsize, size_t ndims, size_t, void* queryPtr)
 {
+    if (queryPtr) {
+        auto sprintz_qparams = create_sprintz_query_params(queryPtr);
+        query_rowmajor_xff_rle_16b((int16_t*)inbuf, (uint16_t*)outbuf, sprintz_qparams);
+        return -1;
+    }
     return sprintz_decompress_xff_16b((int16_t*)inbuf, (uint16_t*)outbuf) * 2;
 }
 
