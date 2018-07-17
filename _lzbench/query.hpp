@@ -132,10 +132,14 @@ static inline std::unique_ptr<QueryResult> reduce_contiguous(const QueryParams& 
     // ret_vals.resize(di.ncols);
     int output_elem_sz = use_i32_output ? sizeof(int32_t) : ElemSz;
     // ret_vals.reserve(output_elem_sz * di.ncols);
-    ret_vals.resize(output_elem_sz * di.ncols);
-    // if (use_i32_output) { ret_vals_i32.reserve(di.ncols); }
-    // ret.idxs.push_back(1);
-    // ret.vals_u8.push_back(1);
+    auto outbuff_size = output_elem_sz * di.ncols;
+    // if (di.storage_order == ROWMAJOR) {
+    //     // only pad if rowmajor since this makes colmajor (eigen) segfault
+    //     auto nstripes_in = div_round_up(di.ncols * ElemSz, 32); // XXX don't hardcode avx2
+    //     outbuff_size = nstripes_in * output_elem_sz / ElemSz;
+    // }
+    ret_vals.resize(outbuff_size);
+    // ret_vals.resize(output_elem_sz * di.ncols);
 
     // return ret;
 

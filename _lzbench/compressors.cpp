@@ -2566,11 +2566,20 @@ int64_t lzbench_sprintz_delta_compress(char *inbuf, size_t insize, char *outbuf,
 int64_t lzbench_sprintz_delta_decompress(char *inbuf, size_t insize, char *outbuf,
     size_t outsize, size_t ndims, size_t, void* queryPtr)
 {
+    // printf("called sprintzDelta8b; queryPtr = %p\n", queryPtr);
     if (queryPtr) {
+        // printf("created qparams = %p\n", queryPtr);
         auto sprintz_qparams = create_sprintz_query_params(queryPtr);
+        // auto op = sprintz_qparams.op;
+        // printf("created qparams; op = %d, materialize = %d\n",
+        //     (int)sprintz_qparams.op, (int)sprintz_qparams.materialize);
+        // printf("using inbuf, outpuf = %p, %p\n", inbuf, outbuf);
+        // printf("about to query; using insize, outsize = %lu, %lu\n", insize, outsize);
         query_rowmajor_delta_rle_8b((int8_t*)inbuf, (uint8_t*)outbuf, sprintz_qparams);
+        // printf("ran query, didn't crash!\n");
         return -1;
     }
+    // printf("sprintzDelta8b: about to decomp from buff %p to buff %p\n", inbuf, outbuf);
     return sprintz_decompress_delta_8b((int8_t*)inbuf, (uint8_t*)outbuf);
 }
 

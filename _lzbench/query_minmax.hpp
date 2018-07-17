@@ -219,8 +219,8 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
 
     // printf("nstripes_in, nstripes_out = %d, %d\n", nstripes_in, nstripes_out);
     // printf("nrows = %lld, ncols = %lld, padding_nrows = %d, buff* = %p, out* = %p\n", nrows, ncols, padding_nrows, buff, out);
-    // // memset(out, 77, ncols*elem_sz);
-    // // return;
+    // // // memset(out, 77, ncols*elem_sz);
+    // // // return;
 
     int64_t i = 0;
     const DataT* read_ptr = buff;
@@ -228,10 +228,13 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
         auto row_start_ptr = buff + i * ncols;
         for (size_t v = 0; v < nstripes_in; v++) {
             auto load_addr = row_start_ptr + v * vector_sz_elems;
-            __m256i x = _mm256_load_si256((const __m256i*)load_addr);
+            // if (i < 3) { printf("about to load from offset %d\n", (int)(i * ncols + v * vector_sz_elems)); }
+            __m256i x = _mm256_loadu_si256((const __m256i*)load_addr);
+            // if (i < 3) { printf("did load; about to extract stuff to si128s\n"); }
             auto x_low = _mm256_extracti128_si256(x, 0);
             auto x_high = _mm256_extracti128_si256(x, 1);
             auto out_idx = v * out_stripes_per_in_stripe;
+            // if (i < 3) { printf("did load; about to unpack to i32s\n"); }
             if (elem_sz == 1) {
                 __m256i x0, x1, x2, x3;
                 if (std::is_signed<DataT>::value) {     // int8
@@ -245,6 +248,10 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
                     x2 = _mm256_cvtepu8_epi32(x_high);
                     x3 = _mm256_cvtepu8_epi32(_mm_slli_si128(x_high, 8));
                 }
+
+
+                // if (i < 3) { printf("about to write stuff to sums %d; i, v = %d, %d\n", (int)out_idx, (int)i, (int)v); }
+
 
                 sums[out_idx + 0] = _mm256_add_epi32(sums[out_idx + 0], x0);
                 sums[out_idx + 1] = _mm256_add_epi32(sums[out_idx + 1], x1);
@@ -265,8 +272,12 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
                 static_assert(elem_sz == 1 || elem_sz == 2,
                     "only element sizes of 1 and 2 bytes are supported!");
             }
+            // if (i < 3) { printf("-- stripe loop: got thru stripe %d\n", (int)v); }
         }
+        // if (i < 3) { printf("==== sum loop: got thru row %d\n", (int)i); }
     }
+
+    // printf("reduce_sum avx2: got thru main loop! about to dump avx2 vecs\n");
 
     // dump simd vecs to normal arrays so we can write to them serially
     DataT sums_ar[nstripes_out * vector_sz_elems];
@@ -275,6 +286,8 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
         _mm256_store_si256((__m256i*)write_addr, sums[v]);
     }
 
+    // printf("reduce_sum avx2: about to add sums from tail rows!\n");
+
     // add in sums from tail rows we didn't operate on via SIMD stuff
     const DataT* tail_start_ptr = buff + ncols * i;
     for (; i < nrows; i++) {
@@ -282,11 +295,15 @@ void reduce_sum_avx2_rowmajor_ax0(const DataT* buff, int64_t nrows,
             sums_ar[j] += buff[i * ncols] + j;
         }
     }
+
+    // printf("reduce_sum avx2: about to copy sums to output!\n");
+
     // copy sums to output; didn't just write to output directly since
     // dumping the SIMD vects would write past the end
     for (size_t j = 0; j < ncols; j++) {
         out[j] = sums_ar[j];
     }
+    // printf("reduce_sum avx2: copied sums to output! Returning!\n");
 }
 
 

@@ -37,6 +37,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
             // printf("can push down query: %d; workmem = %p\n", (int)push_down_query, workmem);
             dlen = decompress((char*)comprbuff, comprsize, (char*)outbuf,
                               outsize, param1, param2, workmem);
+            // printf("finished decomp; dlen = %d\n", (int)dlen);
         }
         undo_preprocessors(params->preprocessors, outbuf, dlen,
             params->data_info.element_sz);
@@ -104,7 +105,6 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
             printf("\n");
         }
     }
-
     return dlen;
 }
 
@@ -164,13 +164,6 @@ void parallel_decomp(lzbench_params_t *params,
     bool already_materialized = strings_equal(desc->name, "materialized");
     bool push_down_query = can_push_down_query(desc->name);
 
-
-
-    // bool push_down_query = false; // TODO uncomment above
-
-
-
-
     // printf("number of chunks: %lu; raw size: %lld\n", compressed_chunk_starts.size(), total_raw_sz);
 
     // // hack to pass query info to algorithms that can push down queries
@@ -211,6 +204,7 @@ void parallel_decomp(lzbench_params_t *params,
             //
 
             void* workmem_ptr = workmems[i];
+            // printf("workmem_ptr: %p\n", workmem_ptr);
 
             //
             // TODO uncomment all this
@@ -240,6 +234,7 @@ void parallel_decomp(lzbench_params_t *params,
             if (push_down_query && workmem_ptr == nullptr) {
                 workmem_ptr = qrefsPtr;
                 // printf("assigning workmem_ptr to %p (%p as void*)\n", qrefsPtr, (void*)qrefsPtr);
+                // printf("workmem_ptr")
             }
 
             // printf("about to run stuff; pushdown query = %d, workmem = %p\n", (int)push_down_query, workmem_ptr);
@@ -264,6 +259,8 @@ void parallel_decomp(lzbench_params_t *params,
 
             bench_timer_t t_start;
             GetTime(t_start);
+
+            // printf("workmem_ptr now: %p\n", workmem_ptr);
 
             do {
                 // run multiple iters betwen rtsc calls to avoid sync overhead

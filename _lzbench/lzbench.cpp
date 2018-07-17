@@ -59,7 +59,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
         // if (clen <= 0 || clen == part)
         if (clen <= 0) {
-            LZBENCH_PRINT(3, "WARNING: got compressed data length of %lld!\n", (int64_t)clen);
+            LZBENCH_PRINT(3, "WARNING: got compressed data length of %lld!\n", (long long)clen);
             if (part > outsize) return 0;
             memcpy(outbuf, inbuf, part);
             clen = part;
@@ -130,12 +130,11 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
                 printf("ERROR: Must specify number of columns in data to run query!\n");
                 exit(1);
             }
-
             dinfo.nrows = dlen / (dinfo.ncols * dinfo.element_sz);
             // printf("dinfo nrows, ncols, size: %lu, %lu, %lu\n",
             //     dinfo.nrows, dinfo.ncols, dinfo.nrows * dinfo.ncols);
 
-            // printf("------------------------ running query %d", (int)qparams.type);
+            // printf("------------------------ running query %d\n", (int)qparams.type);
             // QueryResult result = *poopinize(
             QueryResult result = *run_query(
                 params->query_params, dinfo, outbuf);
@@ -216,7 +215,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     std::vector<uint64_t> ctime, dtime;
     std::vector<size_t> compr_sizes, chunk_sizes;
     bool decomp_error = false;
-    char* workmem = NULL;
+    char* workmem = nullptr;
     size_t param2 = desc->additional_param;
     size_t chunk_size = (params->chunk_size > insize) ? insize : params->chunk_size;
 
@@ -238,6 +237,13 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         // for (int i = 0; i < nthreads; i++) { printf("%p, ", workmems[i]); }
         // printf("\n");
     }
+    // } else {
+    //     printf("not initializing workmems cuz no desc->init\n");
+    // }
+
+    // printf("workmem ptrs: ");
+    // for (int i = 0; i < nthreads; i++) { printf("%p, ", workmems[i]); }
+    // printf("\n");
 
     if (desc->max_block_size != 0 && chunk_size > desc->max_block_size) chunk_size = desc->max_block_size;
     if (!desc->compress || !desc->decompress) goto done;
