@@ -321,7 +321,8 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
             fig_for_dset(dset, save=True, df=all_results, nbits=nbits)
             # fig_for_dset(dset, algos=algos, save=True, df=all_results)
 
-    return all_results
+    if not dry_run:
+        return all_results
 
 
 # ================================================================ plotting
@@ -671,7 +672,7 @@ def run_queries():
 
 def run_multicore_queries():
 
-    use_nthreads = np.arange(1, 16)
+    use_nthreads = np.arange(1, 17)
     # use_nthreads = [1, 2]
     query_ids = [cfg.Queries.NONE, cfg.Queries.SUM, cfg.Queries.MAX]
     algos = cfg.USE_WHICH_ALGOS
@@ -684,6 +685,7 @@ def run_multicore_queries():
               miniters=0, min_comp_iters=0,
               nthreads=use_nthreads, queries=query_ids,
               save_path=cfg.MULTICORE_RESULTS_PATH, inject_str=' -j')
+    # dry_run=True) # TODO rm
 
 
 def main():
