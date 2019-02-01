@@ -928,7 +928,8 @@ def _compute_ucr_snrs():
 
             diffs = X - X_hat
 
-            snr = np.var(X.ravel()) / np.var(diffs.ravel())
+            # snr = np.var(X.ravel()) / np.var(diffs.ravel())
+            snr = np.var(X.ravel()) / np.mean(diffs.ravel() * diffs.ravel())
             snrs[(dset.name, nbits)] = snr
 
     return snrs
@@ -974,8 +975,9 @@ def quantize_err_results(save=True):
     vals8 = df['Ratio'][df['Nbits'] == 8]
     vals16 = df['Ratio'][df['Nbits'] == 16]
 
-    sb.distplot(vals8, ax=axes[0], norm_hist=False, kde=False, rug=True)
-    sb.distplot(vals16, ax=axes[1], norm_hist=False, kde=False, rug=True)
+    # sb.distplot(vals8, ax=axes[0], norm_hist=False, kde=False, rug=True, bins=13)
+    sb.distplot(vals8, ax=axes[0], norm_hist=False, kde=False, rug=True, bins=25)
+    sb.distplot(vals16, ax=axes[1], norm_hist=False, kde=False, rug=True, bins=25)
 
     # axes[0].semilogx()
     # axes[1].semilogx()
@@ -1000,6 +1002,7 @@ def quantize_err_results(save=True):
         # ax.set_xticklabels([10**float(lbl.get_text()) for lbl in ax.get_xticklabels()])
     # axes[0].set_ylabel('Relative Frequency')
     axes[0].set_ylabel('Number of Datasets')
+    # axes[0].set_xlim(axes[1].get_xlim())
 
     output = ["{}: {}".format(k, v) for k, v in snrs.items()]
     print("\n".join(output[:10]))
@@ -1051,6 +1054,91 @@ def theoretical_thruput(save=True):
 #     pass
 
 
+@_memory.cache
+def _cached_read_csv(path):
+    return pd.read_csv(path)
+
+
+def ncores_vs_thruput(save=False):
+    df = _cached_read_csv("results/multicore/multicore_queries.csv")
+    sb.set_context("talk")
+
+    # print(df)
+    # return
+
+    fig, axes = plt.subplots(2, 2, figsize=(7, 8), sharey=True)
+
+    # df = df[df['Algorithm'] != 'Memcpy']
+
+    ycols = ['Compression speed', 'Decompression speed']
+
+    rm_algos = ('Memcpy', 'SprintzDelta_Huf', 'SprintzDelta_Huf_16b')
+    rm_mask = df['Algorithm'].apply(lambda s: s.split()[0]).isin(rm_algos)
+    df = df[~rm_mask]
+
+    # df['Ndims'] = df['Algorithm'].apply(lambda algo: -int(algo.split()[1]))
+    df['Algorithm'] = df['Algorithm'].apply(_clean_algo_name)
+
+    full_df = df
+    uniq_algos = sorted(df['Algorithm'].unique())
+    all_nbits = (8, 16)
+
+    df = df['Query'] == 0
+
+    # TODO plot max on left, sum on right, instead of comp and decomp
+    for i, nbits in enumerate(all_nbits):
+        df = full_df[full_df['Nbits'] == nbits]
+        for j, col in enumerate(['Compression speed', 'Decompression speed']):
+            ax = axes[i, j]
+            for algo in uniq_algos:
+                subdf = df[df['Algorithm'] == algo]
+                x = subdf['Nthreads']
+                y = subdf[col]
+                ax.plot(x, y, label=algo, lw=1)
+
+    # for ax, nbits in zip(axes[0, :], all_nbits):
+    #     ax.set_title("{}-bit Values".format(nbits), fontsize=16)
+    for ax in axes[:, 0]:
+        # ax.set_ylabel("Decompression Speed\n(MB/s)", fontsize=14)
+        ax.set_ylabel('Throughput (MB/s)', fontsize=14)
+    for ax in axes[-1, :]:
+        ax.set_xlabel("Number of Threads", fontsize=14)
+    for ax in axes.ravel():
+        ax.set_ylim([0, ax.get_ylim()[1]])
+
+    # add byte counts on the right
+    # fmt_str = "{}B Encodings"
+    sb.set_style("white")  # adds border (spines) we have to remove
+    # if len(use_ratios) > 1:
+    #     for i, ax in enumerate(axes[:, -1]):
+    #         ax2 = ax.twinx()
+    #         sb.despine(ax=ax2, top=True, left=True, bottom=True, right=True)
+    #         ax2.get_xaxis().set_visible(False)
+    #         # ax2.get_yaxis().set_visible(False)  # nope, removes ylabel
+    #         plt.setp(ax2.get_xticklabels(), visible=False)
+    #         plt.setp(ax2.get_yticklabels(), visible=False)
+    #         ax2.yaxis.set_label_position('right')
+    #         # if len(use_ratios) == 2:
+    #         #     lbl = "Incompressible Data" if i == 0 else "Highly Compressible Data"
+    #         # else:
+    #         #     lbl = "Compression Ratio = %d".format(int(use_ratios[i]))
+    #         ax2.set_ylabel(lbl, labelpad=10, fontsize=14, family=CAMERA_READY_FONT)
+
+    leg_lines, leg_labels = axes.ravel()[-1].get_legend_handles_labels()
+    plt.figlegend(leg_lines, leg_labels, loc='lower center',
+                  ncol=2, labelspacing=0)
+
+    # plt.suptitle("Decompression Speed vs Number of Columns", fontweight='bold')
+    plt.suptitle("Query Throughput vs Nthreads", fontweight='bold')
+    plt.tight_layout()
+    plt.subplots_adjust(top=.9, bottom=.26)
+
+    if save:
+        save_fig_png('multicore_queries')
+    else:
+        plt.show()
+
+
 def main():
     # camera-ready can't have Type 3 fonts, which are what matplotlib
     # uses by default; 42 is apparently TrueType fonts
@@ -1069,8 +1157,9 @@ def main():
     # decomp_vs_ndims_results()
     # comp_vs_ndims_results()
     # preproc_vs_ndims_results()
-    # quantize_err_results()
-    theoretical_thruput(save=False)
+    quantize_err_results()
+    # theoretical_thruput(save=False)
+    # ncores_vs_thruput()
 
 
 if __name__ == '__main__':

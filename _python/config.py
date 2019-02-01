@@ -339,5 +339,6 @@ ALL_DSET_NAMES = PRETTY_DSET_NAMES.keys()
 # now, this is a hack to not have two different memcpy results
 # INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Order Deltas'.split()
 # INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Deltas'.split()
-INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Preprocs Nthreads'.split()
+# INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Preprocs'.split()
+INDEPENDENT_VARS = 'Algorithm Dataset Memlimit Nbits Preprocs Nthreads Query'.split()
 DEPENDENT_VARS = ['Ratio', 'Compression speed', 'Decompression speed']
