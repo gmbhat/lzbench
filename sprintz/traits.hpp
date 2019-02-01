@@ -98,8 +98,8 @@ template<int Nbytes, typename ScalarT, typename ContextT> struct Packet {
     // default constructors, it ends up trapping
     Packet(const Packet& v) { vec = v.vec; }
     Packet() { vec = _mm256_setzero_si256(); }
-    Packet operator=(const Packet& other) { vec = other.vec; }
-    Packet operator=(vector_t v) { vec = v; }
+    void operator=(const Packet& other) { vec = other.vec; }
+    void operator=(vector_t v) { vec = v; }
 
     vector_t vec;
 

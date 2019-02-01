@@ -22,10 +22,10 @@
     #define CONSTEXPR
 #endif
 
+#include <algorithm>  // for std::swap
 #include <string.h>
 
 #include "immintrin.h"  // TODO memrep impl without avx2
-
 
 #define DIV_ROUND_UP(X, Y) ( ((X) / (Y)) + (((X) % (Y)) > 0) )
 
@@ -136,8 +136,8 @@ public:
         // printf("freed aligned array!");
     }
 
-    DataT& operator[](std::size_t idx) { return _data[idx]; }
-    const DataT& operator[](std::size_t idx) const { return _data[idx]; }
+    DataT& operator[](size_t idx) { return _data[idx]; }
+    const DataT& operator[](size_t idx) const { return _data[idx]; }
 
     size_t size() const { return _size; }
     DataT* data() { return _data; }
