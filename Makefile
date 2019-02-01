@@ -152,8 +152,13 @@ BLOSC_FILES  = blosc/bitshuffle-avx2.o blosc/bitshuffle-generic.o
 BLOSC_FILES += blosc/shuffle-avx2.o blosc/shuffle-generic.o blosc/bitshuffle-sse2.o
 BLOSC_FILES += blosc/shuffle-sse2.o blosc/shuffle.o blosc/blosc.o blosc/blosclz.o
 
-BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
-BBP_FILES += bbp/coding_helpers.o bbp/common.o
+# remove BBP by default since it doesn't currently work
+ifeq "$(BUILD_BBP)" "1"
+	BBP_FILES  = bbp/bbp.o bbp/bitpacking.o bbp/bitstream.o bbp/coding.o
+	BBP_FILES += bbp/coding_helpers.o bbp/common.o
+else
+	DEFINES += -DBENCH_REMOVE_BBP
+endif
 
 SPRINTZ_FILES = sprintz/univariate_8b.o sprintz/delta.o sprintz/predict.o
 SPRINTZ_FILES += sprintz/sprintz_delta.o sprintz/sprintz_delta_rle.o
