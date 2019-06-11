@@ -36,12 +36,12 @@ RUN apt-get install -y git clang
 # so that we can make the user own it while we're still root
 RUN groupadd -g 999 appuser && \
     useradd -m -r -u 999 -g appuser appuser
-COPY . /home/appuser/lzbench
-RUN chown -R appuser:appuser /home/appuser/lzbench
+# COPY . /home/appuser/lzbench
+# RUN chown -R appuser:appuser /home/appuser/lzbench
 USER appuser
 
 WORKDIR /home/appuser/
-# RUN git clone https://github.com/dblalock/lzbench.git
+RUN git clone https://github.com/dblalock/lzbench.git
 WORKDIR /home/appuser/lzbench
 # RUN make clean && make
 
