@@ -61,6 +61,19 @@ Example usage:
 
 Compilation
 -------------------------
+
+The preferred method of building and running this code is using Docker:
+
+```
+$ docker build --tag=lzb . && docker run -it lzb
+```
+
+Because debugging errors in other people's compression libraries on other people's machines is not something I have time for, I will only support errors / build issues encountered while using Docker.
+
+
+If you want to do something more customized on your own, however, see below.
+
+
 For Linux/MacOS/MinGW (Windows):
 ```
 make

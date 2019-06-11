@@ -336,9 +336,18 @@ def write_dsets(which_dsets='normal', delta_encode=False,
 def main():
     # *************** uncomment all these lines to create split msrc12 dataset
     # write_dsets(which_dsets='split')
-    write_dsets(which_dsets='split', storage_order='f')
-    write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
-    write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
+    # write_dsets(which_dsets='split', storage_order='c')
+    # write_dsets(which_dsets='split', storage_order='f')
+    # write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
+    # write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
+
+    # create quantized versions of all the datasets
+    for which_dsets in ['split', 'normal', 'ucr']:
+        for storage_order in ('c', 'f'):
+            for store_as_dtype in (None, np.uint32):
+                write_dsets(which_dsets=which_dsets,
+                            storage_order=storage_order,
+                            store_as_dtype=store_as_dtype)
 
     # write_dsets(which_dsets='split', dry_run=True)
 
