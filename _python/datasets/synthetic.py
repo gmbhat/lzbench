@@ -1,5 +1,7 @@
 #!/usr/bin/env/python
 
+from __future__ import division, print_function
+
 import numpy as np
 from scipy import signal
 from scipy.ndimage import filters
@@ -77,8 +79,8 @@ def warpedSines(length, origFracs=.5, newFracs=.33, periods=1, **kwargs):
 		raise IndexError("origFracs length {} != newFracs length {}".format(
 			len(origFracs), len(newFracs)))
 
-	print "origFracs", origFracs
-	print "newFracs", newFracs
+	print("origFracs", origFracs)
+	print("newFracs", newFracs)
 
 	pieces = []
 	numPieces = len(origFracs) - 1
@@ -107,7 +109,7 @@ def warpedSines(length, origFracs=.5, newFracs=.33, periods=1, **kwargs):
 			pieceLen = length - sum([len(piece) for piece in pieces])
 		else:
 			pieceLen = int(deltaNewFrac * length)
-		print "creating piece of len", pieceLen
+		print("creating piece of len", pieceLen)
 		piecePeriods = deltaOrigFrac * periods
 		piecePeriodOffset = origFrac
 		sinewave = sines(pieceLen, periods=piecePeriods,
@@ -209,9 +211,9 @@ def randWarpingPath(seqLength, stepConstraints=True, reallyWarped=False):
 
 	# actively give it a weird warping path by just increasing i for a while
 	if reallyWarped:
-		for k in range(1, int(maxIdx / 2)):
+		for k in range(1, int(maxIdx // 2)):
 			i = k
-			j = int(k / 4)
+			j = int(k // 4)
 			path.append((i, j))
 
 		horzThresh = .5

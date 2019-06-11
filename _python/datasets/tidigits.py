@@ -3,13 +3,15 @@
 # NOTE: this file may only support unix systems since it's running
 # shell commands
 
+from __future__ import print_function, division
+
 import os
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
-import soundfile as sf # http://pysoundfile.readthedocs.org/en/0.7.0/
-import librosa # https://bmcfee.github.io/librosa/index.html
+import soundfile as sf  # http://pysoundfile.readthedocs.org/en/0.7.0/
+import librosa  # https://bmcfee.github.io/librosa/index.html
 
 from joblib import Memory
 memory = Memory('./', verbose=2)
@@ -17,7 +19,7 @@ memory = Memory('./', verbose=2)
 import paths as pth
 from ..utils import sequence as seq
 
-SAMPLE_RATE_HZ = 20 * 1000 # actual sampling rate of data
+SAMPLE_RATE_HZ = 20 * 1000  # actual sampling rate of data
 
 # ================================================================
 # Public funcs
@@ -456,10 +458,10 @@ def main():
 	# saveDir = 'figs/tidigits/concat3/'
 	saveDir = 'figs/tidigits/concat4/'
 	tsList = datasets.loadDataset('tidigits_grouped_mfcc', whichExamples=range(10))
-	print '------------------------'
+	print('------------------------')
 	for ts in tsList:
 		ts.plot(saveDir)
-		print ts.name, ts.labels
+		print(ts.name, ts.labels)
 	return
 
 	# saveDir = 'figs/tidigits/'
@@ -472,12 +474,12 @@ def main():
 		print("plotting recording: {}".format(r.name))
 
 		data = r.data
-		print len(data)
-		print len(r.mfccs)
+		print(len(data))
+		print(len(r.mfccs))
 
 		r._data = np.vstack((data, data))
-		print len(r._data)
-		print len(r.mfccs(dummyKwarg=True)) # refresh mfccs
+		print(len(r._data))
+		print(len(r.mfccs(dummyKwarg=True))) # refresh mfccs
 
 		# print "digits: ", r.digits[:10]
 		# r.plot(True, True, True, True, saveDir=saveDir)
@@ -492,7 +494,7 @@ def main():
 	paths = paths[:3]
 	for path in paths:
 		data, samplerate = sf.read(path)
-		print data.shape, samplerate
+		print(data.shape, samplerate)
 
 		# plt.plot(data)
 
@@ -521,7 +523,7 @@ def main():
 
 		stft = librosa.core.stft(data.flatten(), n_fft=512,
 			win_length=(.01*samplerate))
-		print stft.shape
+		print(stft.shape)
 
 		plt.figure()
 		librosa.display.specshow(stft, x_axis='time')

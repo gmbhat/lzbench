@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 import os
 import glob
@@ -77,7 +77,7 @@ def all_file_names():
 def parse_time(time):
     # I have no idea what their time stamps mean, but this magic
     # line from their matlab code converts things to...microseconds?
-    return (int(time)*1000 + 49875/2)/49875
+    return (int(time)*1000 + 49875//2)//49875
 
 
 def parse_file_name(fName):
@@ -257,7 +257,7 @@ def main():
     # recs = all_recordings(idxs=np.arange(5, 15, 2))
     recs = all_recordings(idxs=np.arange(11, 550, 40))
     # recs = all_recordings(idxs=np.arange(2))
-    print "recording 0 shape: ", recs[0].data.shape
+    print("recording 0 shape: ", recs[0].data.shape)
     # viz.plot_recordings(recs, interval_len=600, savedir=SAVE_DIR_DELTA)
 
 

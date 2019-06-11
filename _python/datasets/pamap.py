@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function, division
+
 import os
 from joblib import Memory
 
@@ -79,7 +81,7 @@ def getOutdoorFilePaths():
 def all_recordings():
     recs = []
     for p in getIndoorFilePaths() + getOutdoorFilePaths():
-        print "reading pamap file: ", p
+        print("reading pamap file: ", p)
         # yield PamapRecording(p)
         recs.append(PamapRecording(p))
     return recs
@@ -125,7 +127,7 @@ def main():
 
     recs = all_recordings()
 
-    print "recording 0 shape: ", recs[0].data.shape
+    print("recording 0 shape: ", recs[0].data.shape)
 
     # for i, r in enumerate(recs):
     #     print('plotting recording: ' + str(r))

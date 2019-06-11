@@ -1,5 +1,7 @@
 #!/usr/bin/env/python
 
+from __future__ import print_function, division
+
 import os
 import numpy as np
 import pandas as pd
@@ -107,7 +109,7 @@ def generateVids():
         epochEndIdx = epochStartIdx + epochSz
         epochData = ar[epochStartIdx:epochEndIdx]
 
-        subdir = "{0}k-{1}k".format(epochStartIdx / 1000, epochEndIdx / 1000)
+        subdir = "{0}k-{1}k".format(epochStartIdx // 1000, epochEndIdx // 1000)
         saveDir = VIDS_DIR + '/' + appliance + '/' + subdir + '/'
         if not os.path.exists(saveDir):
             os.makedirs(saveDir)
@@ -228,7 +230,7 @@ class Recording(object):
             self.rangeStartIdxs, self.rangeEndIdxs, self.labels = addZC(
                 self.rangeStartIdxs, self.rangeEndIdxs, self.labels)
 
-        print "Dishwasher recording: data shape = ", self.data.shape
+        print("Dishwasher recording: data shape = ", self.data.shape)
         # print "Dishwasher annotations:"
         # annotations = np.c_[self.rangeStartIdxs, self.rangeEndIdxs, self.labels]
         # for anno in annotations:

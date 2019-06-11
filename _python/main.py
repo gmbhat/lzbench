@@ -177,7 +177,7 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     # if (not use_u32):
     if (not use_u32) or (nthreads > 0):  # not sure first clause is good?
         cmd += ' -e{}'.format(int(nbits / 8))
-    if query_id >= 0:
+    if query_id is not None and query_id >= 0:
         cmd += ' -q{}'.format(query_id)
         assert ndims > 0  # running query requires specifying ndims
     if nthreads > 0:
@@ -206,7 +206,7 @@ def _run_cmd(cmd, verbose=0):
     # trimmed = trimmed[:]
 
     if not os.path.exists('./lzbench'):
-        os.path.system('make')
+        os.system('make')
 
     if verbose > 1:
         # print("------------------------")
@@ -497,7 +497,7 @@ def fig_for_dsets(dsets=None, **kwargs):
 def run_sweep(algos=None, create_fig=False, nbits=None, all_use_u32=None,
               preprocs=None, miniters=0, memlimit=-1,
               orders=['c', 'f'], dsets=None, nthreads=[0],
-              queries=[None], **kwargs):
+              queries=[cfg.Queries.NONE], **kwargs):
     # TODO I should just rename these vars
     all_nbits = nbits
     all_preprocs = preprocs  # 'deltas' was a more intuitive kwarg

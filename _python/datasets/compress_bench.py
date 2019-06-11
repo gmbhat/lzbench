@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import division
+from __future__ import division, print_function
 
 import os
 import numpy as np
@@ -130,7 +130,7 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
     # out_paths.append(path)
 
     if verbose > 0:
-        print "saved mat {} ({}) as {}".format(name, store_mat.shape, path)
+        print("saved mat {} ({}) as {}".format(name, store_mat.shape, path))
 
     if not dry_run:
         load_mat = np.fromfile(path, dtype=store_as_dtype)
@@ -139,7 +139,7 @@ def write_dataset(mat, name, dtype, store_as_dtype=None, order='f',
         load_mat = store_mat
 
     if verbose > 1:
-        print "stored mat shape: ", load_mat.shape
+        print("stored mat shape: ", load_mat.shape)
         # print "stored mat[:10]: ", store_mat[:10]
         # print "loaded mat[:10]: ", load_mat[:10]
 
@@ -172,19 +172,9 @@ def concat_and_interpolate(mats, interp_npoints=5):
 
     dtype = mats[0].dtype
 
-    # shapes = np.array([mat.shape for mat in mats])
-    # print "where empty: ", np.where(shapes[:, 0] < 1)[0]
-    # # print "mat shapes: ",
-    # print "bad mat: ", shapes[468]
-    # import sys; sys.exit()
-
     first_vals = np.vstack([mat[0] for mat in mats])
     last_vals = np.vstack([mat[-1] for mat in mats])
     boundary_jumps = first_vals[1:] - last_vals[:-1]
-
-    # print "first_vals: ", first_vals
-    # print "last_vals: ", last_vals
-    # print "boundary_jumps: ", boundary_jumps
 
     offsets = np.arange(1., interp_npoints + 1.) / (interp_npoints + 1)
 
@@ -205,8 +195,8 @@ def concat_and_interpolate(mats, interp_npoints=5):
     out_mats = [mats[0]]
     for i in range(1, len(mats)):
         if i == 1:
-            print "interpolated samples shape: ", interp_samples[i - 1].T.shape
-            print "data matrix shape: ", mats[i].shape
+            print("interpolated samples shape: ", interp_samples[i - 1].T.shape)
+            print("data matrix shape: ", mats[i].shape)
         out_mats.append(interp_samples[i - 1].T)
         out_mats.append(mats[i])
 
