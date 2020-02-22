@@ -33,3 +33,6 @@ _visual/
 lzbench
 
 todo.txt
+lzbench_orig
+results/backups
+_datasets
