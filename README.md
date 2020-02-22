@@ -29,13 +29,13 @@ usage: lzbench [options] input [input2] [input3]
 
 | Flag | Example | Effect |
 | ---- | ---- | ---- |
-| `-a` | `-azstd,1,3/lz4` | Compression algorithms to use. Compression levels to use are separated by commas, and algorithms are separated by slashes. If an algorithm allows multiple compression levels and not are specified, all levels will be used in succession. |
+| `-a` | `-azstd,1,3/lz4` | Compression algorithms to use. Compression levels to use are separated by commas, and algorithms are separated by slashes. If an algorithm allows multiple compression levels and none are specified, all levels will be used in succession. |
 | `-b` | `-b512` | Input is split into blocks of at most 512KB. Default = min(filesize,1747626 KB) |
 | `-c` | `-c6` | Treat data as having 6 columns (so every 6th value represents the same attribute/variable). Only needed when running queries |
 | `-d` | `-d3` | Add delta coding as a preprocessor with a lag of 3 values. I.e., replace each value $x_i$ with $x_i - x_{i-3}$ before compressing. Preprocessing time is included in speed calculations. |
 | `-D` | `-D3` | Like previous but with double delta coding. I.e., replace $x_i$ with $x_i - 2x_{i-3} + x_{i-6}$ |
 | `-e` | `-e2` | Set the size of each element to two bytes. This would cause, e.g., delta coding to operate on 16 bit values. Default is 1 (8 bits). |
-| `-f` | `-f3` | Like delta and double delta coding, but uses the Sprintz's FIRE forecaster instead. |
+| `-f` | `-f3` | Like delta and double delta coding, but uses Sprintz's FIRE forecaster instead. |
 | `-i` | `-i0,10` | Run at least 0 compression iterations and 10 decompression iterations. Each iteration runs through all the data. |
 | `-j` | `-j` | Joins all data to be compressed in memory before compressing it. I.e., copies it all to one contiguous buffer. Blocks always align on the boundaries between files, however, so each file is compressed independently. Default is not copying. |
 | `-m` | `-m512` | Set memory limit to 512MB. Default is no limit. |
@@ -43,7 +43,7 @@ usage: lzbench [options] input [input2] [input3]
 | `-p` | -p2 | print time for all iterations: 1=fastest 2=average 3=median (default = 1) |
 | `-q` | -q2 | Set query to run on the data in each decompression iteration after decompressing it. 0 = no query, 1 = mean of each column, 2 = min of each column, 3 = max of each column (default = 0). Use the "materialized" codec (-amaterialized) to time queries with no decompression. |
 | `-r` | `-r` | Whether to traverse directories recursively when finding files to compress. |
-| `-s` | `-s100` | Use only compressors with compression speed over 100 MB (default = 0 MB) |
+| `-s` | `-s100` | Use only compressors with estimated compression speed over 100 MB (default = 0 MB) |
 | `-S` | `-s` | Storage order. Only relevant for queries. 0 = row-major, 1 = column-major |
 | `-t` | `-t3,5` | Run compression iterations for at least 3 seconds and decompression iterations for at least 5 seconds. |
 | `-U` | `-U` | Unverified. By default, the benchmark checks that the decompressor's output matches the compressor's input. Use this to disable this behavior. |
@@ -88,11 +88,12 @@ make BUILD_ARCH=32-bit
 To remove one of compressors you can add `-DBENCH_REMOVE_XXX` to `DEFINES` in Makefile (e.g. `DEFINES += -DBENCH_REMOVE_LZ4` to remove LZ4).
 You also have to remove corresponding `*.o` files (e.g. `lz4/lz4.o` and `lz4/lz4hc.o`).
 
-lzbench was tested with:
+<!-- lzbench was tested with:
+
 - Ubuntu: gcc 4.6.3, 4.8.4 (both 32-bit and 64-bit), 4.9.3, 5.3.0, 6.1.1 and clang 3.4, 3.5, 3.6, 3.8
 - MacOS: Apple LLVM version 6.0
 - MinGW (Windows): gcc 5.3.0, 4.9.3 (32-bit), 4.8.3 (32-bit)
-
+ -->
 
 Supported compressors
 -------------------------

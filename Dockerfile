@@ -43,7 +43,7 @@ USER appuser
 WORKDIR /home/appuser/
 RUN git clone https://github.com/dblalock/lzbench.git
 WORKDIR /home/appuser/lzbench
-# RUN make clean && make
+RUN make clean && make
 
 RUN bash -c 'conda init bash'
 RUN echo "conda activate myenv" >> ~/.bashrc
