@@ -1,36 +1,13 @@
 #!/usr/bin/env python
 
-# here's what we want:
-#   option to do everything 8b or 16b
-#   option to do rowmajor or colmajor (although only colmajor for now)
-#   option to pick dataset[s] (defaults to all of them)
-#   option to pick algorithm[s] (defaults to all of them)
-#       -and note that all these names are some canonical form
-#   option to pick memory limit in KB (defaults to no limit)
-#   option to pick how many seconds of compression/decompression (-t arg)
-#   for selected combo of (nbits, order, algos, dsets)
-#       figure out which dset to actually use (eg, faspfor needs u32 versions)
-#           -and other stuff needs deltas
-#       figure out which algo to actually use
-#           -eg, 'bitshuf' needs to get turned into 'blosc_bitshuf8b' or 16b
-#       figure out cmd line name for selected algo
-#       figure out cmd line params for selected algo based on orig name
-#       figure out path for selected dset
-#       figure out path for file in which to dump the df
-#           -maybe just one giant df we can query later (so timestamp the versions)
-#       figure out path for file in which to dump the fig(s)
-#
-#   code to generate scatterplots for speed vs ratio
-#   code to read in our stored data and generate real plots via this func
-
 # some queries I like: TODO put these somewhere sensible
 #
-# profile raw bitpacking speed
+# profile raw bitpacking speed (assuming you've generated the synthetic data)
 #   ./lzbench -r -asprJustBitpack/sprFixedBitpack -t0,0 -i25,25 -j synthetic/100M_randint_0_1.dat
 #
 # run everything and create figure for one dataset (here, uci_gas):
 #   python -m _python.main --sweep algos=SprintzDelta,SprintzDelta_16b,
-#       SprintzDelta_HUF,SprintzDelta_HUF_16b,Zstd,Brotli,LZ4,Huffman,
+#       SprintzDelta_Huf,SprintzDelta_Huf_16b,Zstd,Brotli,LZ4,Huffman,
 #       FastPFOR,SIMDBP128 --dsets=uci_gas --miniters=10 --create_fig
 
 from __future__ import absolute_import
@@ -42,15 +19,12 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-# import seaborn as sb
 
 import sys
 from . import files
 from . import pyience
 from . import config as cfg
 
-# import gflags   # google's command line lib; pip install python-gflags
-# FLAGS = gflags.FLAGS
 
 if sys.version_info[0] < 3:
     from StringIO import StringIO
