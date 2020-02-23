@@ -92,6 +92,21 @@ int64_t lzbench_brotli_decompress(char *inbuf, size_t insize, char *outbuf, size
 #endif
 
 
+#ifndef BENCH_REMOVE_BZIP2
+#include "bzip2/bzlib.h"
+
+int64_t lzbench_bzip2_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t windowLog, void*)
+{
+   unsigned int a_outsize = outsize;
+   return BZ2_bzBuffToBuffCompress((char *)outbuf, &a_outsize, (char *)inbuf, (unsigned int)insize, level, 0, 0)==BZ_OK?a_outsize:-1;
+}
+
+int64_t lzbench_bzip2_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, void*)
+{
+   unsigned int a_outsize = outsize;
+   return BZ2_bzBuffToBuffDecompress((char *)outbuf, &a_outsize, (char *)inbuf, (unsigned int)insize, 0, 0)==BZ_OK?a_outsize:-1;
+}
+#endif // BENCH_REMOVE_BZIP2
 
 
 #ifndef BENCH_REMOVE_CRUSH
@@ -1747,19 +1762,17 @@ char* lzbench_zstd_init(size_t insize, size_t level, size_t windowLog)
     zstd_params->cdict = ZSTD_createCDict_advanced(NULL, 0, zstd_params->zparams, zstd_params->cmem);
 #endif
 
-    // printf("zstd returning workmem ptr: %p\n", (char*) zstd_params);
     return (char*) zstd_params;
 }
 
 void lzbench_zstd_deinit(void* workmem)
 {
-    // printf("calling zstd deinit on workmem %p...\n", workmem);
     zstd_params_s* zstd_params = (zstd_params_s*) workmem;
     if (!zstd_params) return;
     if (zstd_params->cctx) ZSTD_freeCCtx(zstd_params->cctx);
     if (zstd_params->dctx) ZSTD_freeDCtx(zstd_params->dctx);
     if (zstd_params->cdict) ZSTD_freeCDict(zstd_params->cdict);
-    free((zstd_params_s*)workmem);
+    free(workmem);
 }
 
 int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t windowLog, void* workmem)
@@ -1767,17 +1780,16 @@ int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t o
     size_t res;
 
     zstd_params_s* zstd_params = (zstd_params_s*) workmem;
-    if (!zstd_params || !zstd_params->cctx) {
-        printf("ERROR: zstd compress had null params or compress context!\n");
-        return 0;
-    }
+    if (!zstd_params || !zstd_params->cctx) return 0;
 
 #if 1
     zstd_params->zparams = ZSTD_getParams(level, insize, 0);
+    ZSTD_CCtx_setParameter(zstd_params->cctx, ZSTD_c_compressionLevel, level);
     zstd_params->zparams.fParams.contentSizeFlag = 1;
+
     if (windowLog && zstd_params->zparams.cParams.windowLog > windowLog) {
         zstd_params->zparams.cParams.windowLog = windowLog;
-        zstd_params->zparams.cParams.chainLog = windowLog + ((zstd_params->zparams.cParams.strategy == ZSTD_btlazy2) || (zstd_params->zparams.cParams.strategy == ZSTD_btopt) || (zstd_params->zparams.cParams.strategy == ZSTD_btopt2));
+        zstd_params->zparams.cParams.chainLog = windowLog + ((zstd_params->zparams.cParams.strategy == ZSTD_btlazy2) || (zstd_params->zparams.cParams.strategy == ZSTD_btopt) || (zstd_params->zparams.cParams.strategy == ZSTD_btultra));
     }
     res = ZSTD_compress_advanced(zstd_params->cctx, outbuf, outsize, inbuf, insize, NULL, 0, zstd_params->zparams);
 //    res = ZSTD_compressCCtx(zstd_params->cctx, outbuf, outsize, inbuf, insize, level);
@@ -1785,26 +1797,33 @@ int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t o
     if (!zstd_params->cdict) return 0;
     res = ZSTD_compress_usingCDict(zstd_params->cctx, outbuf, outsize, inbuf, insize, zstd_params->cdict);
 #endif
-    if (ZSTD_isError(res)) printf("zstd compress got error: %d!\n", (int)res);
-    // if (ZSTD_isError(res)) return res;
+    if (ZSTD_isError(res)) return res;
 
     return res;
 }
 
 int64_t lzbench_zstd_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void* workmem)
 {
-    // printf("called zstd decompress\n");
-    const zstd_params_s* zstd_params = (const zstd_params_s*) workmem;
+    zstd_params_s* zstd_params = (zstd_params_s*) workmem;
     if (!zstd_params || !zstd_params->dctx) return 0;
 
-    // printf("zstd params and dctx not null!\n");
-    auto res = ZSTD_decompressDCtx(zstd_params->dctx, outbuf, outsize, inbuf, insize);
-    // printf("zstd ran decompression! dlen = %d\n", (int)res);
-    if (ZSTD_isError(res)) printf("ERROR: zstd decomp got error: '%s'\n",
-        ZSTD_getErrorString(ZSTD_getErrorCode(res)));
-    return res;
+    return ZSTD_decompressDCtx(zstd_params->dctx, outbuf, outsize, inbuf, insize);
+}
 
-    // return ZSTD_decompressDCtx(zstd_params->dctx, outbuf, outsize, inbuf, insize);
+char* lzbench_zstd_LDM_init(size_t insize, size_t level, size_t windowLog)
+{
+    zstd_params_s* zstd_params = (zstd_params_s*) lzbench_zstd_init(insize, level, windowLog);
+    if (!zstd_params) return NULL;
+    ZSTD_CCtx_setParameter(zstd_params->cctx, ZSTD_c_enableLongDistanceMatching, 1);
+    return (char*) zstd_params;
+}
+
+int64_t lzbench_zstd_LDM_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t windowLog, void* workmem)
+{
+    zstd_params_s* zstd_params = (zstd_params_s*) workmem;
+    if (!zstd_params || !zstd_params->cctx) return 0;
+    ZSTD_CCtx_setParameter(zstd_params->cctx, ZSTD_c_enableLongDistanceMatching, 1);
+    return lzbench_zstd_compress(inbuf, insize, outbuf, outsize, level, windowLog, (char*) zstd_params);
 }
 
 int64_t lzbench_fse_compress(char *inbuf, size_t insize, char *outbuf,

@@ -41,6 +41,13 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 	#define lzbench_brotli_decompress NULL
 #endif
 
+#ifndef BENCH_REMOVE_BZIP2
+    int64_t lzbench_bzip2_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, void*);
+    int64_t lzbench_bzip2_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
+#else
+    #define lzbench_bzip2_compress NULL
+    #define lzbench_bzip2_decompress NULL
+#endif  // BENCH_REMOVE_BZIP2
 
 #ifndef BENCH_REMOVE_CRUSH
 	int64_t lzbench_crush_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, void*);
@@ -462,8 +469,10 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 #ifndef BENCH_REMOVE_ZSTD
     char* lzbench_zstd_init(size_t insize, size_t level, size_t);
     void lzbench_zstd_deinit(void* workmem);
-	int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
-	int64_t lzbench_zstd_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
+    int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
+    int64_t lzbench_zstd_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
+    char* lzbench_zstd_LDM_init(size_t insize, size_t level, size_t);
+    int64_t lzbench_zstd_LDM_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
 
     int64_t lzbench_fse_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
     int64_t lzbench_fse_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, void*);
@@ -474,9 +483,11 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 
 #else
 	#define lzbench_zstd_init NULL
-	#define lzbench_zstd_deinit NULL
-	#define lzbench_zstd_compress NULL
-	#define lzbench_zstd_decompress NULL
+    #define lzbench_zstd_deinit NULL
+    #define lzbench_zstd_compress NULL
+    #define lzbench_zstd_decompress NULL
+    #define lzbench_zstd_LDM_init NULL
+    #define lzbench_zstd_LDM_compress NULL
 #endif
 
 

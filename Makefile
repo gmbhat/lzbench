@@ -155,6 +155,11 @@ ZSTD_FILES += zstd/lib/decompress/zstd_ddict.o
 ZSTD_FILES += zstd/lib/decompress/zstd_decompress_block.o
 ZSTD_FILES += zstd/lib/dictBuilder/divsufsort.o
 
+ifeq "$(DONT_BUILD_BZIP2)" "1"
+    DEFINES += -DBENCH_REMOVE_BZIP2
+else
+    BZIP2_FILES += bzip2/blocksort.o bzip2/huffman.o bzip2/crctable.o bzip2/randtable.o bzip2/compress.o bzip2/decompress.o bzip2/bzlib.o
+endif
 
 BRIEFLZ_FILES = brieflz/brieflz.o brieflz/depacks.o
 
@@ -312,7 +317,8 @@ _lzbench/lzbench.o: _lzbench/lzbench.cpp _lzbench/lzbench.h
 
 lzbench: $(ZSTD_FILES) $(GLZA_FILES) $(LZSSE_FILES) $(LZFSE_FILES) 			\
 		$(XPACK_FILES) $(GIPFELI_FILES) $(XZ_FILES) $(LIBLZG_FILES) 		\
-		$(BRIEFLZ_FILES) $(LZF_FILES) $(LZRW_FILES) $(BROTLI_FILES) 		\
+		$(LZF_FILES) $(LZRW_FILES)  										\
+	    $(BRIEFLZ_FILES) $(BROTLI_FILES) $(BZIP2_FILES)						\
 		$(CSC_FILES) $(LZMA_FILES) $(DENSITY_FILES) $(ZLING_FILES) 			\
 		$(QUICKLZ_FILES) $(SNAPPY_FILES) $(ZLIB_FILES) 						\
 		$(LZO_FILES) $(UCL_FILES) $(LZMAT_FILES) $(LZ4_FILES) 				\
