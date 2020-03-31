@@ -761,6 +761,16 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
         size_t outsize, size_t ndims, size_t, void*);
     int64_t lzbench_sprintz_delta_huf_decompress_16b(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, void*);
+    // delta + bzip2
+    int64_t lzbench_sprintz_delta_bzip2_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, void*);
+    int64_t lzbench_sprintz_delta_bzip2_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, void*);
+    // delta + bzip2
+    int64_t lzbench_sprintz_delta_zstd_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, void*);
+    int64_t lzbench_sprintz_delta_zstd_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, void*);
     // xff + huffman
     int64_t lzbench_sprintz_xff_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,
         size_t outsize, size_t ndims, size_t, void*);

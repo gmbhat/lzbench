@@ -2782,6 +2782,56 @@ int64_t lzbench_sprintz_delta_huf_decompress_16b(char *inbuf, size_t insize, cha
     free(tmp);
     return ret;
 }
+// delta + bzip2
+int64_t lzbench_sprintz_delta_bzip2_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t, void*)
+{
+    auto padded_sz = pad_size(outsize);
+    char* tmp = (char*)calloc(padded_sz, 1);
+
+    // TODO rm + 1 in next line after off-by-one fix
+    auto len = sprintz_compress_delta_16b((uint16_t*)inbuf, insize/2, (int16_t*)tmp, ndims) * 2 + 1;
+    // auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, padded_sz, 0, 0, NULL);
+    auto ret = lzbench_bzip2_compress((char*)tmp, len, outbuf, padded_sz, 9, 0, NULL);
+    free(tmp);
+    return ret;
+}
+int64_t lzbench_sprintz_delta_bzip2_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, void*)
+{
+    auto padded_outsize = pad_size(outsize);
+    char* tmp = (char*)calloc(padded_outsize, 1);
+    // auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, padded_outsize, 0, 0, NULL);
+    auto len = lzbench_bzip2_decompress((char*)inbuf, insize, (char*)tmp, padded_outsize, 9, 0, NULL);
+    auto ret = sprintz_decompress_delta_16b((int16_t*)tmp, (uint16_t*)outbuf) * 2;
+    free(tmp);
+    return ret;
+}
+// delta + zstd
+int64_t lzbench_sprintz_delta_zstd_compress_16b(char *inbuf, size_t insize, char *outbuf,
+        size_t outsize, size_t ndims, size_t windowLog, void* workmem)
+{
+    auto padded_sz = pad_size(outsize);
+    char* tmp = (char*)calloc(padded_sz, 1);
+
+    // TODO rm + 1 in next line after off-by-one fix
+    auto len = sprintz_compress_delta_16b((uint16_t*)inbuf, insize/2, (int16_t*)tmp, ndims) * 2 + 1;
+    // auto ret = lzbench_huff0_compress((char*)tmp, len, outbuf, padded_sz, 0, 0, NULL);
+    auto ret = lzbench_zstd_compress((char*)tmp, len, outbuf, padded_sz, 9, windowLog, workmem);
+    free(tmp);
+    return ret;
+}
+int64_t lzbench_sprintz_delta_zstd_decompress_16b(char *inbuf, size_t insize, char *outbuf,
+    size_t outsize, size_t ndims, size_t, void* workmem)
+{
+    auto padded_outsize = pad_size(outsize);
+    char* tmp = (char*)calloc(padded_outsize, 1);
+    // auto len = lzbench_huff0_decompress((char*)inbuf, insize, (char*)tmp, padded_outsize, 0, 0, NULL);
+    auto len = lzbench_zstd_decompress((char*)inbuf, insize, (char*)tmp, padded_outsize, 0, 0, workmem);
+    auto ret = sprintz_decompress_delta_16b((int16_t*)tmp, (uint16_t*)outbuf) * 2;
+    free(tmp);
+    return ret;
+}
 
 // xff + huffman
 int64_t lzbench_sprintz_xff_huf_compress_16b(char *inbuf, size_t insize, char *outbuf,

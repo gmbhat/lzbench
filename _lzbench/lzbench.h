@@ -155,7 +155,7 @@ typedef struct
     {NAME, "2017-9", 0, 0, 0, 0, lzbench_ ## FUNCNAME ## _compress, lzbench_ ## FUNCNAME ## _decompress, NULL, NULL}
 
 
-#define LZBENCH_COMPRESSOR_COUNT 114
+#define LZBENCH_COMPRESSOR_COUNT 116
 
 static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
 {
@@ -251,7 +251,7 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprDeltaRLE2",    "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle2_compress,   lzbench_sprintz_delta_rle2_decompress,   NULL,       NULL },
     { "sprDeltaRLE_FSE", "0.0", 0, 0,   0,       0, lzbench_sprintz_delta_rle_fse_compress,lzbench_sprintz_delta_rle_fse_decompress,NULL, NULL },
     { "sprDeltaRLE_HUF", "0.0", 0, 0,   0,  64<<10, lzbench_sprintz_delta_rle_huf_compress,lzbench_sprintz_delta_rle_huf_decompress,NULL, NULL },
-    { "sprDeltaRLE_Zstd","0.0", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit },
+    { "sprDeltaRLE_Zstd","0.0", 1, 22,  0,       0, lzbench_sprintz_delta_rle_zstd_compress,lzbench_sprintz_delta_rle_zstd_decompress, lzbench_zstd_init, lzbench_zstd_deinit},
     { "sprRowMajor",     "0.0", 1, 128, 0,       0, lzbench_sprintz_row_compress,          lzbench_sprintz_row_decompress,          NULL,       NULL },
     { "sprRowDelta",     "0.0", 1, 128, 0,       0, lzbench_sprintz_row_delta_compress,    lzbench_sprintz_row_delta_decompress,    NULL,       NULL },
     { "sprRowDelta_HUF", "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_row_delta_huf_compress,lzbench_sprintz_row_delta_huf_decompress,NULL,       NULL },
@@ -276,8 +276,10 @@ static const compressor_desc_t comp_desc[LZBENCH_COMPRESSOR_COUNT] =
     { "sprintzXff_HUF",  "0.0", 1, 128, 0,  64<<10, lzbench_sprintz_xff_huf_compress,  lzbench_sprintz_xff_huf_decompress,          NULL,       NULL },
     { "sprintzDelta_16b","0.0", 1, 128, 0,       0, lzbench_sprintz_delta_compress_16b,  lzbench_sprintz_delta_decompress_16b,         NULL,    NULL },
     { "sprintzXff_16b",  "0.0", 1, 128, 0,       0, lzbench_sprintz_xff_compress_16b,  lzbench_sprintz_xff_decompress_16b,             NULL,    NULL },
-    { "sprintzDelta_HUF_16b","0.0", 1,128,0,80<<10, lzbench_sprintz_delta_huf_compress_16b,  lzbench_sprintz_delta_huf_decompress_16b, NULL,    NULL },
-    { "sprintzXff_HUF_16b",  "0.0", 1,128,0,80<<10, lzbench_sprintz_xff_huf_compress_16b,  lzbench_sprintz_xff_huf_decompress_16b,     NULL,    NULL },
+    { "sprintzDelta_HUF_16b","0.0",  1,128,0,80<<10, lzbench_sprintz_delta_huf_compress_16b,   lzbench_sprintz_delta_huf_decompress_16b,    NULL,   NULL },
+    { "sprintzDelta_zstd_16b","0.0", 1,128,0,80<<10, lzbench_sprintz_delta_zstd_compress_16b,  lzbench_sprintz_delta_zstd_decompress_16b,   lzbench_zstd_init, lzbench_zstd_deinit },
+    { "sprintzDelta_bz2_16b","0.0",  1,128,0,80<<10, lzbench_sprintz_delta_bzip2_compress_16b, lzbench_sprintz_delta_bzip2_decompress_16b,  NULL,   NULL },
+    { "sprintzXff_HUF_16b",  "0.0",  1,128,0,80<<10, lzbench_sprintz_xff_huf_compress_16b,     lzbench_sprintz_xff_huf_decompress_16b,      NULL,   NULL },
     // pushed-down query functions; must be run with -U since they don't write out decompressed data
     { "sprintzDeltaQuery0_8b", "0.0", 1,128,0,80<<10, lzbench_sprintz_delta_compress,  lzbench_sprintz_delta_query0_8b,      NULL,       NULL },
     { "sprintzXffQuery0_16b",  "0.0", 1,128,0,80<<10, lzbench_sprintz_xff_compress_16b,  lzbench_sprintz_xff_query1_16b,    NULL,       NULL },
