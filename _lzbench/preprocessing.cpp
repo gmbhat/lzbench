@@ -11,6 +11,7 @@
     #include "sprintz/delta.h"  // for simd delta preproc
     #include "sprintz/predict.h"  // for simd xff preproc
     #include "sprintz/format.h"  // for simd delta preproc?
+    #include "sprintz/online.hpp"  // for dynamic delta
 #endif
 
 namespace lzbench {
@@ -125,6 +126,15 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             continue;
         }
 
+        // ------------------------ dynamic delta
+        if (sz == 2 && func == DYNAMIC_DELTA) {
+            // int loss = Losses::MaxAbs;
+            size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            nelements = (size + sz - 1) / sz;
+            continue;
+        }
+
         // printf("didn't apply any preproc for offset %lld...\n", offset);
 
 #else
@@ -210,7 +220,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     if (sz < 1) {
         sz = 1;
     }
-    int64_t nelements = size / sz;
+    int64_t nelements = (size + sz - 1) / sz;
 
     // printf("size=%lu, sz=%lu, element_sz=%d\n", size, sz, element_sz);
     // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
@@ -335,6 +345,15 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             }
             continue;
         }
+
+        // ------------------------ dynamic delta
+        if (sz == 2 && func == DYNAMIC_DELTA) {
+            size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes
+                (const int16_t*)inbuf, (uint16_t*)outbuf);
+            nelements = (size + sz - 1) / sz;
+            continue;
+        }
+
 #else
         if ((offset > 4)) { // TODO better err message saying need sprintz
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);

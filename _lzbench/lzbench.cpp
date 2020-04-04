@@ -45,18 +45,19 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 
     for (int i = 0; i < cscount; i++) {
         part = chunk_sizes[i];
+        auto orig_part = part;  // preprocessors might change part
         outpart = GET_COMPRESS_BOUND(part);
         if (outpart > outsize) outpart = outsize;
 
         const uint8_t* inptr = inbuf;
-        size_t new_size = part;
         if (params->preprocessors.size() > 0) {
-            new_size = apply_preprocessors(params->preprocessors, inbuf, part,
+            part = apply_preprocessors(params->preprocessors, inbuf, part,
                 params->data_info.element_sz, tmpbuf);
+            chunk_sizes[i] = part; // TODO did this break everything?
             inptr = (const uint8_t*)tmpbuf;
         }
 
-        clen = compress((char*)inptr, new_size, (char*)outbuf, outpart,
+        clen = compress((char*)inptr, part, (char*)outbuf, outpart,
                         param1, param2, workmem);
         LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n",
             (int)part, (int)clen, (int)(inbuf-start));
@@ -70,7 +71,7 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
             clen = part;
         }
 
-        inbuf += part;
+        inbuf += orig_part;
         outbuf += clen;
         outsize -= clen;
         compr_sizes[i] = clen;
@@ -118,8 +119,10 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
                 dlen = decompress((char*)inbuf, part, (char*)outbuf,
                     chunk_sizes[i], param1, param2, workmem);
             }
+            // printf("decomp: dlen before preproc %d\n", dlen);
             dlen = undo_preprocessors(params->preprocessors, outbuf, dlen,
                 params->data_info.element_sz);
+            // printf("decomp: dlen after preproc %d\n", dlen);
         } else {
             // printf("already_materialized; skipping decomp, etc\n");
             dlen = part;

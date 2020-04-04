@@ -7,9 +7,10 @@
 //
 
 #include "online.hpp"
+#include "format.h"
 
-#include "array_utils.hpp"
-#include "debug_utils.hpp"
+// #include "array_utils.hpp"
+// #include "debug_utils.hpp"
 
 // =================================================== dynamic predictor choice
 
@@ -146,7 +147,7 @@ len_t dynamic_delta_zigzag_encode_u16(
 
 len_t dynamic_delta_zigzag_decode_u16(
     const int16_t* data_in, len_t length, uint16_t* data_out,
-    uint8_t* choices_in)
+    const uint8_t* choices_in)
 {
     typedef uint16_t uint_t;
     typedef int16_t int_t;
@@ -234,8 +235,9 @@ len_t dynamic_delta_zigzag_decode_u16(
     return length + 1; // original length
 }
 
-len_t dynamic_delta_choices_size(len_t length, int blocksz) {
-    return (length + blocksz - 1) / blocksz;
+len_t dynamic_delta_choices_size_bytes(len_t length, int blocksz) {
+    len_t nblocks = (length + blocksz - 1) / blocksz;
+    return (nblocks + 7) / 8; // numbytes
 }
 
 len_t dynamic_delta_zigzag_encode_u16(
@@ -253,3 +255,77 @@ len_t dynamic_delta_zigzag_encode_u16(
     }
 }
 
+static constexpr int dbg_offset_elems = 7; // TODO rm
+static constexpr int dbg_tail_elems = 16; // TODO rm
+
+len_t dynamic_delta_pack_u16(
+    const uint16_t* data_in, size_t size, int16_t* data_out)
+{
+    // works
+    // memcpy(data_out + dbg_offset_elems, data_in, 3912);
+    // return 3912 + 2 * dbg_offset_elems + dbg_tail_nbytes;
+    // works
+    // memcpy(data_out + dbg_offset_elems, data_in, 2 * size);
+    // return size + dbg_offset_elems + dbg_tail_elems;
+
+
+    len_t length = (len_t)size; // avoid implicit conversion warnings
+    // printf("dyndelt pack orig size: %d\n", length);
+    int loss = Losses::SumLogAbs;
+    uint16_t offset = write_metadata_simple1d(data_out, length);
+    data_out += offset;
+
+    // works
+    // memcpy(data_out, data_in, 2 * length);
+    // return offset + length;
+
+    // works
+    // uint8_t* choices_out = (uint8_t*)(data_out + length);
+    // len_t choices_size = (dynamic_delta_choices_size_bytes(length) + 1) / 2;
+    // memcpy(data_out, data_in, 2 * length);
+    // memset(data_out + length, 42, choices_size);
+    // return offset + length + choices_size;
+
+    // works
+    // uint8_t* choices_out = (uint8_t*)(data_out + length);
+    // len_t choices_size = dynamic_delta_choices_size(length);
+    // return offset + dynamic_delta_zigzag_encode_u16(
+    //     data_in, length, data_out, choices_out, loss) + choices_size;
+
+    // works
+    uint8_t* choices_out = (uint8_t*)(data_out + length);
+    len_t choices_size = (dynamic_delta_choices_size_bytes(length) + 1) / 2;
+    return offset + dynamic_delta_zigzag_encode_u16(
+        data_in, length, data_out, choices_out, loss) + choices_size;
+    // auto ret = offset + dynamic_delta_zigzag_encode_u16(
+    //     data_in, length, data_out, choices_out, loss) + choices_size;
+    // printf("dyndelta initial len, packed len = %d, %d\n", length, ret);
+    // return ret;
+}
+len_t dynamic_delta_unpack_u16(
+    const int16_t* data_in, uint16_t* data_out)
+{
+    // works
+    // memcpy(data_out, data_in + dbg_offset_elems, 3912);
+    // return 3912 / 2;
+    // works
+    // memcpy(data_out, data_in + 2, 3912);
+    // return 3912 / 2;
+
+    // works
+    // len_t length;
+    // uint16_t offset = read_metadata_simple1d(data_in, &length);
+    // data_in += offset;
+    // const uint8_t* choices_in = (const uint8_t*)(data_in + length);
+    // auto ret = length;
+    // memcpy(data_out, data_in, 2 * length);
+    // return ret;
+
+    // works
+    len_t length;
+    uint16_t offset = read_metadata_simple1d(data_in, &length);
+    data_in += offset;
+    const uint8_t* choices_in = (const uint8_t*)(data_in + length);
+    return dynamic_delta_zigzag_decode_u16(
+        data_in, length, data_out, choices_in);
+}
