@@ -135,7 +135,8 @@ int main(int argc, char** argv) {
             }
             break;
         case 'd':
-            params->preprocessors.push_back(number);
+            // params->preprocessors.push_back(number);
+            params->preprocessors.push_back({.func = DELTA, .offset=number});
             // printf("params preprocessors current size: %lu\n", params->preprocessors.size());
             // params->preprocessors.push_back(1);
             // printf("params preprocessors new size: %lu\n", params->preprocessors.size());
@@ -143,7 +144,8 @@ int main(int argc, char** argv) {
             // printf("params preprocessors cleared size: %lu\n", params->preprocessors.size());
             break;
         case 'D':
-            params->preprocessors.push_back(number + (1 << 16)); // XXX total hack
+            // params->preprocessors.push_back(number + (1 << 16)); // XXX total hack
+            params->preprocessors.push_back({.func=DOUBLE_DELTA, .offset=number});
             break;
         case 'e':
             dinfo.element_sz = number;
@@ -158,7 +160,8 @@ int main(int argc, char** argv) {
         case 'f':
             // XXX: for sprintz forecasting, pass in negative of the
             // dimensionality; this is a total hack
-            params->preprocessors.push_back(-number);
+            // params->preprocessors.push_back(-number);
+            params->preprocessors.push_back({.func=XFF, .offset=number});
             break;
         case 'i':
             params->c_iters = number;

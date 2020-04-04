@@ -96,7 +96,14 @@ typedef struct string_table
 
 enum textformat_e { MARKDOWN=1, TEXT, TEXT_FULL, CSV, TURBOBENCH, MARKDOWN2 };
 enum timetype_e { FASTEST=1, AVERAGE, MEDIAN };
-enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4};
+// enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4}; // TODO rm?
+
+enum preproc_func_e { DELTA, DOUBLE_DELTA, XFF, DYNAMIC_DELTA };
+
+struct preproc_params_t {
+    int func;
+    int offset;
+};
 
 class lzbench_params_t {
 public:
@@ -108,7 +115,8 @@ public:
     size_t mem_limit;
     int random_read;
     std::vector<string_table_t> results;
-    std::vector<int64_t> preprocessors;
+    // std::vector<int64_t> preprocessors;
+    std::vector<preproc_params_t> preprocessors;
     const char* in_filename;
     // int element_sz;
     QueryParams query_params;
