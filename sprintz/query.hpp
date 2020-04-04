@@ -207,7 +207,7 @@ public:
     // explicit MaxQuery(int64_t ndims):
     //     state(DIV_ROUND_UP(ndims, elems_per_vec)) {}
     explicit MaxQuery(int64_t ndims) {
-        int needed_npackets = div_round_up(ndims, elems_per_vec) + 3;
+        int needed_npackets = (int)div_round_up(ndims, elems_per_vec) + 3;
         // printf("MaxQuery: need %d packets for %d dims\n", needed_npackets, (int)ndims);
         bool zero = true; // XXX max could be less than zero
         state = aligned_array<packet_t>(needed_npackets, true);
@@ -255,7 +255,7 @@ public:
     // explicit SumQuery(int64_t ndims):
     //     state(div_round_up(ndims, elems_per_vec) + 3) {}
     explicit SumQuery(int64_t ndims) {
-        int needed_npackets = div_round_up(ndims, elems_per_vec) + 3;
+        int needed_npackets = (int)div_round_up(ndims, elems_per_vec) + 3;
         // int needed_npackets = DIV_ROUND_UP(ndims, elems_per_vec) + 20; // TODO rm
         // printf("SumQuery: ndims = %d, needed_npackets = %d\n", (int)ndims, needed_npackets);
         // state = std::unique_ptr<packet_t[]>(
