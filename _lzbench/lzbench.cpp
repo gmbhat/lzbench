@@ -49,17 +49,22 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         if (outpart > outsize) outpart = outsize;
 
         const uint8_t* inptr = inbuf;
+        size_t new_size = part;
         if (params->preprocessors.size() > 0) {
-            apply_preprocessors(params->preprocessors, inbuf, part, params->data_info.element_sz, tmpbuf);
+            new_size = apply_preprocessors(params->preprocessors, inbuf, part,
+                params->data_info.element_sz, tmpbuf);
             inptr = (const uint8_t*)tmpbuf;
         }
 
-        clen = compress((char*)inptr, part, (char*)outbuf, outpart, param1, param2, workmem);
-        LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n", (int)part, (int)clen, (int)(inbuf-start));
+        clen = compress((char*)inptr, new_size, (char*)outbuf, outpart,
+                        param1, param2, workmem);
+        LZBENCH_PRINT(9, "ENC part=%d clen=%d in=%d\n",
+            (int)part, (int)clen, (int)(inbuf-start));
 
         // if (clen <= 0 || clen == part)
         if (clen <= 0) {
-            LZBENCH_PRINT(3, "WARNING: got compressed data length of %lld!\n", (long long)clen);
+            LZBENCH_PRINT(3, "WARNING: got compressed data length of %lld!\n",
+                (long long)clen);
             if (part > outsize) return 0;
             memcpy(outbuf, inbuf, part);
             clen = part;
@@ -113,7 +118,7 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
                 dlen = decompress((char*)inbuf, part, (char*)outbuf,
                     chunk_sizes[i], param1, param2, workmem);
             }
-            undo_preprocessors(params->preprocessors, outbuf, dlen,
+            dlen = undo_preprocessors(params->preprocessors, outbuf, dlen,
                 params->data_info.element_sz);
         } else {
             // printf("already_materialized; skipping decomp, etc\n");

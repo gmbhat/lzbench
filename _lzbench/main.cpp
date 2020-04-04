@@ -163,6 +163,9 @@ int main(int argc, char** argv) {
             // params->preprocessors.push_back(-number);
             params->preprocessors.push_back({.func=XFF, .offset=number});
             break;
+        case 'F': // specify forecaster by number, with fixed offset of 1
+            // see preproc_func_e at top of lzbench.h for meanings
+            params->preprocessors.push_back({.func=number, .offset=1});
         case 'i':
             params->c_iters = number;
             if (*numPtr == ',')

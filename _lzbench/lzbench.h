@@ -98,7 +98,7 @@ enum textformat_e { MARKDOWN=1, TEXT, TEXT_FULL, CSV, TURBOBENCH, MARKDOWN2 };
 enum timetype_e { FASTEST=1, AVERAGE, MEDIAN };
 // enum preprocessor_e { DELTA = 1, DELTA2 = 2, DELTA3 = 3, DELTA4 = 4}; // TODO rm?
 
-enum preproc_func_e { DELTA, DOUBLE_DELTA, XFF, DYNAMIC_DELTA };
+enum preproc_func_e { DELTA=1, DOUBLE_DELTA=2, XFF=2, DYNAMIC_DELTA=3};
 
 struct preproc_params_t {
     int func;

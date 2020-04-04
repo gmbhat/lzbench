@@ -18,12 +18,12 @@ namespace lzbench {
 static const int64_t kDoubleDeltaThreshold = 1 << 16;
 
 // void apply_preprocessors(const std::vector<int64_t>& preprocessors,
-void apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
+size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
 {
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
 
-    if (preprocessors.size() < 1) { return; }
+    if (preprocessors.size() < 1) { return size; }
 
     int sz = element_sz;
     if (sz < 1) { sz = 1; }
@@ -193,15 +193,16 @@ void apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             }
         }
     }
+    return size;
 }
 
 // void undo_preprocessors(const std::vector<int64_t>& preprocessors,
-void undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
+size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
 {
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
 
-    if (preprocessors.size() < 1) { return; }
+    if (preprocessors.size() < 1) { return size; }
 
     if (outbuf == nullptr) { outbuf = inbuf; }
 
@@ -391,6 +392,7 @@ void undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
 #undef UNDO_DELTA_FOR_OFFSET
     }
+    return size;
 }
 
 } // namespace lzbench
