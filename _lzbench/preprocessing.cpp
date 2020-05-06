@@ -42,7 +42,8 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
-            && (func != XFF) && (func != DYNAMIC_DELTA))
+            && (func != XFF) && (func != DYNAMIC_DELTA)
+            && (func != ZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -133,6 +134,27 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
             nelements = (size + sz - 1) / sz;
             continue;
+        }
+
+        // ------------------------ zigzag
+        if (sz == 2 && func == ZIGZAG) {
+            // printf("enc buff has length in elements: %d\n", nelements);
+            // printf("enc buff has size in bytes: %d\n", size);
+            // auto data_in = (const uint16_t*)inbuf;
+            // auto data_out = (int16_t*)outbuf;
+            // for (len_t i = 0; i < nelements; i++) {
+            //     // data_out[i] = zigzag_decode_16b(zigzag_encode_16b(data_in[i]));
+            //     data_out[i] = zigzag_encode_16b(data_in[i]);
+            //     if (i < 5) {
+            //         printf("raw val, enc val: %d, %d\n", data_in[i], data_out[i]);
+            //     }
+            // }
+            // for (len_t i = 0; i < length; i++) {
+            //     *data_out++ = zigzag_encode_16b(*data_out++);
+            // }
+            zigzag_encode_u16( // TODO uncomment
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            // memcpy(outbuf, inbuf, nelements * sz);
         }
 
         // printf("didn't apply any preproc for offset %lld...\n", offset);
@@ -226,7 +248,10 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
 
 
-    for (auto preproc : preprocessors) {
+    // for (auto preproc : preprocessors) {
+    for (size_t i = 0; i < preprocessors.size(); i++) {
+        // traverse preprocessors in reverse order
+        auto preproc = preprocessors[preprocessors.size() - 1 - i];
         // printf("undoing preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
         // continue;
 
@@ -243,7 +268,8 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
-            && (func != XFF) && (func != DYNAMIC_DELTA))
+            && (func != XFF) && (func != DYNAMIC_DELTA)
+            && (func != ZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -297,7 +323,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             } else {
                 // printf("inbuf == outbuf! WTF\n");
                 // decode_doubledelta_rowmajor_inplace_8b(inbuf, size, offset);
-                decode_doubledelta_rowmajor_inplace_8b(inbuf, nelements, offset);
+                decode_delta_rowmajor_inplace_8b(inbuf, nelements, offset);
                 // decode_doubledelta_rowmajor_inplace_8b(inbuf, size, offset);
                 // printf("ran dbl delta decoding without crashing!\n");
             }
@@ -352,6 +378,27 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
                 (const int16_t*)inbuf, (uint16_t*)outbuf);
             nelements = (size + sz - 1) / sz;
             continue;
+        }
+
+        // ------------------------ zigzag
+        if (sz == 2 && func == ZIGZAG) {
+            // printf("does inbuf == outbuf? %d\n", inbuf == outbuf);
+            // // printf("dec buff has length in elements: %d\n", nelements);
+            // printf("dec buff has size in bytes: %d\n", size);
+            // printf("offset: %d\n", offset);
+            // // memcpy(outbuf, inbuf, nelements * sz);
+            zigzag_decode_u16(
+                (const int16_t*)inbuf, nelements, (uint16_t*)outbuf);
+            // // printf("dec of ")
+            // auto data_in = (const uint16_t*)inbuf;
+            // auto data_out = (int16_t*)outbuf;
+            // for (len_t i = 0; i < nelements; i++) {
+            //     auto enc_val = data_in[i];
+            //     data_out[i] = zigzag_decode_16b(data_in[i]);
+            //     // if (i < 5) {
+            //     //     printf("raw val, enc val: %d, %d\n", data_out[i], enc_val);
+            //     // }
+            // }
         }
 
 #else

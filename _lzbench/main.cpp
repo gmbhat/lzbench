@@ -7,6 +7,7 @@
 
 using namespace lzbench; // TODO separate out individual types/funcs we need
 
+
 void usage(lzbench_params_t* params) {
     // fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory and [options] are:\n");
     fprintf(stderr, "usage: " PROGNAME " [options] input [input2] [input3]\n\nwhere [input] is a file or a directory.\n");
@@ -113,6 +114,7 @@ int main(int argc, char** argv) {
         // bool ignored_decimal = decimal;
         // int64_t divide_decimal_by = std::pow(10, length - decimal_pos);
 
+        int offset; // can't declare vars within switch
         switch (argument[0])
         {
         case 'a':
@@ -165,8 +167,10 @@ int main(int argc, char** argv) {
             break;
         case 'F': // specify forecaster by number, with fixed offset of 1
             // see preproc_func_e at top of lzbench.h for meanings
-            params->preprocessors.push_back({.func=number, .offset=1});
-            // params->preprocessors.push_back({.func=3, .offset=1});
+            offset = number == ZIGZAG ? 0 : 1; // zigzag doesn't store len
+            // TODO have other that don't need to store length also not
+            // store it
+            params->preprocessors.push_back({.func=number, .offset=offset});
             break;
         case 'i':
             params->c_iters = number;

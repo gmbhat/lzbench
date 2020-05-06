@@ -408,6 +408,18 @@ len_t dynamic_delta_zigzag_decode_u16(
 len_t dynamic_delta_unpack_u16(
     const int16_t* data_in, uint16_t* data_out);
 
+// =================================================== just zigzag
+
+len_t zigzag_encode_u16(
+    const uint16_t* data_in, len_t length, int16_t* data_out);
+len_t zigzag_pack_u16(
+    const uint16_t* data_in, size_t length, int16_t* data_out);
+
+len_t zigzag_decode_u16(
+    const int16_t* data_in, len_t length, uint16_t* data_out);
+len_t zigzag_unpack_u16(
+    const int16_t* data_in, uint16_t* data_out);
+
 // void dynamic_delta_zigzag_decode_u16(
 //     const uint16_t* data_in, uint16_t* data_out, uint8_t* choices_in);
 
