@@ -114,9 +114,7 @@ int main(int argc, char** argv) {
         // bool ignored_decimal = decimal;
         // int64_t divide_decimal_by = std::pow(10, length - decimal_pos);
 
-        int offset; // can't declare vars within switch
-        switch (argument[0])
-        {
+        switch (argument[0]) {
         case 'a':
             encoder_list = strdup(argument + 1);
             numPtr += strlen(numPtr);
@@ -138,7 +136,7 @@ int main(int argc, char** argv) {
             break;
         case 'd':
             // params->preprocessors.push_back(number);
-            params->preprocessors.push_back({.func = DELTA, .offset=number});
+            params->preprocessors.push_back({.func = DELTA, .stride=number});
             // printf("params preprocessors current size: %lu\n", params->preprocessors.size());
             // params->preprocessors.push_back(1);
             // printf("params preprocessors new size: %lu\n", params->preprocessors.size());
@@ -147,7 +145,7 @@ int main(int argc, char** argv) {
             break;
         case 'D':
             // params->preprocessors.push_back(number + (1 << 16)); // XXX total hack
-            params->preprocessors.push_back({.func=DOUBLE_DELTA, .offset=number});
+            params->preprocessors.push_back({.func=DOUBLE_DELTA, .stride=number});
             break;
         case 'e':
             dinfo.element_sz = number;
@@ -160,17 +158,14 @@ int main(int argc, char** argv) {
         //     numPtr += strlen(numPtr);
         //     break;
         case 'f':
-            // XXX: for sprintz forecasting, pass in negative of the
-            // dimensionality; this is a total hack
-            // params->preprocessors.push_back(-number);
-            params->preprocessors.push_back({.func=XFF, .offset=number});
+            params->preprocessors.push_back({.func=XFF, .stride=number});
             break;
         case 'F': // specify forecaster by number, with fixed offset of 1
             // see preproc_func_e at top of lzbench.h for meanings
-            offset = number == ZIGZAG ? 0 : 1; // zigzag doesn't store len
+            // offset = number == ZIGZAG ? 0 : 1; // zigzag doesn't store len
             // TODO have other that don't need to store length also not
             // store it
-            params->preprocessors.push_back({.func=number, .offset=offset});
+            params->preprocessors.push_back({.func=number, .stride=1});
             break;
         case 'i':
             params->c_iters = number;

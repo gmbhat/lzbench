@@ -108,7 +108,7 @@ enum preproc_func_e {
 
 struct preproc_params_t {
     int func;
-    int offset;
+    int stride;
 };
 
 class lzbench_params_t {

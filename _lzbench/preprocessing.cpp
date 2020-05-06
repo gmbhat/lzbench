@@ -26,16 +26,6 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
     if (preprocessors.size() < 1) { return size; }
 
-
-
-
-
-    // TODO if multiple preprocs, needs to have them read each others' output
-
-
-
-
-
     int sz = element_sz;
     if (sz < 1) { sz = 1; }
     int64_t nelements = size / sz;
@@ -54,11 +44,12 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     for (int i = 0; i < preprocessors.size(); i++) {
         auto preproc = preprocessors[i];
         // if (false) { // TODO rm
-        if (i % 2) { // swap buffers
+        // if (i % 2) { // swap buffers
+        if (i > 0) { // swap buffers
             // printf("swapping input and output buffers\n");
+            auto tmp = inbuf;
             inbuf = (const uint8_t*)outbuf;
-            outbuf = (uint8_t*)inbuf;
-            // auto tmp = tmpbuf;
+            outbuf = (uint8_t*)tmp;
             // tmpbuf = outbuf;
             // outbuf = tmpbuf;
         }
@@ -88,14 +79,15 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 // #endif
 
         // int64_t offset = preproc;  // simplifying hack based on enum values
-        int64_t offset = preproc.offset;
+        // int64_t offset = preproc.offset;
+        int64_t stride = preproc.stride;
         // printf("using offset: %lld\n", offset);
 
         // printf("alright, we got to here; about to maybe apply a preproc...\n");
 
         // use simd delta if available
 #ifndef BENCH_REMOVE_FASTPFOR
-        if (sz == 4 && func == DELTA && offset == 4)  {
+        if (sz == 4 && func == DELTA && stride == 4)  {
             memcpy(outbuf, inbuf, size);
             FastPForLib::Delta::deltaSIMD((uint32_t*)outbuf, nelements);
             continue;
@@ -104,52 +96,54 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
         // ------------------------ delta
         // if (sz == 1 && (offset > 2) && (offset < kDoubleDeltaThreshold)) {
-        if (sz == 1 && (offset > 2) && func == DELTA) {
+        if (sz == 1 && (stride > 2) && func == DELTA) {
             // printf("applying 8b delta encoding...\n");
-            encode_delta_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, offset, false);
+            encode_delta_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, stride, false);
             continue;
         }
         // if (sz == 2 && (offset > 2) && (offset < kDoubleDeltaThreshold)) {
-        if (sz == 2 && (offset > 2) && func == DELTA) {
+        if (sz == 2 && (stride > 2) && func == DELTA) {
             // printf("applying 16b delta encoding...\n");
+            // printf("enc delta: %d elements\n", nelements);
             encode_delta_rowmajor_16b((const uint16_t*)inbuf, nelements,
-                (int16_t*)outbuf, offset, false);
+                (int16_t*)outbuf, stride, false);
+            // size = (nelements + 1) / 2;
             continue;
         }
         // ------------------------ double delta
-        // if (sz == 1 && offset >= kDoubleDeltaThreshold) {
-        //     offset = offset % kDoubleDeltaThreshold;
         if (sz == 1 && func == DOUBLE_DELTA) {
             // printf("applying 8b double delta encoding...\n");
-            // printf("about to run double delta encoding using offset %d...\n", (int)offset);
-            encode_doubledelta_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, offset, false);
-            // encode_delta_rowmajor_8b(inbuf, size, (int8_t*)outbuf, offset, false); // XXX rm after debug
+            size = encode_doubledelta_rowmajor_8b(
+                inbuf, nelements, (int8_t*)outbuf, stride, false);
+            nelements = size;
             // printf("got thru encoding without exception...\n");
             continue;
         }
         // if (sz == 2 && offset >= kDoubleDeltaThreshold) {
         if (sz == 2 && func == DOUBLE_DELTA) {
             // printf("applying 16b double delta encoding...\n");
-            offset = offset % kDoubleDeltaThreshold;
-            encode_doubledelta_rowmajor_16b((const uint16_t*)inbuf, nelements,
-                (int16_t*)outbuf, offset, false);
+            // stride = offset % kDoubleDeltaThreshold;
+            // nelements = encode_doubledelta_rowmajor_16b(
+            encode_doubledelta_rowmajor_16b(
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf,
+                stride, false);
+            // size = (nelements + 1) / 2;
             continue;
         }
         // ------------------------ xff
-        // if (sz == 1 && offset < 0) {
-        //     offset = -offset;
         if (sz == 1 && func == XFF) {
             // printf("about to run 8b xff encoding using offset %d...\n", (int)offset);
-            encode_xff_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, offset, false);
+            // size = encode_xff_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, stride, false);
+            encode_xff_rowmajor_8b(inbuf, nelements, (int8_t*)outbuf, stride, false);
+            // nelements = size;
             // printf("...ran xff encoding\n");
             continue;
         }
-        // if (sz == 2 && offset < 0) {
-        //     offset = -offset;
         if (sz == 2 && func == XFF) {
-            // printf("about to run 16b xff encoding using offset %d...\n", (int)offset);
+            // nelements = encode_xff_rowmajor_16b((const uint16_t*)inbuf, nelements,
             encode_xff_rowmajor_16b((const uint16_t*)inbuf, nelements,
-                (int16_t*)outbuf, offset, false);
+                (int16_t*)outbuf, stride, false);
+            // size = (nelements + 1) / 2;
             // printf("...ran xff encoding\n");
             continue;
         }
@@ -181,6 +175,7 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             // }
             zigzag_encode_u16( // TODO uncomment
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            continue;
             // memcpy(outbuf, inbuf, nelements * sz);
 
             // printf("enc first 5 enc elems: ");
@@ -190,16 +185,13 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // printf("didn't apply any preproc for offset %lld...\n", offset);
 
 #else
-        if ((offset > 4)) { // TODO better err message saying need sprintz
+        if ((stride > 4)) { // TODO better err message saying need sprintz
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
 #endif
 
-        memcpy(outbuf, inbuf, offset * sz);
-
-
-#define DELTAS_FOR_OFFSET(OFFSET) \
+    #define DELTAS_FOR_OFFSET(OFFSET) \
         switch(sz) { \
         case 1: \
             { \
@@ -238,9 +230,10 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         }
 
         if (func == DELTA) {
+            memcpy(outbuf, inbuf, stride * sz);
             // tell compiler that offset is only going to be one of these 4
             // values (2x speedup or more)
-            switch (offset) {
+            switch (stride) {
             case 1:
                 DELTAS_FOR_OFFSET(1); break;
             case 2:
@@ -255,10 +248,12 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             }
         }
     }
-
+    #undef DELTAS_FOR_OFFSET
 
     // if (false) { // TODO rm
-    if (outbuf != orig_outbuf) {
+    // if (outbuf != orig_outbuf) {
+    if (preprocessors.size() % 2 == 0) {
+        // printf("copying tmpbuf to output buffer!\n");
         // we switch off between using original inbuf and outbuf as input
         // and output when there are multiple preprocs; ensure that the
         // final result ends up in outbuf;
@@ -268,7 +263,6 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // outbuf = tmp;
     }
     return size;
-
 }
 
 // void undo_preprocessors(const std::vector<int64_t>& preprocessors,
@@ -309,10 +303,10 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // memcpy(outbuf, inbuf, size); continue;  // TODO rm
 
         // int offset = preproc;  // simplifying hack based on enum values
-        int offset = preproc.offset;  // simplifying hack based on enum values
+        int stride = preproc.stride;  // simplifying hack based on enum values
 #ifndef BENCH_REMOVE_FASTPFOR   // use simd delta if available
         // if (sz == 4 && preproc == DELTA4)  {
-        if (sz == 4 && func == DELTA && offset == 4)  {
+        if (sz == 4 && func == DELTA && stride == 4)  {
             memcpy(outbuf, inbuf, size);
             FastPForLib::Delta::inverseDeltaSIMD((uint32_t*)outbuf, nelements);
             continue;
@@ -320,84 +314,64 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 #endif
 #ifndef BENCH_REMOVE_SPRINTZ   // use simd delta if available
         // ------------------------ delta
-        if (sz == 1 && (offset > 2) && func == DELTA) {
+        if (sz == 1 && (stride > 2) && func == DELTA) {
             if (inbuf != outbuf) {
-                decode_delta_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, offset);
+                decode_delta_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, stride);
             } else {
-                decode_delta_rowmajor_inplace_8b(inbuf, nelements, offset);
-                // uint8_t* tmp = (uint8_t*)malloc(size);
-                // decode_delta_rowmajor((int8_t*)inbuf, size, tmp, offset);
-                // memcpy(inbuf, tmp, size);
+                decode_delta_rowmajor_inplace_8b(inbuf, nelements, stride);
             }
             continue;
         }
-        if (sz == 2 && (offset > 2) && func == DELTA) {
+        if (sz == 2 && (stride > 2) && func == DELTA) {
             if (inbuf != outbuf) {
                 decode_delta_rowmajor_16b((const int16_t*)inbuf, nelements,
-                    (uint16_t*)outbuf, offset);
+                    (uint16_t*)outbuf, stride);
             } else {
+                // printf("dec delta: %d elements\n", nelements);
                 decode_delta_rowmajor_inplace_16b((uint16_t*)inbuf,
-                    nelements, offset);
+                    nelements, stride);
             }
             continue;
         }
         // ------------------------ double delta
-        // if (sz == 1 && offset >= kDoubleDeltaThreshold) {
-        //     offset = offset % kDoubleDeltaThreshold;
         if (sz == 1 && func == DOUBLE_DELTA) {
-            // printf("about to run double delta decoding using offset %d...\n", (int)offset);
             if (inbuf != outbuf) {
                 // printf("inbuf != outbuf!\n");
-                // decode_doubledelta_rowmajor_8b((int8_t*)inbuf, size, outbuf, offset);
-                decode_delta_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, offset);
+                decode_delta_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, stride);
                 // printf("ran dbl delta decoding without crashing!\n");
             } else {
                 // printf("inbuf == outbuf! WTF\n");
-                // decode_doubledelta_rowmajor_inplace_8b(inbuf, size, offset);
-                decode_delta_rowmajor_inplace_8b(inbuf, nelements, offset);
-                // decode_doubledelta_rowmajor_inplace_8b(inbuf, size, offset);
+                decode_delta_rowmajor_inplace_8b(inbuf, nelements, stride);
                 // printf("ran dbl delta decoding without crashing!\n");
             }
             continue;
         }
-        // if (sz == 2 && offset >= kDoubleDeltaThreshold) {
-        //     offset = offset % kDoubleDeltaThreshold;
         if (sz == 2 && func == DOUBLE_DELTA) {
             if (inbuf != outbuf) {
                 decode_doubledelta_rowmajor_16b((const int16_t*)inbuf, nelements,
-                    (uint16_t*)outbuf, offset);
+                    (uint16_t*)outbuf, stride);
             } else {
                 decode_doubledelta_rowmajor_inplace_16b((uint16_t*)inbuf,
-                    nelements, offset);
+                    nelements, stride);
             }
             continue;
         }
         // ------------------------ xff
-        // if (sz == 1 && offset < 0) {
-        //     offset = -offset;
         if (sz == 1 && func == XFF) {
             if (inbuf != outbuf) {
-                decode_xff_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, offset);
+                decode_xff_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, stride);
             } else {
-                // printf("running xff decode 8b inplace with offset %d...", (int)offset);
-                decode_xff_rowmajor_inplace_8b(inbuf, nelements, offset);
-                // printf("...ran xff decode 8b\n");
-                // uint8_t* tmp = (uint8_t*)malloc(size);
-                // decode_delta_rowmajor((int8_t*)inbuf, size, tmp, offset);
-                // memcpy(inbuf, tmp, size);
+                decode_xff_rowmajor_inplace_8b(inbuf, nelements, stride);
             }
             continue;
         }
-        // if (sz == 2 && offset < 0) {
-        //     offset = -offset;
         if (sz == 2 && func == XFF) {
             if (inbuf != outbuf) {
                 decode_xff_rowmajor_16b((const int16_t*)inbuf, nelements,
-                    (uint16_t*)outbuf, offset);
+                    (uint16_t*)outbuf, stride);
             } else {
-                // printf("about to run xff decode inplace for offset %lld\n", offset);
                 decode_xff_rowmajor_inplace_16b((uint16_t*)inbuf,
-                    nelements, offset);
+                    nelements, stride);
                 // printf("...ran xff decode\n");
             }
             continue;
@@ -418,12 +392,11 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             // printf("dec buff has size in bytes: %d\n", size);
             // printf("dec first 5 enc elems: ");
             // for (int i = 0; i < 5; i++) { printf("%d ", ((int16_t*)inbuf)[i]); } printf("\n");
-            // printf("offset: %d\n", offset);
 
             // memcpy(outbuf, inbuf, nelements * sz);
             zigzag_decode_u16(
                 (const int16_t*)inbuf, nelements, (uint16_t*)outbuf);
-
+            continue;
             // // printf("dec of ")
             // auto data_in = (const uint16_t*)inbuf;
             // auto data_out = (int16_t*)outbuf;
@@ -437,13 +410,13 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         }
 
 #else
-        if ((offset > 4)) { // TODO better err message saying need sprintz
+        if ((stride > 4)) { // TODO better err message saying need sprintz
             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
             continue;
         }
 #endif
 
-        memcpy(outbuf, inbuf, offset * sz);
+
 
 #define UNDO_DELTA_FOR_OFFSET(OFFSET) \
         if (sz <= 1) { \
@@ -477,7 +450,8 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // compiler doesn't know that offset is only going to be one of these
         // 4 values, and so produces 2-3x slower code if we don't this
         if (func == DELTA) {
-            switch (offset) {
+            memcpy(outbuf, inbuf, stride * sz);
+            switch (stride) {
             case 1:
                 UNDO_DELTA_FOR_OFFSET(1); break;
             case 2:
@@ -490,7 +464,6 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
                 break; // we checked that offset was in {1,..,4} above
             }
         }
-
 #undef UNDO_DELTA_FOR_OFFSET
     }
     return size;

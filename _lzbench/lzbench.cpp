@@ -53,8 +53,8 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         if (params->preprocessors.size() > 0) {
             part = apply_preprocessors(params->preprocessors, inbuf, part,
                 params->data_info.element_sz, tmpbuf0, tmpbuf1);
-            chunk_sizes[i] = part; // TODO did this break everything?
-            inptr = (const uint8_t*)tmpbuf0;
+            chunk_sizes[i] = part;
+            inptr = (const uint8_t*)tmpbuf0;  // first tmp is used as outbuf
         }
 
         clen = compress((char*)inptr, part, (char*)outbuf, outpart,
