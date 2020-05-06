@@ -15,7 +15,8 @@ namespace lzbench {
 
 // void apply_preprocessors(const std::vector<int64_t>& preprocessors,
 size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
-    const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf);
+    const uint8_t* inbuf, size_t size, int element_sz,
+    uint8_t* outbuf, uint8_t* tmpbuf);
 // void undo_preprocessors(const std::vector<int64_t>& preprocessors,
 size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf=nullptr);

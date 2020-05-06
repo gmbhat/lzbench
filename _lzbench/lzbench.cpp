@@ -33,8 +33,8 @@ namespace lzbench {
 inline int64_t lzbench_compress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, compress_func compress,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
-    uint8_t* tmpbuf, size_t outsize, size_t param1, size_t param2,
-    char* workmem)
+    uint8_t* tmpbuf0, uint8_t* tmpbuf1, size_t outsize, size_t param1,
+    size_t param2, char* workmem)
 {
     int64_t clen;
     size_t outpart, part, sum = 0;
@@ -52,9 +52,9 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
         const uint8_t* inptr = inbuf;
         if (params->preprocessors.size() > 0) {
             part = apply_preprocessors(params->preprocessors, inbuf, part,
-                params->data_info.element_sz, tmpbuf);
+                params->data_info.element_sz, tmpbuf0, tmpbuf1);
             chunk_sizes[i] = part; // TODO did this break everything?
-            inptr = (const uint8_t*)tmpbuf;
+            inptr = (const uint8_t*)tmpbuf0;
         }
 
         clen = compress((char*)inptr, part, (char*)outbuf, outpart,
@@ -127,7 +127,6 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             // printf("already_materialized; skipping decomp, etc\n");
             dlen = part;
         }
-        // printf("lzbench_decompress: undid preprocs!\n");
 
         // run query if one is specified
         if (qparams.type != QUERY_NONE) {
@@ -227,7 +226,8 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
     size_t param2 = desc->additional_param;
     size_t chunk_size = (params->chunk_size > insize) ? insize : params->chunk_size;
 
-    uint8_t* tmpbuf = alloc_data_buffer(GET_COMPRESS_BOUND(insize));
+    uint8_t* tmpbuf0 = alloc_data_buffer(GET_COMPRESS_BOUND(insize));
+    uint8_t* tmpbuf1 = alloc_data_buffer(GET_COMPRESS_BOUND(insize));
     // printf("allocated tmpbuf of size: %d\n", (int)GET_COMPRESS_BOUND(insize));
 
     LZBENCH_PRINT(5, "*** trying %s insize=%d comprsize=%d chunk_size=%d\n", desc->name, (int)insize, (int)comprsize, (int)chunk_size);
@@ -303,7 +303,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         do {
             GetTime(start_ticks);
             complen = lzbench_compress(params, chunk_sizes, desc->compress,
-                compr_sizes, inbuf, compbuf, tmpbuf, comprsize, param1, param2, workmem);
+                compr_sizes, inbuf, compbuf, tmpbuf0, tmpbuf1, comprsize, param1, param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);
             if (nanosec >= 10000) { ctime.push_back(nanosec); }
@@ -335,7 +335,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
 
     if (!params->compress_only && params->nthreads > 0) {
         parallel_decomp(params, chunk_sizes,
-                desc, compr_sizes, compbuf, decomp, tmpbuf, rate, ctime,
+                desc, compr_sizes, compbuf, decomp, tmpbuf0, rate, ctime,
                 param1, param2, &workmems[0]);
         // return;
         goto done;
@@ -385,7 +385,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         do {
             GetTime(start_ticks);
             decomplen = lzbench_decompress(params, chunk_sizes,
-                desc, compr_sizes, compbuf, decomp, tmpbuf, param1,
+                desc, compr_sizes, compbuf, decomp, tmpbuf0, param1,
                 param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);

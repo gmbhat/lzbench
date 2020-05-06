@@ -20,11 +20,21 @@ static const int64_t kDoubleDeltaThreshold = 1 << 16;
 
 // void apply_preprocessors(const std::vector<int64_t>& preprocessors,
 size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
-    const uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
+    const uint8_t* orig_inbuf, size_t size, int element_sz, uint8_t* outbuf, uint8_t* tmpbuf)
 {
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
 
     if (preprocessors.size() < 1) { return size; }
+
+
+
+
+
+    // TODO if multiple preprocs, needs to have them read each others' output
+
+
+
+
 
     int sz = element_sz;
     if (sz < 1) { sz = 1; }
@@ -33,8 +43,25 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     // printf("size=%lu, sz=%lu, element_sz=%d\n", size, sz, element_sz);
     // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
 
+    // auto orig_inbuf = inbuf;
+    auto orig_outbuf = outbuf;
 
-    for (auto preproc : preprocessors) {
+    memcpy(tmpbuf, orig_inbuf, size);
+    auto inbuf = (const uint8_t*)tmpbuf;
+    // const uint8_t* inbuf = orig_inbuf;
+
+    // for (auto preproc : preprocessors) {
+    for (int i = 0; i < preprocessors.size(); i++) {
+        auto preproc = preprocessors[i];
+        // if (false) { // TODO rm
+        if (i % 2) { // swap buffers
+            // printf("swapping input and output buffers\n");
+            inbuf = (const uint8_t*)outbuf;
+            outbuf = (uint8_t*)inbuf;
+            // auto tmp = tmpbuf;
+            // tmpbuf = outbuf;
+            // outbuf = tmpbuf;
+        }
         // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
         // continue;
 
@@ -155,6 +182,9 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             zigzag_encode_u16( // TODO uncomment
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
             // memcpy(outbuf, inbuf, nelements * sz);
+
+            // printf("enc first 5 enc elems: ");
+            // for (int i = 0; i < 5; i++) { printf("%d ", ((int16_t*)outbuf)[i]); } printf("\n");
         }
 
         // printf("didn't apply any preproc for offset %lld...\n", offset);
@@ -225,7 +255,20 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             }
         }
     }
+
+
+    // if (false) { // TODO rm
+    if (outbuf != orig_outbuf) {
+        // we switch off between using original inbuf and outbuf as input
+        // and output when there are multiple preprocs; ensure that the
+        // final result ends up in outbuf;
+        memcpy(orig_outbuf, tmpbuf, nelements * sz);
+        // auto tmp = inbuf;
+        // inbuf = outbuf;
+        // outbuf = tmp;
+    }
     return size;
+
 }
 
 // void undo_preprocessors(const std::vector<int64_t>& preprocessors,
@@ -253,18 +296,6 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // traverse preprocessors in reverse order
         auto preproc = preprocessors[preprocessors.size() - 1 - i];
         // printf("undoing preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
-        // continue;
-
-//         if (preproc == 0) {
-//             printf("WARNING: ignoring unrecognized preprocessor number '0'\n");
-//             continue;
-//         }
-// #ifdef BENCH_REMOVE_SPRINTZ
-//         if (preproc < 1) {
-//             printf("WARNING: ignoring unrecognized preprocessor number '%lld'\n", preproc);
-//             continue;
-//         }
-// #endif
 
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
@@ -385,10 +416,14 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             // printf("does inbuf == outbuf? %d\n", inbuf == outbuf);
             // // printf("dec buff has length in elements: %d\n", nelements);
             // printf("dec buff has size in bytes: %d\n", size);
+            // printf("dec first 5 enc elems: ");
+            // for (int i = 0; i < 5; i++) { printf("%d ", ((int16_t*)inbuf)[i]); } printf("\n");
             // printf("offset: %d\n", offset);
-            // // memcpy(outbuf, inbuf, nelements * sz);
+
+            // memcpy(outbuf, inbuf, nelements * sz);
             zigzag_decode_u16(
                 (const int16_t*)inbuf, nelements, (uint16_t*)outbuf);
+
             // // printf("dec of ")
             // auto data_in = (const uint16_t*)inbuf;
             // auto data_out = (int16_t*)outbuf;
