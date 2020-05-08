@@ -20,6 +20,7 @@ namespace lzbench {
 size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc,
     const uint8_t* comprbuff, size_t comprsize, uint8_t* outbuf, size_t outsize,
     bool already_materialized, bool push_down_query,
+    uint8_t* tmpbuf0, uint8_t* tmpbuf1,
     size_t param1, size_t param2, void* workmem)
 {
     // printf("decomp_and_query: running '%s' with insize %lu, outsize %u!\n", desc->name, comprsize, outsize);
@@ -40,7 +41,7 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
             // printf("finished decomp; dlen = %d\n", (int)dlen);
         }
         undo_preprocessors(params->preprocessors, outbuf, dlen,
-            params->data_info.element_sz);
+            params->data_info.element_sz, tmpbuf0, tmpbuf1);
 
         // prevent compiler from not running above command (hopefully...)
         if (params->verbose >= 999 || dlen >= ((int64_t)1) << 31) {
@@ -113,8 +114,9 @@ size_t _decomp_and_query(lzbench_params_t *params, const compressor_desc_t* desc
 void parallel_decomp(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, const compressor_desc_t* desc,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
-    uint8_t* tmpbuf, bench_rate_t rate, std::vector<uint64_t> comp_times,
-    size_t param1, size_t param2, char** workmems)
+    bench_rate_t rate, std::vector<uint64_t> comp_times,
+    uint8_t* tmpbuf0, uint8_t* tmpbuf1, size_t param1, size_t param2,
+    char** workmems)
 {
     // printf("calling parallel decomp for algorithm (T=%d): %s!\n", params->nthreads, desc->name);
     // printf("calling parallel decomp for algorithm %s!\n", desc->name);
@@ -179,6 +181,11 @@ void parallel_decomp(lzbench_params_t *params,
         buffs[i] = alloc_data_buffer(max_chunk_sz + 4096);
     }
 
+    /// XXX: this function is broken
+    printf("WARNING: parallel_decomp is broken if there");
+    printf("are any preprocessors; the tmpbufs need to not");
+    printf("be shared across threads.\n");
+
     // for (int i = 0; i < nthreads; i++) {
         // auto& this_total = total_scanned_sizes[i];
         // size_t* this_total = total_scanned_sizes[i];
@@ -189,6 +196,7 @@ void parallel_decomp(lzbench_params_t *params,
                 compressed_chunk_starts,
                 already_materialized, push_down_query,
                 // &total_scanned_sizes,
+                tmpbuf0, tmpbuf1, /// XXX this is bad
                 param1, param2, workmems](int i) {
 
             // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
@@ -278,7 +286,7 @@ void parallel_decomp(lzbench_params_t *params,
                     _decomp_and_query(params, desc, inptr, insize,
                         decomp_buff, rawsize,
                         already_materialized, push_down_query,
-                        param1, param2, workmem_ptr);
+                        tmpbuf0, tmpbuf1, param1, param2, workmem_ptr);
 
                     // std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
                     // std::this_thread::sleep_for(std::chrono::duration<double>(1));

@@ -20,8 +20,9 @@ namespace lzbench {
 void parallel_decomp(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, const compressor_desc_t* desc,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
-    uint8_t* tmpbuf, bench_rate_t rate, std::vector<uint64_t> comp_times,
-    size_t param1, size_t param2, char* workmems[]);
+    bench_rate_t rate, std::vector<uint64_t> comp_times,
+    uint8_t* tmpbuf0, uint8_t* tmpbuf1, size_t param1, size_t param2,
+    char* workmems[]);
 
 } // namespace lzbench
 

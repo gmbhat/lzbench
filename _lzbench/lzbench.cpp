@@ -84,7 +84,8 @@ inline int64_t lzbench_compress(lzbench_params_t *params,
 inline int64_t lzbench_decompress(lzbench_params_t *params,
     std::vector<size_t>& chunk_sizes, const compressor_desc_t* desc,
     std::vector<size_t> &compr_sizes, const uint8_t *inbuf, uint8_t *outbuf,
-    uint8_t* tmpbuf, size_t param1, size_t param2, char* workmem)
+    uint8_t* tmpbuf0, uint8_t* tmpbuf1, size_t param1, size_t param2,
+    char* workmem)
 {
     int64_t dlen = 0;
     size_t part, sum = 0;
@@ -121,7 +122,8 @@ inline int64_t lzbench_decompress(lzbench_params_t *params,
             }
             // printf("decomp: dlen before preproc %d\n", dlen);
             dlen = undo_preprocessors(params->preprocessors, outbuf, dlen,
-                params->data_info.element_sz);
+                params->data_info.element_sz, tmpbuf0, tmpbuf1);
+            memcpy(outbuf, tmpbuf0, dlen);
             // printf("decomp: dlen after preproc %d\n", dlen);
         } else {
             // printf("already_materialized; skipping decomp, etc\n");
@@ -335,8 +337,8 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
 
     if (!params->compress_only && params->nthreads > 0) {
         parallel_decomp(params, chunk_sizes,
-                desc, compr_sizes, compbuf, decomp, tmpbuf0, rate, ctime,
-                param1, param2, &workmems[0]);
+                desc, compr_sizes, compbuf, decomp, rate, ctime,
+                tmpbuf0, tmpbuf1, param1, param2, &workmems[0]);
         // return;
         goto done;
     }
@@ -373,8 +375,9 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
                 //         params->data_info.element_sz, outptr);
                 // } else {
                     memcpy(outptr, inptr, orig_sz);
-                    undo_preprocessors(params->preprocessors, outptr, orig_sz,
-                        params->data_info.element_sz);
+                    auto newsize = undo_preprocessors(params->preprocessors, outptr, orig_sz,
+                        params->data_info.element_sz, tmpbuf0, tmpbuf1);
+                    memcpy(outptr, tmpbuf0, newsize);
                 // }
                 inptr += orig_sz;
                 outptr += orig_sz;
@@ -385,7 +388,7 @@ void lzbench_test(lzbench_params_t *params, std::vector<size_t> &file_sizes,
         do {
             GetTime(start_ticks);
             decomplen = lzbench_decompress(params, chunk_sizes,
-                desc, compr_sizes, compbuf, decomp, tmpbuf0, param1,
+                desc, compr_sizes, compbuf, decomp, tmpbuf0, tmpbuf1, param1,
                 param2, workmem);
             GetTime(end_ticks);
             nanosec = GetDiffTime(rate, start_ticks, end_ticks);

@@ -41,31 +41,37 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     // const uint8_t* inbuf = orig_inbuf;
 
     // for (auto preproc : preprocessors) {
+    bool needs_ptr_swap = false;
+    int nswaps = 0;
     for (int i = 0; i < preprocessors.size(); i++) {
         auto preproc = preprocessors[i];
+
+        auto func = preproc.func;
+        if ((func != DELTA) && (func != DOUBLE_DELTA)
+            && (func != XFF) && (func != DYNAMIC_DELTA)
+            && (func != ZIGZAG) && (func != SPRINTZPACK))
+        {
+            printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
+            continue;
+        }
         // if (false) { // TODO rm
         // if (i % 2) { // swap buffers
-        if (i > 0) { // swap buffers
+        if (needs_ptr_swap) { // swap buffers
             // printf("swapping input and output buffers\n");
             auto tmp = inbuf;
             inbuf = (const uint8_t*)outbuf;
             outbuf = (uint8_t*)tmp;
             // tmpbuf = outbuf;
             // outbuf = tmpbuf;
+            nswaps++;
         }
-        // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
+        needs_ptr_swap = true; // execute each time but the first
+
+        // printf("applying preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz)
         // continue;
 
         // if ((preproc < 1) || (preproc > 4)) {
 
-        auto func = preproc.func;
-        if ((func != DELTA) && (func != DOUBLE_DELTA)
-            && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG))
-        {
-            printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
-            continue;
-        }
 
 //         if (preproc == 0) {
 //             printf("WARNING: ignoring unrecognized preprocessor number '0'\n");
@@ -150,10 +156,11 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
         // ------------------------ dynamic delta
         if (sz == 2 && func == DYNAMIC_DELTA) {
-            // int loss = Losses::MaxAbs;
+            // printf("initial size, nelements: %d, %d\n", size, nelements);
             size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
             nelements = (size + sz - 1) / sz;
+            // printf("new     size, nelements: %d, %d\n", size, nelements);
             continue;
         }
 
@@ -180,6 +187,19 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
             // printf("enc first 5 enc elems: ");
             // for (int i = 0; i < 5; i++) { printf("%d ", ((int16_t*)outbuf)[i]); } printf("\n");
+        }
+
+        // ------------------------ sprintz bitpacking
+        if (sz == 2 && func == SPRINTZPACK) {
+            // printf("initial size, nelements: %d, %d\n", size, nelements);
+            size = 2 * sprintzpack_pack_u16( // 2x to convert to bytes
+
+            // size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes // works
+
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            nelements = (size + sz - 1) / sz;
+            // printf("new     size, nelements: %d, %d\n", size, nelements);
+            continue;
         }
 
         // printf("didn't apply any preproc for offset %lld...\n", offset);
@@ -252,7 +272,8 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
     // if (false) { // TODO rm
     // if (outbuf != orig_outbuf) {
-    if (preprocessors.size() % 2 == 0) {
+    // if (preprocessors.size() % 2 == 0) {
+    if (nswaps % 2) {
         // printf("copying tmpbuf to output buffer!\n");
         // we switch off between using original inbuf and outbuf as input
         // and output when there are multiple preprocs; ensure that the
@@ -267,13 +288,16 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
 // void undo_preprocessors(const std::vector<int64_t>& preprocessors,
 size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
-    uint8_t* inbuf, size_t size, int element_sz, uint8_t* outbuf)
+    uint8_t* orig_inbuf, size_t size, int element_sz, uint8_t* outbuf,
+    uint8_t* tmpbuf)
 {
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
-
-    if (preprocessors.size() < 1) { return size; }
-
-    if (outbuf == nullptr) { outbuf = inbuf; }
+    if (preprocessors.size() < 1) {
+        memcpy(outbuf, orig_inbuf, size);
+        return size;
+    }
+    assert(orig_inbuf != outbuf);
+    assert(tmpbuf != outbuf);
 
     int sz = element_sz;
     if (sz < 1) {
@@ -284,8 +308,15 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     // printf("size=%lu, sz=%lu, element_sz=%d\n", size, sz, element_sz);
     // printf("size=%lu, element_sz=%lu, nelements=%lld\n", size, sz, element_sz, nelements);
 
+    auto orig_outbuf = outbuf;
+    memcpy(tmpbuf, orig_inbuf, size);
+    auto inbuf = (const uint8_t*)tmpbuf;
+
+    // printf("dec sees initial encoded elems: "); dump_elements((uint16_t*)orig_inbuf, 8);
 
     // for (auto preproc : preprocessors) {
+    bool needs_ptr_swap = false;
+    int nswaps = 0;
     for (size_t i = 0; i < preprocessors.size(); i++) {
         // traverse preprocessors in reverse order
         auto preproc = preprocessors[preprocessors.size() - 1 - i];
@@ -294,11 +325,23 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
             && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG))
+            && (func != ZIGZAG) && (func != SPRINTZPACK))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
         }
+
+        if (needs_ptr_swap) { // swap buffers
+            // printf("swapping input and output buffers\n");
+            auto tmp = inbuf;
+            inbuf = (const uint8_t*)outbuf;
+            outbuf = (uint8_t*)tmp;
+            // tmpbuf = outbuf;
+            // outbuf = tmpbuf;
+            nswaps++;
+        }
+        needs_ptr_swap = true; // execute each time but the first
+        // needs_ptr_swap = false; // TODO rm
 
         // memcpy(outbuf, inbuf, size); continue;  // TODO rm
 
@@ -318,7 +361,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             if (inbuf != outbuf) {
                 decode_delta_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, stride);
             } else {
-                decode_delta_rowmajor_inplace_8b(inbuf, nelements, stride);
+                decode_delta_rowmajor_inplace_8b((uint8_t*)inbuf, nelements, stride);
             }
             continue;
         }
@@ -341,7 +384,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
                 // printf("ran dbl delta decoding without crashing!\n");
             } else {
                 // printf("inbuf == outbuf! WTF\n");
-                decode_delta_rowmajor_inplace_8b(inbuf, nelements, stride);
+                decode_delta_rowmajor_inplace_8b((uint8_t*)inbuf, nelements, stride);
                 // printf("ran dbl delta decoding without crashing!\n");
             }
             continue;
@@ -361,7 +404,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             if (inbuf != outbuf) {
                 decode_xff_rowmajor_8b((int8_t*)inbuf, nelements, outbuf, stride);
             } else {
-                decode_xff_rowmajor_inplace_8b(inbuf, nelements, stride);
+                decode_xff_rowmajor_inplace_8b((uint8_t*)inbuf, nelements, stride);
             }
             continue;
         }
@@ -379,9 +422,11 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
         // ------------------------ dynamic delta
         if (sz == 2 && func == DYNAMIC_DELTA) {
+            // printf("initial size, nelements: %d, %d\n", size, nelements);
             size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes
                 (const int16_t*)inbuf, (uint16_t*)outbuf);
             nelements = (size + sz - 1) / sz;
+            // printf("new     size, nelements: %d, %d\n", size, nelements);
             continue;
         }
 
@@ -407,6 +452,20 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             //     //     printf("raw val, enc val: %d, %d\n", data_out[i], enc_val);
             //     // }
             // }
+        }
+
+        // ------------------------ sprintz bitpacking
+        if (sz == 2 && func == SPRINTZPACK) {
+            assert(outbuf != inbuf);  // sprintpack can't run inplace
+            printf("initial size, nelements: %d, %d\n", size, nelements);
+            size = 2 * sprintzpack_unpack_u16( // 2x to convert to bytes
+
+            // size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes // works
+
+                (const int16_t*)inbuf, (uint16_t*)outbuf);
+            nelements = (size + sz - 1) / sz;
+            printf("new     size, nelements: %d, %d\n", size, nelements);
+            continue;
         }
 
 #else
@@ -465,6 +524,12 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             }
         }
 #undef UNDO_DELTA_FOR_OFFSET
+    }
+    if (nswaps % 2) {
+        // we switch off between using original inbuf and outbuf as input
+        // and output when there are multiple preprocs; ensure that the
+        // final result ends up in outbuf;
+        memcpy(orig_outbuf, tmpbuf, nelements * sz);
     }
     return size;
 }
