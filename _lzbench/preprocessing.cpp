@@ -191,14 +191,15 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
         // ------------------------ sprintz bitpacking
         if (sz == 2 && func == SPRINTZPACK) {
-            // printf("initial size, nelements: %d, %d\n", size, nelements);
-            size = 2 * sprintzpack_pack_u16( // 2x to convert to bytes
+            // printf("enc initial size, nelements: %d, %d\n", size, nelements);
+            nelements = sprintzpack_pack_u16( // 2x to convert to bytes
 
             // size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes // works
 
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
-            nelements = (size + sz - 1) / sz;
-            // printf("new     size, nelements: %d, %d\n", size, nelements);
+            // nelements = (size + sz - 1) / sz;
+            size = nelements * sz;
+            // printf("enc new     size, nelements: %d, %d\n", size, nelements);
             continue;
         }
 
@@ -291,6 +292,19 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     uint8_t* orig_inbuf, size_t size, int element_sz, uint8_t* outbuf,
     uint8_t* tmpbuf)
 {
+    // printf("undo preprocs: got size = %d\n", size);
+    // printf("undo preprocs: end of orig_inbuf:");//" \n", orig_inbuf[size - 1]);
+    // auto tail_len = 8;
+    // // uint16_t* tmpptr = ((uint16_t*)inbuf);
+    // for (int i = 0; i < tail_len; i++) {
+    //     // printf("%d ", tmpptr[nelements - tail_len + i]);
+    //     // printf("%d ", orig_inbuf[size - tail_len + i + 1]);
+    //     printf("%d ", orig_inbuf[size - tail_len + i]);
+    //     // printf("%d ", inbuf[size - tail_len + i]);
+    // }
+    // printf("\n");
+
+    // printf("undo preprocs: end of orig_inbuf: %d\n", orig_inbuf[size - 1]);
     // printf("using %lu preprocessors; size=%lu, element_sz=%d\n", preprocessors.size(), size, element_sz);
     if (preprocessors.size() < 1) {
         memcpy(outbuf, orig_inbuf, size);
@@ -311,6 +325,16 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
     auto orig_outbuf = outbuf;
     memcpy(tmpbuf, orig_inbuf, size);
     auto inbuf = (const uint8_t*)tmpbuf;
+
+    // printf("undo preprocs: got size = %d\n", size);
+    // printf("undo preprocs: end of orig_inbuf:");//" \n", orig_inbuf[size - 1]);
+    // auto tail_len = 8;
+    // uint16_t* tmpptr = ((uint16_t*)inbuf);
+    // for (int i = 0; i < tail_len; i++) {
+    //     printf("%d ", tmpptr[nelements - tail_len + i]);
+    //     // printf("%d ", inbuf[size - tail_len + i]);
+    // }
+    // printf("\n");
 
     // printf("dec sees initial encoded elems: "); dump_elements((uint16_t*)orig_inbuf, 8);
 
@@ -457,14 +481,15 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // ------------------------ sprintz bitpacking
         if (sz == 2 && func == SPRINTZPACK) {
             assert(outbuf != inbuf);  // sprintpack can't run inplace
-            printf("initial size, nelements: %d, %d\n", size, nelements);
-            size = 2 * sprintzpack_unpack_u16( // 2x to convert to bytes
+            // printf("dec initial size, nelements: %d, %d\n", size, nelements);
+            nelements = sprintzpack_unpack_u16( // 2x to convert to bytes
 
             // size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes // works
 
                 (const int16_t*)inbuf, (uint16_t*)outbuf);
-            nelements = (size + sz - 1) / sz;
-            printf("new     size, nelements: %d, %d\n", size, nelements);
+            size = nelements * sz;
+            // nelements = (size + sz - 1) / sz;
+            // printf("dec new     size, nelements: %d, %d\n", size, nelements);
             continue;
         }
 
