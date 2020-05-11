@@ -49,7 +49,8 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
             && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG) && (func != SPRINTZPACK))
+            && (func != ZIGZAG) && (func != SPRINTZPACK)
+            && (func != SPRINTZPACK_NOZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -192,7 +193,7 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // ------------------------ sprintz bitpacking
         if (sz == 2 && func == SPRINTZPACK) {
             // printf("enc initial size, nelements: %d, %d\n", size, nelements);
-            nelements = sprintzpack_pack_u16( // 2x to convert to bytes
+            nelements = sprintzpack_pack_u16_zigzag( // 2x to convert to bytes
 
             // size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes // works
 
@@ -200,6 +201,14 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             // nelements = (size + sz - 1) / sz;
             size = nelements * sz;
             // printf("enc new     size, nelements: %d, %d\n", size, nelements);
+            continue;
+        }
+        if (sz == 2 && func == SPRINTZPACK_NOZIGZAG) {
+            // printf("enc initial size, nelements: %d, %d\n", size, nelements);
+            // nelements = sprintzpack_pack_u16( // 2x to convert to bytes
+            nelements = sprintzpack_pack_u16( // 2x to convert to bytes
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            size = nelements * sz;
             continue;
         }
 
@@ -349,7 +358,8 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         auto func = preproc.func;
         if ((func != DELTA) && (func != DOUBLE_DELTA)
             && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG) && (func != SPRINTZPACK))
+            && (func != ZIGZAG) && (func != SPRINTZPACK)
+            && (func != SPRINTZPACK_NOZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -482,7 +492,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         if (sz == 2 && func == SPRINTZPACK) {
             assert(outbuf != inbuf);  // sprintpack can't run inplace
             // printf("dec initial size, nelements: %d, %d\n", size, nelements);
-            nelements = sprintzpack_unpack_u16( // 2x to convert to bytes
+            nelements = sprintzpack_unpack_u16_zigzag( // 2x to convert to bytes
 
             // size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes // works
 
@@ -490,6 +500,14 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             size = nelements * sz;
             // nelements = (size + sz - 1) / sz;
             // printf("dec new     size, nelements: %d, %d\n", size, nelements);
+            continue;
+        }
+        if (sz == 2 && func == SPRINTZPACK_NOZIGZAG) {
+            assert(outbuf != inbuf);  // sprintpack can't run inplace
+            // nelements = sprintzpack_unpack_u16( // 2x to convert to bytes
+            nelements = sprintzpack_unpack_u16( // 2x to convert to bytes
+                (const int16_t*)inbuf, (uint16_t*)outbuf);
+            size = nelements * sz;
             continue;
         }
 
