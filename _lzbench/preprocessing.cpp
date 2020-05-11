@@ -47,10 +47,10 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         auto preproc = preprocessors[i];
 
         auto func = preproc.func;
-        if ((func != DELTA) && (func != DOUBLE_DELTA)
-            && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG) && (func != SPRINTZPACK)
-            && (func != SPRINTZPACK_NOZIGZAG))
+        if ((func != DELTA) && (func != DOUBLE_DELTA) && (func != XFF)
+            && (func != ZIGZAG)
+            && (func != DYNAMIC_DELTA) && (func != DYNAMIC_DELTA_ALT)
+            && (func != SPRINTZPACK) && (func != SPRINTZPACK_NOZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -159,6 +159,14 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         if (sz == 2 && func == DYNAMIC_DELTA) {
             // printf("initial size, nelements: %d, %d\n", size, nelements);
             size = 2 * dynamic_delta_pack_u16( // 2x to convert to bytes
+                (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
+            nelements = (size + sz - 1) / sz;
+            // printf("new     size, nelements: %d, %d\n", size, nelements);
+            continue;
+        }
+        if (sz == 2 && func == DYNAMIC_DELTA_ALT) {
+            // printf("initial size, nelements: %d, %d\n", size, nelements);
+            size = 2 * dynamic_delta_pack_u16_altloss(
                 (const uint16_t*)inbuf, nelements, (int16_t*)outbuf);
             nelements = (size + sz - 1) / sz;
             // printf("new     size, nelements: %d, %d\n", size, nelements);
@@ -356,10 +364,10 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // printf("undoing preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
 
         auto func = preproc.func;
-        if ((func != DELTA) && (func != DOUBLE_DELTA)
-            && (func != XFF) && (func != DYNAMIC_DELTA)
-            && (func != ZIGZAG) && (func != SPRINTZPACK)
-            && (func != SPRINTZPACK_NOZIGZAG))
+        if ((func != DELTA) && (func != DOUBLE_DELTA) && (func != XFF)
+            && (func != ZIGZAG)
+            && (func != DYNAMIC_DELTA) && (func != DYNAMIC_DELTA_ALT)
+            && (func != SPRINTZPACK) && (func != SPRINTZPACK_NOZIGZAG))
         {
             printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
             continue;
@@ -455,7 +463,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         }
 
         // ------------------------ dynamic delta
-        if (sz == 2 && func == DYNAMIC_DELTA) {
+        if (sz == 2 && (func == DYNAMIC_DELTA || func == DYNAMIC_DELTA_ALT)) {
             // printf("initial size, nelements: %d, %d\n", size, nelements);
             size = 2 * dynamic_delta_unpack_u16( // 2x to convert to bytes
                 (const int16_t*)inbuf, (uint16_t*)outbuf);

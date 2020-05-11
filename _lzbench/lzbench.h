@@ -103,10 +103,11 @@ enum preproc_func_e {
     DELTA=1,
     DOUBLE_DELTA=2,
     XFF=3,
-    DYNAMIC_DELTA=4,
-    ZIGZAG=5,
-    SPRINTZPACK=6,
-    SPRINTZPACK_NOZIGZAG=7,
+    ZIGZAG=4,
+    DYNAMIC_DELTA=5,
+    DYNAMIC_DELTA_ALT=6,
+    SPRINTZPACK=7,
+    SPRINTZPACK_NOZIGZAG=8,
 };
 
 struct preproc_params_t {
