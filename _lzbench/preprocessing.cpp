@@ -13,10 +13,29 @@
     #include "sprintz/format.h"  // for simd delta preproc?
     #include "sprintz/online.hpp"  // for dynamic delta
 #endif
+#ifndef BENCH_REMOVE_BLOSC
+    #include "blosc/shuffle.h"
+#endif
 
 namespace lzbench {
 
 static const int64_t kDoubleDeltaThreshold = 1 << 16;
+
+
+bool is_func_valid(int func) {
+    if ((func != DELTA) && (func != DOUBLE_DELTA) && (func != XFF)
+        && (func != ZIGZAG)
+        && (func != DYNAMIC_DELTA) && (func != DYNAMIC_DELTA_ALT)
+        && (func != SPRINTZPACK) && (func != SPRINTZPACK_NOZIGZAG)
+        && (func != BITSHUFFLE) && (func != BYTESHUFFLE)
+        )
+    {
+        printf("WARNING: ignoring unrecognized preprocessor function %d\n",
+            func);
+        return false;
+    }
+    return true;
+}
 
 // void apply_preprocessors(const std::vector<int64_t>& preprocessors,
 size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
@@ -35,6 +54,7 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
 
     // auto orig_inbuf = inbuf;
     auto orig_outbuf = outbuf;
+    auto orig_tmpbuf = tmpbuf;
 
     memcpy(tmpbuf, orig_inbuf, size);
     auto inbuf = (const uint8_t*)tmpbuf;
@@ -47,14 +67,10 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         auto preproc = preprocessors[i];
 
         auto func = preproc.func;
-        if ((func != DELTA) && (func != DOUBLE_DELTA) && (func != XFF)
-            && (func != ZIGZAG)
-            && (func != DYNAMIC_DELTA) && (func != DYNAMIC_DELTA_ALT)
-            && (func != SPRINTZPACK) && (func != SPRINTZPACK_NOZIGZAG))
-        {
-            printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
+        if (!is_func_valid(func)) {
             continue;
         }
+
         // if (false) { // TODO rm
         // if (i % 2) { // swap buffers
         if (needs_ptr_swap) { // swap buffers
@@ -220,6 +236,23 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
             continue;
         }
 
+        // ------------------------ byteshuffle and bitshuffle
+        if (func == BITSHUFFLE) {
+            // auto buff = std::
+            std::vector<uint8_t> tmp;
+            tmp.reserve(sz);
+            bitshuffle(sz, size, inbuf, outbuf, tmp.data());
+            // bitshuffle(const size_t bytesoftype, const size_t blocksize,
+            //            const uint8_t* const _src, const uint8_t* _dest,
+            //            const uint8_t* _tmp);
+        }
+        if (func == BYTESHUFFLE) {
+            // printf("enc initial size, nelements: %d, %d\n", size, nelements);
+            // shuffle(size, sz, inbuf, outbuf);
+            shuffle(sz, size, inbuf, outbuf);
+        }
+
+
         // printf("didn't apply any preproc for offset %lld...\n", offset);
 
 #else
@@ -364,12 +397,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         // printf("undoing preproc: %lld with nelements=%lld, element_sz=%d\n", preproc, nelements, sz);
 
         auto func = preproc.func;
-        if ((func != DELTA) && (func != DOUBLE_DELTA) && (func != XFF)
-            && (func != ZIGZAG)
-            && (func != DYNAMIC_DELTA) && (func != DYNAMIC_DELTA_ALT)
-            && (func != SPRINTZPACK) && (func != SPRINTZPACK_NOZIGZAG))
-        {
-            printf("WARNING: ignoring unrecognized preprocessor function %d\n", preproc.func);
+        if (!is_func_valid(func)) {
             continue;
         }
 
@@ -517,6 +545,22 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
                 (const int16_t*)inbuf, (uint16_t*)outbuf);
             size = nelements * sz;
             continue;
+        }
+
+        // ------------------------ byteshuffle and bitshuffle
+        if (func == BITSHUFFLE) {
+            // auto buff = std::
+            std::vector<uint8_t> tmp;
+            tmp.reserve(sz);
+            bitunshuffle(sz, size, inbuf, outbuf, tmp.data());
+            // bitshuffle(const size_t bytesoftype, const size_t blocksize,
+            //            const uint8_t* const _src, const uint8_t* _dest,
+            //            const uint8_t* _tmp);
+        }
+        if (func == BYTESHUFFLE) {
+            // printf("dec initial size, nelements: %d, %d\n", size, nelements);
+            // unshuffle(size, sz, inbuf, outbuf);
+            unshuffle(sz, size, inbuf, outbuf);
         }
 
 #else
