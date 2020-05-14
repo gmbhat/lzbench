@@ -240,7 +240,7 @@ size_t apply_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         if (func == BITSHUFFLE) {
             // auto buff = std::
             std::vector<uint8_t> tmp;
-            tmp.reserve(sz);
+            tmp.reserve(2 * size);
             bitshuffle(sz, size, inbuf, outbuf, tmp.data());
             // bitshuffle(const size_t bytesoftype, const size_t blocksize,
             //            const uint8_t* const _src, const uint8_t* _dest,
@@ -551,7 +551,7 @@ size_t undo_preprocessors(const std::vector<preproc_params_t>& preprocessors,
         if (func == BITSHUFFLE) {
             // auto buff = std::
             std::vector<uint8_t> tmp;
-            tmp.reserve(sz);
+            tmp.reserve(2 * size);
             bitunshuffle(sz, size, inbuf, outbuf, tmp.data());
             // bitshuffle(const size_t bytesoftype, const size_t blocksize,
             //            const uint8_t* const _src, const uint8_t* _dest,
