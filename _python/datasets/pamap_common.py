@@ -75,17 +75,17 @@ def removeNullCols(colNames):
 # -------------------------------
 
 def parseDataFileName(f):
-    name = basename(f, noexts=True)
+    name = basename(f, noext=True)
     subjId = int(name[-1])
     return subjId
 
 
-@memory.cache
+
 def _readtxt(path):
     return np.genfromtxt(path)
 
 
-@memory.cache
+
 def dfFromFileAtPath(path, missingDataVal, allColNames, keepColNames):
     # read in the data file and pull out the
     # columns with valid data (and also replace
@@ -116,13 +116,14 @@ def rangesOfConstantValue(seq):
 
     starts = [0]
     ends = []
-    for i in xrange(1, len(seq)):
+    for i in range(1, len(seq)):
         if seq[i] != seq[i-1]:
             starts.append(i)
             ends.append(i)
     ends.append(len(seq))
-
-    return np.array(zip(starts, ends))
+    
+    a = np.array((starts, ends))
+    return np.transpose(a)
 
 
 def findActivityBoundaries(df, labelColName=LABEL_COL_NAME):
@@ -187,8 +188,8 @@ class Recording(object):
         self.subjId = parseDataFileName(filePath)
         self.df = dfFromFileAtPath(filePath, missingDataVal,
                                    colNames, usedColNames)
-        self.sampleTimes = self.df.as_matrix([TIMESTAMP_COL_NAME])
-        self.data = self.df.as_matrix(columns=dataColNames)
+        self.sampleTimes = self.df[TIMESTAMP_COL_NAME].to_numpy()
+        self.data = self.df[usedColNames].to_numpy()
         np.clip(self.data, MINVAL, MAXVAL, out=self.data)
         self.boundaries, self.labels = findActivityBoundaries(self.df)
         self.labelStrs = [ids2labelStrs[label] for label in self.labels]

@@ -9,7 +9,7 @@ from joblib import Memory
 # from . utils.files import ensure_dir_exists
 from .. import files
 
-from . import ampds, ucr, pamap, uci_gas, msrc
+from . import pamap
 from . import paths
 
 from .. import compress
@@ -241,16 +241,9 @@ def write_dsets(which_dsets='normal', delta_encode=False,
 
     if write_normal_datasets or write_split_datasets:
         funcs_and_names = [
-            (ampds.all_gas_recordings, 'ampd_gas'),
-            (ampds.all_water_recordings, 'ampd_water'),
-            (ampds.all_power_recordings, 'ampd_power'),
-            (ampds.all_weather_recordings, 'ampd_weather'),
-            (uci_gas.all_recordings, 'uci_gas'),
             (pamap.all_recordings, 'pamap'),
-            (msrc.all_recordings, 'msrc'),
         ]
-        if write_split_datasets:
-            funcs_and_names = [(msrc.all_recordings, 'msrc_split')]
+
 
         # # TODO rm
         # # recordings = list(msrc.all_recordings())
@@ -341,8 +334,9 @@ def main():
     # write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
     # write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
 
+    pamap.main()
     # create quantized versions of all the datasets
-    for which_dsets in ['split', 'normal', 'ucr']:
+    for which_dsets in ['split', 'normal']:
         for storage_order in ('c', 'f'):
             for store_as_dtype in (None, np.uint32):
                 write_dsets(which_dsets=which_dsets,

@@ -21,7 +21,11 @@ def is_visible(path):
 
 
 def join_paths(dir, contents):
-    return [os.path.join(dir, f) for f in contents]
+    paths = []
+    for f in contents:
+        curr_path = os.path.join(dir,f)
+        paths.append(curr_path)
+    return paths
 
 
 def files_matching(dir, prefix=None, suffix=None, abs_paths=False,
@@ -31,6 +35,13 @@ def files_matching(dir, prefix=None, suffix=None, abs_paths=False,
         files = filter(lambda f: f.startswith(prefix), files)
     if suffix:
         files = filter(lambda f: f.endswith(suffix), files)
+    
+    files_list = []
+    for f in files:
+        files_list.append(f)
+    
+    files = files_list
+        
     if only_files or only_dirs:
         paths = join_paths(dir, files)
         if only_files:
