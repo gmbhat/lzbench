@@ -184,6 +184,12 @@ class Recording(object):
     def __init__(self, filePath, missingDataVal, colNames, ids2labelStrs):
         dataColNames = colNames[2:]
         usedColNames = removeNullCols(colNames)
+        
+        ucol = []
+        for c in usedColNames:
+            ucol.append(c)
+            
+        usedColNames = ucol
 
         self.subjId = parseDataFileName(filePath)
         self.df = dfFromFileAtPath(filePath, missingDataVal,

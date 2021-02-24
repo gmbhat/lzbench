@@ -334,7 +334,7 @@ def main():
     # write_dsets(which_dsets='split', storage_order='c', store_as_dtype=np.uint32)
     # write_dsets(which_dsets='split', storage_order='f', store_as_dtype=np.uint32)
 
-    pamap.main()
+    #pamap.main()
     # create quantized versions of all the datasets
     for which_dsets in ['split', 'normal']:
         for storage_order in ('c', 'f'):
