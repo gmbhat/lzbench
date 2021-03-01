@@ -11,10 +11,10 @@ import matplotlib as mpl
 from . import files
 
 # change this if you aren't me
-DATASETS_DIR = os.path.expanduser('~/Desktop/datasets/compress')
+DATASETS_DIR = 'C:/Users/Dina Hussein/Documents/GitHub/lzbench/_python/datasets/compress'
 
-FIG_SAVE_DIR = 'figs'
-RESULTS_SAVE_DIR = 'results'
+FIG_SAVE_DIR = 'C:/Users/Dina Hussein/Documents/GitHub/lzbench/figs'
+RESULTS_SAVE_DIR = 'C:/Users/Dina Hussein/Documents/GitHub/lzbench/results'
 
 
 def _results_path(*args):

@@ -311,6 +311,12 @@ def generate_params_combinations(params_list, update_func={}):
     return params_list
 
 
+def ensure_list_or_tuple(x):#D.H: added this function
+    print("reached")
+    if not isinstance(x, (list, tuple)):
+        return [x]
+    return x
+
 # ------------------------------------------------ cross validation
 
 def stratified_split_train_test(X, Y, train_frac=.8, random_state=123):
@@ -702,6 +708,7 @@ def update(params, new_keys):
             params.setdefault('gamma', Options([1, 10]))
 
     return True if new_keys else False
+
 
 
 def main():

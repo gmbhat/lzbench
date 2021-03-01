@@ -52,10 +52,11 @@ def _clean_algorithm_name(algo_name):
     return algo_name
 
 
+
 def _df_from_string(s, **kwargs):
     # print('>>>>>>>>>>>> got df string:\n', s)
     # print('<<<<<<<<<<<<')
-    return pd.read_csv(StringIO(s), **kwargs)
+    return pd.read_csv(StringIO(s), **kwargs)#D.H **kwarg/s is empty maybe replace by sep="."
 
 
 def _dset_path(nbits, dset, algos, order, deltas):
@@ -65,7 +66,7 @@ def _dset_path(nbits, dset, algos, order, deltas):
         return dset[len(RAW_DSET_PATH_PREFIX):]
 
     join = os.path.join
-    path = cfg.DATASETS_DIR
+    path = cfg.DATASETS_DIR #D.H: It is taking quantized data here not row
 
     # storage order
     assert order in ('c', 'f')  # rowmajor, colmajor order (C, Fortran order)
@@ -106,7 +107,7 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
     if ndims is None:
         ndims = int(cfg.NAME_2_DSET[dset_name].ndims)
 
-    # cmd = './lzbench -r -j -o4 -e'  # o4 is csv
+    # cmd = './lzbench -r -j -o4 -e'  # o4 is csv #D.H:CSV A comma-separated values file is a delimited text file
     cmd = './lzbench -r -o4 -t0,0'  # o4 is csv
     cmd += inject_str
     cmd += ' -i{},{}'.format(int(min_comp_iters), int(miniters))
@@ -171,7 +172,8 @@ def _generate_cmd(nbits, algos, dset_path, preprocs=None, memlimit=None,
 def _run_cmd(cmd, verbose=0):
     # print("------------------------")
     # print("actually about to run it...")
-    output = os.popen(cmd).read()
+    output = os.popen(cmd).read()#D.H: OPEN FUNC (Pipe can read or write here r)
+    print("issue, reading nothing in output")#D.H
     # trimmed = output[output.find('\n') + 1:output.find('\ndone...')]
     # print("here's the start of the raw output: \n")
     # print output[:1000]
@@ -179,7 +181,7 @@ def _run_cmd(cmd, verbose=0):
     trimmed = output[:output.find('\ndone...')]
     # trimmed = trimmed[:]
 
-    if not os.path.exists('./lzbench'):
+    if not os.path.exists('./lzbench'): #D.H not sure if this should be lzbench not compress but tried compress and didn't help
         os.system('make')
 
     if verbose > 1:
@@ -189,7 +191,7 @@ def _run_cmd(cmd, verbose=0):
 
     # print("about to turn string into df")
     try:
-        return _df_from_string(trimmed[:])
+        return _df_from_string(trimmed[:])#it is empty
     except:  # noqa
         print("ERROR: couldn't parse dataframe from output: '{}'".format(output))
         sys.exit(1)
@@ -226,9 +228,10 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                     preprocs=None, create_fig=False, verbose=1, dry_run=DEBUG,
                     save_path=None, nthreads=0, query_id=None, **cmd_kwargs):
     dsets = cfg.ALL_DSET_NAMES if dsets is None else dsets
-    dsets = pyience.ensure_list_or_tuple(dsets)
+    dsets = pyience.ensure_list_or_tuple(dsets)#D.H:added a func in the pyience file
     algos = pyience.ensure_list_or_tuple(algos)
-
+    #dsets = pyience._ensure_list_or_tuple(dsets)
+    #algos = pyience._ensure_list_or_tuple(algos)
     # print("using nthreads, query: ", nthreads, query_id)
     # return
 
@@ -258,7 +261,7 @@ def _run_experiment(nbits, algos, dsets=None, memlimit=-1, miniters=0, order='f'
                 print("Warning: abandoning early for debugging!")
                 continue
 
-        # print("about to run command:")
+        print("about to run command:")
         results = _run_cmd(cmd, verbose=verbose)
         # print("...command successful")
         results = _clean_results(
@@ -663,10 +666,10 @@ def run_multicore_queries():
 
 
 def main():
-    # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Zstd', 'FSE'])
+    _run_experiment(nbits=8, dsets=['pamap'], algos=['DoubleDelta'])
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['FSE'])
     # _run_experiment(nbits=8, dsets=['ampd_gas'], algos=['Huffman'])
-
+    print("in the file")
     kwargs = pyience.parse_cmd_line()
 
     if kwargs.get('run_ucr', False):

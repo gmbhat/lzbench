@@ -2,7 +2,7 @@
 
 import os
 
-DATASETS_DIR = os.path.expanduser("~/projects/lzbench/new_project/_python/datasets/")
+DATASETS_DIR = ('C:/Users/Dina Hussein/Documents/GitHub/lzbench/_python/datasets')
 
 
 def to_path(*args):
