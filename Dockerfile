@@ -42,10 +42,10 @@ RUN apt-get install -y git clang
 
 RUN mkdir /compress_files/
 WORKDIR /compress_files/
-RUN git clone https://github.com/gmbhat/lzbench.git
+#RUN git clone https://github.com/gmbhat/lzbench.git
 #RUN git clone https://github.com/dblalock/lzbench.git
-WORKDIR /compress_files/lzbench
-RUN make clean && make
+#WORKDIR /compress_files/lzbench
+#RUN make clean && make
 
 RUN bash -c 'conda init bash'
 RUN echo "conda activate myenv" >> ~/.bashrc
