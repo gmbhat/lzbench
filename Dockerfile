@@ -34,15 +34,17 @@ RUN apt-get install -y git clang
 # Create a group and user, then run future commands as this user; we copy
 # the source code into this user's home directory before becoming the user
 # so that we can make the user own it while we're still root
-RUN groupadd -g 999 appuser && \
-    useradd -m -r -u 999 -g appuser appuser
+#RUN groupadd -g 999 appuser && \
+#    useradd -m -r -u 999 -g appuser appuser
 # COPY . /home/appuser/lzbench
 # RUN chown -R appuser:appuser /home/appuser/lzbench
-USER appuser
+#USER appuser
 
-WORKDIR /home/appuser/
-RUN git clone https://github.com/dblalock/lzbench.git
-WORKDIR /home/appuser/lzbench
+RUN mkdir /compress_files/
+WORKDIR /compress_files/
+RUN git clone https://github.com/gmbhat/lzbench.git
+#RUN git clone https://github.com/dblalock/lzbench.git
+WORKDIR /compress_files/lzbench
 RUN make clean && make
 
 RUN bash -c 'conda init bash'
